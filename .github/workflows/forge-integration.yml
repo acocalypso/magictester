@@ -45,6 +45,7 @@ jobs:
       - run: node scripts/formats-browser.mjs
       - run: node scripts/bo3-smoke.mjs
       - run: node scripts/bo3-browser.mjs
+      - run: node scripts/observations-browser.mjs
       - run: node scripts/feeds-smoke.mjs
       - run: node scripts/feeds-browser.mjs
       - run: node scripts/selection-smoke.mjs

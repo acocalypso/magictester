@@ -2072,3 +2072,14 @@ td strong,
     flex-direction: column;
   }
 }
+
+#observed-match-games-heading {
+  scroll-margin-top: 96px;
+}
+#observed-match-games-heading:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.observation-count {
+  padding: 0 20px;
+}

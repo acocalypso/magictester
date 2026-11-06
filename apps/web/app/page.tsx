@@ -314,7 +314,60 @@ export default function Home() {
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const [observations, setObservations] = useState<Observation[] | null>(null);
-  useEffect(() => setObservations(null), [selected]);
+  const [observationsLoading, setObservationsLoading] = useState(false);
+  const [observationsError, setObservationsError] = useState("");
+  const observationsHeading = useRef<HTMLHeadingElement>(null);
+  const observationsRequest = useRef(0);
+  const focusObservations = useRef(false);
+  const failedObservationsAppend = useRef(false);
+  useEffect(() => {
+    observationsRequest.current++;
+    focusObservations.current = false;
+    setObservations(null);
+    setObservationsLoading(false);
+    setObservationsError("");
+  }, [selected, view]);
+  useEffect(() => {
+    if (
+      observations !== null &&
+      focusObservations.current &&
+      observationsHeading.current
+    ) {
+      focusObservations.current = false;
+      observationsHeading.current.focus({ preventScroll: true });
+      observationsHeading.current.scrollIntoView({ block: "start" });
+    }
+  }, [observations]);
+  async function loadObservations(append = false) {
+    if (!result || observationsLoading) return;
+    const jobId = result.job.id;
+    const request = ++observationsRequest.current;
+    setObservationsLoading(true);
+    setObservationsError("");
+    try {
+      const offset = append ? observations?.length || 0 : 0;
+      const rows = await api<Observation[]>(
+        `/simulations/${jobId}/observations?limit=50&offset=${offset}`,
+      );
+      if (
+        observationsRequest.current !== request ||
+        selectedRef.current !== jobId
+      )
+        return;
+      focusObservations.current = !append;
+      setObservations((previous) =>
+        append ? [...(previous || []), ...rows] : rows,
+      );
+    } catch (e) {
+      if (observationsRequest.current === request) {
+        failedObservationsAppend.current = append;
+        setObservationsError((e as Error).message);
+      }
+    } finally {
+      if (observationsRequest.current === request)
+        setObservationsLoading(false);
+    }
+  }
   const [runs, setRuns] = useState<Run[]>([]);
   const [runPage, setRunPage] = useState(0);
   const [detail, setDetail] = useState<Run | null>(null);
@@ -1724,20 +1777,24 @@ export default function Home() {
                       </p>
                       <button
                         className="text-button"
-                        onClick={async () => {
-                          try {
-                            setObservations(
-                              await api<Observation[]>(
-                                `/simulations/${result.job.id}/observations?limit=50`,
-                              ),
-                            );
-                          } catch (e) {
-                            setError((e as Error).message);
-                          }
-                        }}
+                        disabled={observationsLoading}
+                        aria-controls="observed-match-games"
+                        aria-expanded={observations !== null}
+                        onClick={() => void loadObservations()}
                       >
-                        View observed games ({result.job.observedGames ?? 0}) →
+                        {observationsLoading
+                          ? "Loading observed games…"
+                          : `View observed games (${result.job.observedGames ?? 0}) →`}
                       </button>
+                      <span className="muted" role="status">
+                        {observationsLoading ? "Fetching recorded games…" : ""}
+                      </span>
+                      {observationsError && (
+                        <p role="alert">
+                          {observationsError} Try opening the observed games
+                          again.
+                        </p>
+                      )}
                       <p className="muted">
                         Observations include restarted match attempts.
                         Unfinished attempts remain audit evidence and do not
@@ -2113,14 +2170,37 @@ export default function Home() {
                     </button>
                   </div>
                 </section>
-                {observations && (
-                  <section className="panel">
+                {observations !== null && (
+                  <section
+                    id="observed-match-games"
+                    className="panel"
+                    aria-labelledby="observed-match-games-heading"
+                    aria-busy={observationsLoading}
+                  >
                     <div className="panel-heading">
-                      <h2>Observed match games</h2>
+                      <h2
+                        id="observed-match-games-heading"
+                        ref={observationsHeading}
+                        tabIndex={-1}
+                      >
+                        Observed match games
+                      </h2>
                       <span className="muted">
                         Includes interrupted/restarted attempts
                       </span>
                     </div>
+                    <p className="muted observation-count" role="status">
+                      {observations.length
+                        ? `${observations.length} recorded games loaded.`
+                        : "No observed games have been recorded yet. A running match publishes games as they finish; use View observed games again to refresh."}
+                    </p>
+                    <button
+                      className="text-button observation-count"
+                      disabled={observationsLoading}
+                      onClick={() => void loadObservations()}
+                    >
+                      Refresh observed games →
+                    </button>
                     <div className="table-scroll">
                       <table>
                         <thead>
@@ -2167,21 +2247,31 @@ export default function Home() {
                         </tbody>
                       </table>
                     </div>
+                    {observationsError && (
+                      <p role="alert" className="observation-count">
+                        {observationsError}{" "}
+                        <button
+                          className="text-button"
+                          disabled={observationsLoading}
+                          onClick={() =>
+                            void loadObservations(
+                              failedObservationsAppend.current,
+                            )
+                          }
+                        >
+                          Retry loading games →
+                        </button>
+                      </p>
+                    )}
                     {observations.length < (result.job.observedGames || 0) && (
                       <button
                         className="text-button"
-                        onClick={async () => {
-                          try {
-                            const more = await api<Observation[]>(
-                              `/simulations/${result.job.id}/observations?limit=50&offset=${observations.length}`,
-                            );
-                            setObservations([...observations, ...more]);
-                          } catch (e) {
-                            setError((e as Error).message);
-                          }
-                        }}
+                        disabled={observationsLoading}
+                        onClick={() => void loadObservations(true)}
                       >
-                        Load more observations →
+                        {observationsLoading
+                          ? "Loading more observations…"
+                          : "Load more observations →"}
                       </button>
                     )}
                   </section>

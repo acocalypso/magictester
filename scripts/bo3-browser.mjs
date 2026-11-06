@@ -58,11 +58,33 @@ try {
     .waitFor();
   await page.getByText("Game win rate", { exact: true }).waitFor();
   await page.getByRole("button", { name: /View observed games/ }).click();
-  await page
-    .getByRole("heading", { name: "Observed match games", exact: true })
-    .waitFor();
+  const observedHeading = page.getByRole("heading", {
+    name: "Observed match games",
+    exact: true,
+  });
+  await observedHeading.waitFor();
+  await page.waitForFunction(
+    () => document.activeElement?.id === "observed-match-games-heading",
+  );
+  const observedBox = await observedHeading.boundingBox();
+  assert.ok(
+    observedBox &&
+      observedBox.y >= 0 &&
+      observedBox.y + observedBox.height <= 1100,
+    "Opening observed games must bring them into the viewport",
+  );
+  assert.ok((await page.locator("#observed-match-games tbody tr").count()) > 0);
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1100 });
+    await page.getByRole("button", { name: /View observed games/ }).click();
+    await page.waitForFunction(
+      () => document.activeElement?.id === "observed-match-games-heading",
+    );
+    const box = await observedHeading.boundingBox();
+    assert.ok(
+      box && box.y >= 0 && box.y + box.height <= 1100,
+      "Observed games must be in view at width " + width,
+    );
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth + 1,
