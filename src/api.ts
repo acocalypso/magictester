@@ -1,3 +1,4 @@
+import { importDeckLink, DeckLinkError } from "./deck-links.js";
 import { resolveRuntime, updateStatus } from "./runtime.mjs";
 import { stopSourceImports } from "./source-http.js";
 import { selectionSchema } from "./planning.js";
@@ -104,6 +105,8 @@ await app.register(swagger, {
 });
 await app.register(swaggerUi, { routePrefix: "/api/docs" });
 app.setErrorHandler((error, _req, reply) => {
+  if (error instanceof DeckLinkError)
+    return reply.code(error.statusCode).send({ error: error.message });
   if (error instanceof z.ZodError)
     return reply
       .code(400)
@@ -168,6 +171,37 @@ app.get<{ Params: { format: string } }>(
     },
   },
   async (req) => referencePool(req.params.format, cards).decks[0],
+);
+app.post(
+  "/api/v1/decks/import-link",
+  {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    schema: {
+      tags: ["Decks"],
+      body: {
+        type: "object",
+        required: ["url", "format"],
+        additionalProperties: false,
+        properties: {
+          url: { type: "string", maxLength: 1000 },
+          format: { type: "string", enum: validationFormatIds() },
+        },
+      },
+    },
+  },
+  async (req) => {
+    const body = z
+      .object({
+        url: z.string().trim().min(1).max(1000),
+        format: z.enum(validationFormatIds()),
+      })
+      .parse(req.body);
+    const imported = await importDeckLink(body.url);
+    return {
+      ...imported,
+      validation: validateDeck(imported.decklist, body.format, cards),
+    };
+  },
 );
 app.post(
   "/api/v1/decks/validate",

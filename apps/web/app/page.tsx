@@ -321,6 +321,14 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [deckName, setDeckName] = useState("My test deck");
   const [decklist, setDecklist] = useState("");
+  const [deckUrl, setDeckUrl] = useState("");
+  const [deckImport, setDeckImport] = useState<{
+    provider: string;
+    url: string;
+    fetchedAt: string;
+  } | null>(null);
+  const decklistRef = useRef(decklist);
+  decklistRef.current = decklist;
   const [snapshotId, setSnapshotId] = useState("");
   const [games, setGames] = useState(50);
   const [seed, setSeed] = useState(12345);
@@ -642,6 +650,55 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+              <details className="testing-guide">
+                <summary>How your deck is checked and tested</summary>
+                <ol>
+                  <li>
+                    <strong>Import and check your list.</strong> Paste card
+                    quantities or import a Moxfield or Archidekt link. Choose
+                    the format you want to test. We check card names, deck and
+                    sideboard sizes, copy limits, bans and legality against
+                    refreshed card data, plus support in the installed Forge
+                    release. Commander checks include commander eligibility,
+                    partner rules, color identity and singleton rules;
+                    companions have their own restrictions. Maybeboard cards are
+                    kept for reference and excluded from play. A valid list
+                    passes these checks; it does not guarantee that every card
+                    interaction works in Forge.
+                  </li>
+                  <li>
+                    <strong>Choose the opponents and test.</strong> The daily
+                    pool uses recent tournament lists, reported archetype shares
+                    and the coverage shown below. Commander uses the competitive
+                    cEDH population. You can choose a saved pool and change
+                    allocation. Each job saves the exact deck, opponent lists,
+                    rules and engine build, so a later refresh does not change a
+                    running test. Both players use Forge AI. BO3 plays until a
+                    player wins twice, with optional native AI sideboarding and
+                    a cap on total games so repeated draws cannot run
+                    indefinitely.
+                  </li>
+                  <li>
+                    <strong>Follow progress and read the results.</strong> Jobs
+                    wait for an engine slot, then play real games. Runtime
+                    depends on the queue, sample size and deck complexity.
+                    Engine startup adds time beyond the per-game clock. You can
+                    leave this page and return to the saved job. Cancellation
+                    preserves completed results; resume runs the unfinished
+                    units. Timeouts and engine failures are shown separately and
+                    excluded from win rates. Confidence intervals show sampling
+                    uncertainty; small samples can move substantially.
+                  </li>
+                </ol>
+                <p>
+                  These results measure this Forge AI configuration. They are
+                  not a prediction of human tournament win rate. Aggro and
+                  midrange tend to suit the AI better than intricate control and
+                  combo decks. Inspect failed runs and matchup coverage before
+                  drawing conclusions; a failed job can still contain completed
+                  games worth reviewing.
+                </p>
+              </details>
               <div className="analysis-grid">
                 <section className="panel deck-panel">
                   <div className="panel-heading">
@@ -662,6 +719,7 @@ export default function Home() {
                           setDecklist(sample.decklist);
                           setDeckName(sample.name);
                           setValidation(null);
+                          setDeckImport(null);
                         } catch (e) {
                           setError((e as Error).message);
                         } finally {
@@ -673,6 +731,82 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="panel-body">
+                    <label htmlFor="deck-url">Import a deck link</label>
+                    <div className="deck-link-row">
+                      <input
+                        id="deck-url"
+                        type="url"
+                        value={deckUrl}
+                        onChange={(e) => setDeckUrl(e.target.value)}
+                        placeholder="Moxfield or Archidekt deck URL"
+                        disabled={busy}
+                        maxLength={1000}
+                      />
+                      <button
+                        className="secondary"
+                        disabled={busy || !deckUrl.trim()}
+                        onClick={async () => {
+                          const requestedFormat = format,
+                            original = decklistRef.current;
+                          setBusy(true);
+                          setError("");
+                          try {
+                            const imported = await api<{
+                              name: string;
+                              decklist: string;
+                              source: {
+                                provider: string;
+                                url: string;
+                                fetchedAt: string;
+                              };
+                              validation: NonNullable<typeof validation>;
+                            }>("/decks/import-link", {
+                              url: deckUrl,
+                              format: requestedFormat,
+                            });
+                            if (
+                              formatRef.current !== requestedFormat ||
+                              decklistRef.current !== original
+                            ) {
+                              setError(
+                                "The editor changed while importing. Import again to load the linked deck.",
+                              );
+                              return;
+                            }
+                            setDecklist(imported.decklist);
+                            setDeckName(imported.name);
+                            setValidation(imported.validation);
+                            setDeckImport(imported.source);
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        {busy ? "Working…" : "Import deck"}
+                      </button>
+                    </div>
+                    <p className="deck-link-note">
+                      Public or unlisted decks. Imported lists are checked
+                      against your selected format; you can edit them before
+                      testing.
+                    </p>
+                    {deckImport && (
+                      <p className="deck-link-note" role="status">
+                        Imported from{" "}
+                        <a
+                          href={deckImport.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {deckImport.provider === "moxfield"
+                            ? "Moxfield"
+                            : "Archidekt"}
+                        </a>
+                        . This is a copy of the list at import time.
+                      </p>
+                    )}
                     <label htmlFor="deck-name">Deck name</label>
                     <input
                       id="deck-name"
@@ -704,6 +838,7 @@ export default function Home() {
                         onChange={(e) => {
                           setDecklist(e.target.value);
                           setValidation(null);
+                          setDeckImport(null);
                         }}
                         placeholder={
                           "Paste your decklist here…\n\n4 Lightning Bolt\n4 Chain Lightning\n20 Mountain\n\nSideboard\n4 Red Elemental Blast"

@@ -2021,3 +2021,54 @@ td strong,
   padding: 12px;
   border: 1px solid var(--border);
 }
+
+.deck-link-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.deck-link-row input {
+  min-width: 0;
+  flex: 1;
+  margin-bottom: 0;
+}
+.deck-link-row button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.deck-link-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 8px 0 16px;
+  overflow-wrap: anywhere;
+}
+.testing-guide {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 24px;
+  padding: 14px 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.testing-guide summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.testing-guide ol {
+  padding-left: 22px;
+  max-width: 100ch;
+}
+.testing-guide li {
+  margin: 12px 0;
+  padding-left: 4px;
+}
+.testing-guide p {
+  max-width: 100ch;
+  color: var(--muted);
+}
+@media (max-width: 480px) {
+  .deck-link-row {
+    flex-direction: column;
+  }
+}

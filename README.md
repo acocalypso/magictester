@@ -93,3 +93,5 @@ See [simulation methodology](docs/SIMULATION_MODEL.md), [Forge integration](docs
 This independent application is not affiliated with or endorsed by Wizards of the Coast. Magic: The Gathering is a trademark of Wizards of the Coast. No card artwork is bundled.
 
 See [opponent allocation](docs/OPPONENT_SELECTION.md), [operations](docs/OPERATIONS.md), and daily metagame [sources and feed contract](docs/sources/METAGAME.md). Configure `META_FEED_HOSTS` for trusted public sources; registration and refresh require `ADMIN_TOKEN`. Bundled reference lists do not claim to be current tournament decks.
+
+Decks can also be imported from public or unlisted Moxfield and Archidekt links. See [deck importing and validation](docs/DECK_IMPORTS.md); the testing screen explains the checks, simulation process and what to expect.
