@@ -1,8 +1,9 @@
+import { rateLimitedFetch } from "./test-http.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 const base = (process.env.BASE_URL || "http://localhost:3000") + "/api/v1";
 async function request(path, body, expected = 200) {
-  const r = await fetch(base + path, {
+  const r = await rateLimitedFetch(base + path, {
     method: body ? "POST" : "GET",
     headers: { "content-type": "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),

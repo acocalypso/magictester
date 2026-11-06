@@ -7,6 +7,7 @@ import {
   rename,
   rm,
   mkdtemp,
+  chmod,
 } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createHash } from "node:crypto";
@@ -242,6 +243,7 @@ if (
     ],
     { cwd: home, stdio: "inherit" },
   );
+  await chmod(buildClasses, 0o755);
   if (!existsSync(classPath)) await rename(buildClasses, classPath);
   else await rm(buildClasses, { recursive: true, force: true });
   // Publish only complete immutable builds. Running JVMs retain their original path.
@@ -267,6 +269,8 @@ if (
     JSON.stringify({ event: "forge_bridge_compiled", sourceHash: bridgeHash }),
   );
 }
+// mkdtemp defaults to owner-only; the runtime runs as the unprivileged node user.
+await chmod(classPath, 0o755);
 console.log(
   JSON.stringify({
     event: "bootstrap_complete",
