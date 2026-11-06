@@ -1,0 +1,11 @@
+CREATE TABLE meta_snapshots (id uuid PRIMARY KEY,format text NOT NULL,name text NOT NULL,source text NOT NULL,source_date text,selection_method text NOT NULL,decks jsonb NOT NULL,metadata jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE deck_versions (id uuid PRIMARY KEY,name text NOT NULL,format text NOT NULL,decklist text NOT NULL,cards jsonb NOT NULL,card_data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE simulation_jobs (id uuid PRIMARY KEY,deck_version_id uuid NOT NULL REFERENCES deck_versions(id),snapshot_id uuid NOT NULL REFERENCES meta_snapshots(id),state text NOT NULL DEFAULT 'QUEUED' CHECK(state IN ('QUEUED','PREPARING','RUNNING','AGGREGATING','COMPLETED','FAILED','CANCELLED')),games int NOT NULL CHECK(games>0),seed int NOT NULL,clock_seconds int NOT NULL CHECK(clock_seconds>0),client_key text NOT NULL,cancel_requested boolean NOT NULL DEFAULT false,config jsonb NOT NULL,error text,created_at timestamptz NOT NULL DEFAULT now(),started_at timestamptz,finished_at timestamptz);
+CREATE INDEX jobs_state_idx ON simulation_jobs(state);
+CREATE TABLE simulation_runs (id uuid PRIMARY KEY,job_id uuid NOT NULL REFERENCES simulation_jobs(id),opponent_id text NOT NULL,batch_index int NOT NULL,seed int NOT NULL,state text NOT NULL DEFAULT 'PENDING' CHECK(state IN ('PENDING','DONE','ERROR')),result jsonb,error text,finished_at timestamptz);
+CREATE UNIQUE INDEX run_identity_idx ON simulation_runs(job_id,opponent_id,batch_index);
+CREATE INDEX runs_job_idx ON simulation_runs(job_id);
+CREATE TABLE simulation_events (id uuid PRIMARY KEY,job_id uuid NOT NULL REFERENCES simulation_jobs(id),kind text NOT NULL,data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE FUNCTION reject_immutable_change() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Immutable version: insert a new version instead'; END; $$;
+CREATE TRIGGER immutable_snapshot BEFORE UPDATE OR DELETE ON meta_snapshots FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();
+CREATE TRIGGER immutable_deck BEFORE UPDATE OR DELETE ON deck_versions FOR EACH ROW EXECUTE FUNCTION reject_immutable_change();

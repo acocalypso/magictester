@@ -1,0 +1,361 @@
+Error handling registered!
+16:14:02 [INFO ] GuiBase: ##########################################
+16:14:02 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+16:14:02 [INFO ] GuiBase: Java: 21.0.13 (Eclipse Adoptium)
+16:14:02 [INFO ] GuiBase: OS: Linux 6.18.57 amd64
+16:14:02 [INFO ] GuiBase: RAM: 1024 MB max, 2 CPUs
+16:14:02 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Read cards: 34010 archived files in 1 ms (25 parts) using thread pool
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+The card A-Alrund's Epiphany was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Baba Lysaga, Night Witch was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Divide by Zero was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Esika's Chariot was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Faceless Haven was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Fires of Invention was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Goldspan Dragon was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Hullbreaker Horror was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Kumano Faces Kakkazan was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Luminarch Aspirant was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Monster Manual was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Omnath, Locus of Creation was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-The Meathook Massacre was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Unholy Heat was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Blinding Radiance was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Goblin Bruiser was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Ogre Painbringer was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Titanic Pelagosaur was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Treetop Recluse was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-deck-a vs Ai(2)-deck-b - one game of Constructed seed 12345
+Mountain Did not have activator set in SpellAbilityRestriction.canPlay()
+Shock Did not have activator set in SpellAbilityRestriction.canPlay()
+Mulligan: Ai(2)-deck-b has mulliganed down to 6 cards.
+Mulligan: Ai(1)-deck-a has kept a hand of 7 cards
+Mulligan: Ai(2)-deck-b has kept a hand of 6 cards
+Turn: Turn 1 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (24)
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Monastery Swiftspear
+Resolve Stack: Monastery Swiftspear - Creature 1 / 2
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Combat: Ai(1)-deck-a assigned Monastery Swiftspear (7) to attack Ai(2)-deck-b.
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Combat: Ai(2)-deck-b didn't block Monastery Swiftspear (7).
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Damage: Monastery Swiftspear (7) deals 1 combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 20 > 19
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 2 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (97)
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Phase: Ai(2)-deck-b's End step
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 3 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (32)
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Combat: Ai(1)-deck-a assigned Monastery Swiftspear (7) to attack Ai(2)-deck-b.
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Combat: Ai(2)-deck-b didn't block Monastery Swiftspear (7).
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Damage: Monastery Swiftspear (7) deals 1 combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 19 > 18
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 4 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (88)
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Mana: Forest (97) - {T}: Add {G}.
+Mana: Forest (88) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Grizzly Bears
+Resolve Stack: Grizzly Bears - Creature 2 / 2
+Phase: Ai(2)-deck-b's End step
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Shock targeting [Ai(2)-deck-b]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Shock (46), Activator: Ai(1)-deck-a, SpellAbility: Shock deals 2 damage to any target.]
+Damage: Shock (46) deals 2 non-combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 18 > 16
+Resolve Stack: Shock (46) - Shock (46) deals 2 damage to Ai(2)-deck-b.
+Mana: Mountain (32) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Lightning Bolt targeting [Grizzly Bears (60)]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Lightning Bolt (4), Activator: Ai(1)-deck-a, SpellAbility: Lightning Bolt deals 3 damage to any target.]
+Damage: Lightning Bolt (4) deals 3 damage to Grizzly Bears (60).
+Resolve Stack: Lightning Bolt (4) - Lightning Bolt (4) deals 3 damage to Grizzly Bears (60).
+Zone Change: Grizzly Bears (60) was put into Graveyard from Battlefield.
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 5 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (25)
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Combat: Ai(1)-deck-a assigned Monastery Swiftspear (7) to attack Ai(2)-deck-b.
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Combat: Ai(2)-deck-b didn't block Monastery Swiftspear (7).
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Damage: Monastery Swiftspear (7) deals 1 combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 16 > 15
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 6 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (92)
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Mana: Forest (97) - {T}: Add {G}.
+Mana: Forest (88) - {T}: Add {G}.
+Mana: Forest (92) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Leatherback Baloth
+Resolve Stack: Leatherback Baloth - Creature 4 / 5
+Phase: Ai(2)-deck-b's End step
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 7 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (27)
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Chain Lightning targeting [Ai(2)-deck-b]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Chain Lightning (54), Activator: Ai(1)-deck-a, SpellAbility: Chain Lightning deals 3 damage to any target. Then that player or that permanent's controller may pay {R}{R}. If the player does, they may copy this spell and may choose a new target for that copy. ]
+Damage: Chain Lightning (54) deals 3 non-combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 15 > 12
+Resolve Stack: Chain Lightning (54) - Chain Lightning (54) deals 3 damage to Ai(2)-deck-b. 
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 8 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (82)
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Combat: Ai(2)-deck-b assigned Leatherback Baloth (72) to attack Ai(1)-deck-a.
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Combat: Ai(1)-deck-a didn't block Leatherback Baloth (72).
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Damage: Leatherback Baloth (72) deals 4 combat damage to Ai(1)-deck-a.
+Life: Life: Ai(1)-deck-a 20 > 16
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Mana: Forest (97) - {T}: Add {G}.
+Mana: Forest (88) - {T}: Add {G}.
+Mana: Forest (92) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Leatherback Baloth
+Resolve Stack: Leatherback Baloth - Creature 4 / 5
+Phase: Ai(2)-deck-b's End step
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 9 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Land: Ai(1)-deck-a played Mountain (38)
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 10 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (81)
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Combat: Ai(2)-deck-b assigned Leatherback Baloth (72) and Leatherback Baloth (70) to attack Ai(1)-deck-a.
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Combat: Ai(1)-deck-a didn't block Leatherback Baloth (72).
+Ai(1)-deck-a didn't block Leatherback Baloth (70).
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Damage: Leatherback Baloth (72) deals 4 combat damage to Ai(1)-deck-a.
+Damage: Leatherback Baloth (70) deals 4 combat damage to Ai(1)-deck-a.
+Life: Life: Ai(1)-deck-a 16 > 8
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Mana: Forest (97) - {T}: Add {G}.
+Mana: Forest (88) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Runeclaw Bear
+Resolve Stack: Runeclaw Bear - Creature 2 / 2
+Mana: Forest (92) - {T}: Add {G}.
+Mana: Forest (82) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Nest Invader
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Shock targeting [Runeclaw Bear (65)]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Shock (48), Activator: Ai(1)-deck-a, SpellAbility: Shock deals 2 damage to any target.]
+Mana: Forest (81) - {T}: Add {G}.
+Add To Stack: Ai(2)-deck-b cast Giant Growth targeting [Runeclaw Bear (65)]
+Resolve Stack: Giant Growth (76) - Runeclaw Bear (65) gets +3/+3  until end of turn.
+Damage: Shock (48) deals 2 damage to Runeclaw Bear (65).
+Resolve Stack: Shock (48) - Shock (48) deals 2 damage to Runeclaw Bear (65).
+Mana: Mountain (32) - {T}: Add {R}.
+Mana: Mountain (25) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Incinerate targeting [Runeclaw Bear (65)]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Incinerate (11), Activator: Ai(1)-deck-a, SpellAbility: Incinerate deals 3 damage to any target. A creature dealt damage this way can't be regenerated this turn.  ]
+Damage: Incinerate (11) deals 3 damage to Runeclaw Bear (65).
+Resolve Stack: Incinerate (11) - Incinerate (11) deals 3 damage to Runeclaw Bear (65).  
+Zone Change: Runeclaw Bear (65) was put into Graveyard from Battlefield.
+Resolve Stack: Nest Invader - Creature 2 / 2
+Add To Stack: Ai(2)-deck-b triggered Nest Invader
+Resolve Stack: When Nest Invader enters, create a 0/1 colorless Eldrazi Spawn creature token. It has "Sacrifice this creature: Add {C}." [Zone Changer: Nest Invader (112)]
+Phase: Ai(2)-deck-b's End step
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 11 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Chain Lightning targeting [Nest Invader (112)]
+Add To Stack: Ai(1)-deck-a triggered Monastery Swiftspear
+Resolve Stack: Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.) [Card: Chain Lightning (55), Activator: Ai(1)-deck-a, SpellAbility: Chain Lightning deals 3 damage to any target. Then that player or that permanent's controller may pay {R}{R}. If the player does, they may copy this spell and may choose a new target for that copy. ]
+Damage: Chain Lightning (55) deals 3 damage to Nest Invader (112).
+Resolve Stack: Chain Lightning (55) - Chain Lightning (55) deals 3 damage to Nest Invader (112). 
+Zone Change: Nest Invader (112) was put into Graveyard from Battlefield.
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 12 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Combat: Ai(2)-deck-b assigned Leatherback Baloth (72) and Leatherback Baloth (70) to attack Ai(1)-deck-a.
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Combat: Ai(1)-deck-a assigned Monastery Swiftspear (7) to block Leatherback Baloth (72).
+Ai(1)-deck-a didn't block Leatherback Baloth (70).
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Damage: Leatherback Baloth (72) deals 4 damage to Monastery Swiftspear (7).
+Damage: Leatherback Baloth (70) deals 4 combat damage to Ai(1)-deck-a.
+Damage: Monastery Swiftspear (7) deals 1 damage to Leatherback Baloth (72).
+Life: Life: Ai(1)-deck-a 8 > 4
+Zone Change: Monastery Swiftspear (7) was put into Graveyard from Battlefield.
+Phase: Ai(2)-deck-b's End of Combat Step
+Phase: Ai(2)-deck-b's Main phase, postcombat
+Land: Ai(2)-deck-b played Forest (99)
+Phase: Ai(2)-deck-b's End step
+Phase: Ai(2)-deck-b's Cleanup step
+Turn: Turn 13 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (34)
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 14 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Phase: Ai(2)-deck-b's Beginning of Combat Step
+Phase: Ai(2)-deck-b's Declare Attackers Step
+Combat: Ai(2)-deck-b assigned Leatherback Baloth (72) and Leatherback Baloth (70) to attack Ai(1)-deck-a.
+Phase: Ai(2)-deck-b's Declare Blockers Step
+Combat: Ai(1)-deck-a didn't block Leatherback Baloth (72).
+Ai(1)-deck-a didn't block Leatherback Baloth (70).
+Phase: Ai(2)-deck-b's First Strike Damage Step
+Phase: Ai(2)-deck-b's Combat Damage Step
+Damage: Leatherback Baloth (72) deals 4 combat damage to Ai(1)-deck-a.
+Damage: Leatherback Baloth (70) deals 4 combat damage to Ai(1)-deck-a.
+Life: Life: Ai(1)-deck-a 4 > -4
+Player Control: Ai(1)-deck-a has restored control over themself
+Player Control: Ai(2)-deck-b has restored control over themself
+Game Outcome: Match Duration 0m : 02s
+Game Outcome: Turn 7
+Game Outcome: Ai(1)-deck-a has lost because life total reached 0
+Game Outcome: Ai(2)-deck-b has won because all opponents have lost
+Match Result: Ai(1)-deck-a: 0 Ai(2)-deck-b: 1 
+
+Game Result: Game 1 ended in 3337 ms. Ai(2)-deck-b has won!
+

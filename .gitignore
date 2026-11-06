@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+.env
+.env.*
+!.env.example
+data/*
+!data/.gitkeep
+runtime/
+*.tsbuildinfo
+coverage/
+test-results/

@@ -1,0 +1,118 @@
+// Download immutable Forge release and cache Scryfall bulk metadata. No card artwork.
+import { existsSync, createReadStream } from "node:fs";
+import { mkdir, readFile, writeFile, rename, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createGunzip } from "node:zlib";
+import { createInterface } from "node:readline";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { createWriteStream } from "node:fs";
+const root = process.env.DATA_DIR || "/data";
+const home = process.env.FORGE_HOME || root + "/forge";
+const headers = {
+  "User-Agent": "MagicTester/0.1 (https://github.com/acocalypso/magictester)",
+  Accept: "application/json",
+};
+async function get(url) {
+  const r = await fetch(url, { headers, signal: AbortSignal.timeout(600000) });
+  if (!r.ok) throw new Error(`Download failed ${r.status}: ${url}`);
+  return r;
+}
+await mkdir(root, { recursive: true });
+await mkdir(home, { recursive: true });
+if (!existsSync(home + "/build.txt")) {
+  const archive = root + "/forge.tar.bz2";
+  const url =
+    "https://github.com/Card-Forge/forge/releases/download/forge-2.0.15/forge-installer-2.0.15.tar.bz2";
+  console.log(JSON.stringify({ event: "downloading_forge", url }));
+  await pipeline(
+    Readable.fromWeb((await get(url)).body),
+    createWriteStream(archive),
+  );
+  const hash = createHash("sha256");
+  for await (const b of createReadStream(archive)) hash.update(b);
+  if (
+    hash.digest("hex") !==
+    "4468f182b60f6ca62d89697baa208981085af744f116781af751c611826db600"
+  )
+    throw new Error("Forge archive checksum mismatch");
+  execFileSync("tar", ["-xjf", archive, "-C", home]);
+  await rm(archive);
+}
+if (
+  !existsSync(root + "/cards.json") ||
+  process.argv.includes("--refresh-cards")
+) {
+  const bulk = (
+    await (await get("https://api.scryfall.com/bulk-data")).json()
+  ).data.find((x) => x.type === "oracle_cards");
+  const url = bulk.jsonl_download_uri || bulk.download_uri;
+  if (!url) throw new Error("Unsupported Scryfall bulk schema");
+  console.log(JSON.stringify({ event: "downloading_scryfall", url }));
+  const cards = [];
+  const add = (c) => {
+    if (
+      c.name &&
+      c.legalities &&
+      !["token", "double_faced_token", "emblem", "art_series"].includes(
+        c.layout,
+      )
+    )
+      cards.push({
+        name: c.name,
+        legalities: c.legalities,
+        typeLine: c.type_line || "",
+        colorIdentity: c.color_identity || [],
+        oracleText: c.oracle_text || "",
+        faces: (c.card_faces || []).map((f) => ({
+          name: f.name,
+          typeLine: f.type_line,
+          oracleText: f.oracle_text,
+        })),
+        scryfallId: c.id,
+      });
+  };
+  if (bulk.jsonl_download_uri) {
+    const stream = Readable.fromWeb((await get(url)).body);
+    const input = url.endsWith(".gz") ? stream.pipe(createGunzip()) : stream;
+    for await (const line of createInterface({ input }))
+      if (line.trim()) add(JSON.parse(line));
+  } else {
+    for (const c of await (await get(url)).json()) add(c);
+  }
+  await writeFile(
+    root + "/cards.json.tmp",
+    JSON.stringify({
+      source: "Scryfall oracle_cards",
+      sourceUpdatedAt: bulk.updated_at,
+      fetchedAt: new Date().toISOString(),
+      cards,
+    }),
+  );
+  await rename(root + "/cards.json.tmp", root + "/cards.json");
+  console.log(JSON.stringify({ event: "cards_cached", count: cards.length }));
+}
+// Extract supported card names from the release's scripts archive using the JDK jar utility.
+if (!existsSync(root + "/forge-cards.json")) {
+  const archive = home + "/res/cardsfolder/cardsfolder.zip";
+  // Python isn't required: the `jar tf` list contains named script paths, but the card's actual
+  // Name field can differ. Use a tiny Java ZIP reader to preserve exact names.
+  const source = `import java.util.zip.*;import java.io.*;import java.nio.charset.StandardCharsets;public class CardNames{public static void main(String[]a)throws Exception{try(ZipFile z=new ZipFile(a[0])){var entries=z.entries();while(entries.hasMoreElements()){var e=entries.nextElement();if(e.isDirectory())continue;try(var r=new BufferedReader(new InputStreamReader(z.getInputStream(e),StandardCharsets.UTF_8))){String l;while((l=r.readLine())!=null){if(l.startsWith("Name:"))System.out.println(l.substring(5).trim());}}}}}}`;
+  await writeFile(root + "/CardNames.java", source);
+  // Source launch requires a JDK. Bootstrap image carries one; the runner uses a JRE.
+  const names = execFileSync("java", [root + "/CardNames.java", archive], {
+    maxBuffer: 16 * 1024 * 1024,
+  })
+    .toString()
+    .split("\n")
+    .filter(Boolean);
+  await writeFile(root + "/forge-cards.json", JSON.stringify(names));
+  await rm(root + "/CardNames.java");
+}
+console.log(
+  JSON.stringify({
+    event: "bootstrap_complete",
+    build: (await readFile(home + "/build.txt", "utf8")).trim(),
+  }),
+);

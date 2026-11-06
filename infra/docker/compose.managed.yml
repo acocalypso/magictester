@@ -1,0 +1,17 @@
+# Optional overlay for environments with an HTTPS inspection CA.
+x-managed-build: &managed-build
+  secrets: [proxy_ca]
+services:
+  api: { build: *managed-build }
+  worker: { build: *managed-build }
+  forge-runner: { build: *managed-build }
+  web: { build: *managed-build }
+  bootstrap:
+    build: *managed-build
+    environment:
+      NODE_EXTRA_CA_CERTS: /run/proxy-ca.pem
+    volumes:
+      - ${CODEX_PROXY_CERT:-/etc/ssl/certs/ca-certificates.crt}:/run/proxy-ca.pem:ro
+secrets:
+  proxy_ca:
+    file: ${CODEX_PROXY_CERT:-/etc/ssl/certs/ca-certificates.crt}

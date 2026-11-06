@@ -1,0 +1,162 @@
+name: magictester
+x-app: &app
+  image: magictester-app
+  build:
+    context: .
+    target: backend
+  restart: unless-stopped
+  init: true
+  environment: &env
+    DATABASE_URL: postgres://magictester:${POSTGRES_PASSWORD:-magictester-local}@postgres:5432/magictester
+    REDIS_HOST: redis
+    DATA_DIR: /data
+    FORGE_HOME: /data/forge
+    RUNNER_URL: http://forge-runner:3002
+    LOG_DIR: /app/logs
+    NO_PROXY: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web
+    no_proxy: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web
+    MAX_GAMES_PER_JOB: ${MAX_GAMES_PER_JOB:-1000}
+    SIMULATION_CONCURRENCY: ${SIMULATION_CONCURRENCY:-1}
+    MAX_FORGE_PROCESSES: ${MAX_FORGE_PROCESSES:-1}
+    MAX_JOB_RUNTIME_SECONDS: ${MAX_JOB_RUNTIME_SECONDS:-21600}
+  volumes:
+    - runtime:/data:ro
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: magictester
+      POSTGRES_USER: magictester
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-magictester-local}
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magictester -d magictester"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7.4-alpine
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    restart: unless-stopped
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  bootstrap:
+    build:
+      context: .
+      target: bootstrap
+    environment:
+      <<: *env
+      NODE_EXTRA_CA_CERTS: ${RUNTIME_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
+    volumes: [runtime:/data]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: "no"
+  forge-runner:
+    <<: *app
+    image: magictester-runner
+    build:
+      context: .
+      target: runner
+    command: ["node", "dist/runner.js"]
+    environment:
+      <<: *env
+      FORGE_HEAP: ${FORGE_HEAP:-1024m}
+    volumes: [runtime:/data:ro, forge-logs:/app/logs]
+    tmpfs: ["/tmp:mode=1777,size=128m"]
+    mem_limit: ${RUNNER_MEMORY:-2g}
+    cpus: ${RUNNER_CPUS:-2}
+    stop_grace_period: 15s
+    depends_on:
+      bootstrap: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  api:
+    <<: *app
+    command: ["node", "dist/api.js"]
+    environment:
+      <<: *env
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      bootstrap: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.js"]
+    stop_grace_period: 30s
+    depends_on:
+      api: { condition: service_healthy }
+      forge-runner: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    <<: *app
+    image: magictester-web
+    build:
+      context: .
+      target: web
+    command: ["node", "apps/web/server.js"]
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres:
+  redis:
+  runtime:
+  forge-logs:
