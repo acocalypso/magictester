@@ -1,3 +1,4 @@
+import { resolveRuntime, updateStatus } from "./runtime.mjs";
 import { stopSourceImports } from "./source-http.js";
 import { selectionSchema } from "./planning.js";
 import {
@@ -51,10 +52,25 @@ const cacheTimer = setInterval(() => {
   void (async () => {
     const { stat } = await import("node:fs/promises");
     const root = process.env.DATA_DIR || "/data";
+    const runtime = await resolveRuntime();
+    const { resolve } = await import("node:path");
     const fingerprint = (
       await Promise.all(
-        ["cards.json", "forge-facts.json", "forge/magictester-bridge.json"].map(
-          async (file) => (await stat(root + "/" + file)).mtimeMs,
+        [
+          root + "/cards.json",
+          runtime.home + "/magictester-bridge.json",
+          resolve(runtime.home, runtime.bridge.metadataDirectory || "..") +
+            "/forge-facts.json",
+          (process.env.FORGE_HOME || root + "/forge") +
+            "/runtime-registry.json",
+        ].map(
+          async (file) =>
+            (
+              await stat(file).catch((e) => {
+                if (e.code === "ENOENT") return { mtimeMs: 0 };
+                throw e;
+              })
+            ).mtimeMs,
         ),
       )
     ).join(":");
@@ -451,7 +467,7 @@ const requireAdmin = async (req: { headers: { authorization?: string } }) => {
 };
 app.get<{ Params: { format: string } }>(
   "/api/v1/meta/:format/current",
-  async (req) => currentMetagame(req.params.format),
+  async (req) => currentMetagame(req.params.format, cards.provenance),
 );
 app.get("/api/v1/meta/feeds", async () => listFeeds());
 app.post(
@@ -496,7 +512,7 @@ app.patch<{ Params: { id: string } }>(
   },
 );
 let feedBusy = false;
-const feedTimer = setInterval(() => {
+function refreshFeeds() {
   if (feedBusy) return;
   feedBusy = true;
   void syncDueFeeds(cards)
@@ -504,7 +520,8 @@ const feedTimer = setInterval(() => {
     .finally(() => {
       feedBusy = false;
     });
-}, 60000);
+}
+const feedTimer = setInterval(refreshFeeds, 60000);
 feedTimer.unref();
 app.get("/api/v1/operations", async () => {
   const [states, runner, metadata] = await Promise.all([
@@ -528,6 +545,7 @@ app.get("/api/v1/operations", async () => {
   ]);
   return {
     jobs: states.rows,
+    forgeUpdates: await updateStatus(),
     runner,
     metadata,
     cardData: cards.provenance,
@@ -550,10 +568,30 @@ app.post(
     return reply.code(response.status).send(await response.json());
   },
 );
+app.post(
+  "/api/v1/operations/check-forge",
+  { preHandler: requireAdmin },
+  async (req, reply) => {
+    const response = await fetch(
+      (process.env.MAINTENANCE_URL || "http://maintenance:3004") +
+        "/refresh?engine=stable",
+      {
+        method: "POST",
+        headers: { authorization: req.headers.authorization || "" },
+        signal: AbortSignal.timeout(5000),
+      },
+    );
+    return reply.code(response.status).send(await response.json());
+  },
+);
 app.get("/api/v1/status", { schema: { tags: ["Operations"] } }, async () => ({
   queue: await queue.getJobCounts("waiting", "active", "failed"),
   limits: config,
-  engine: "Forge 2.0.15",
+  engine:
+    "Forge " +
+    ((cards.provenance.engineBridge as { engineVersion?: string })
+      ?.engineVersion || "unavailable"),
+  forgeUpdates: await updateStatus(),
   formats: enabledFormatIds(),
   model: "AI-vs-AI BO1 / BO3",
   authentication: "local/private deployment only",
@@ -579,3 +617,5 @@ for (const signal of ["SIGTERM", "SIGINT"])
       })(),
   );
 await app.listen({ port: Number(process.env.PORT || 3001), host: "0.0.0.0" });
+
+refreshFeeds();

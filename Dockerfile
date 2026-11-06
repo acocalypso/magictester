@@ -18,7 +18,7 @@ FROM backend AS bootstrap
 USER root
 RUN --mount=type=secret,id=proxy_ca if [ -f /run/secrets/proxy_ca ]; then export SSL_CERT_FILE=/run/secrets/proxy_ca; fi; apk add --no-cache openjdk21-jdk bzip2
 ENV NODE_USE_ENV_PROXY=1
-CMD ["sh","-c","node scripts/bootstrap.mjs && node dist/migrate.js && node dist/seed.js"]
+CMD ["sh","-c","node scripts/bootstrap.mjs && node scripts/update-forge.mjs && node dist/migrate.js && node dist/seed.js"]
 FROM node:24-alpine AS web-build
 WORKDIR /app
 COPY . .

@@ -1,6 +1,7 @@
+import { resolveRuntime } from "./runtime.mjs";
 import Fastify from "fastify";
 import { z } from "zod";
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { ForgeEngineAdapter } from "./engine.js";
 import { config } from "./config.js";
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
@@ -9,15 +10,16 @@ let active = 0;
 const controllers = new Set<AbortController>();
 app.get("/health", async (_req, reply) => {
   try {
+    const runtime = await resolveRuntime(engine.home);
+    const bridge = runtime.bridge;
     await access(
-      engine.home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
-    );
-    await access(engine.home + "/magictester-bridge.json");
-    const bridge = JSON.parse(
-      await readFile(engine.home + "/magictester-bridge.json", "utf8"),
+      runtime.home +
+        "/" +
+        (bridge.release?.jarName ||
+          `forge-gui-desktop-${bridge.engineVersion}-jar-with-dependencies.jar`),
     );
     await access(
-      engine.home +
+      runtime.home +
         "/" +
         (bridge.classDirectory || "magictester-bridge") +
         "/MagicTesterBridge.class",
@@ -28,7 +30,10 @@ app.get("/health", async (_req, reply) => {
       status: "ok",
       active,
       max: config.MAX_FORGE_PROCESSES,
-      capabilities: engine.getCapabilities(),
+      capabilities: {
+        ...engine.getCapabilities(),
+        version: bridge.engineVersion,
+      },
     };
   } catch {
     return reply.code(503).send({ status: "engine_missing" });
@@ -37,6 +42,12 @@ app.get("/health", async (_req, reply) => {
 app.post("/games", async (req, reply) => {
   const parsed = z
     .object({
+      runtime: z
+        .object({
+          engineVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+          sourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+        })
+        .optional(),
       bestOf: z.union([z.literal(1), z.literal(3)]).default(1),
       maxMatchGames: z.number().int().min(3).max(9).default(5),
       sideboarding: z.boolean().default(false),

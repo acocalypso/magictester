@@ -159,6 +159,7 @@ const worker = new Worker(
                   seed: plan.seed,
                   clockSeconds: job.clockSeconds,
                   traceId: id + "_" + plan.key,
+                  runtime: job.config.bridge,
                 }),
                 signal: controller.signal,
               },

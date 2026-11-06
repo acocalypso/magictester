@@ -1,3 +1,4 @@
+import { resolveRuntime } from "./runtime.mjs";
 import { boundedLog } from "./logs.js";
 import { z } from "zod";
 import { spawn } from "node:child_process";
@@ -88,6 +89,7 @@ export const gameResults = (results: EngineResult[]) =>
     result.unit === "match" ? result.games : [result],
   );
 export interface EngineRequest {
+  runtime?: { engineVersion: string; sourceHash: string };
   decks: string[];
   bestOf?: 1 | 3;
   maxMatchGames?: number;
@@ -259,7 +261,7 @@ const structuredResult = z.object({
   mode: z.enum(["constructed", "commander", "duel"]).optional(),
   mulliganRule: z.literal("London").optional(),
   engine: z.literal("forge"),
-  engineVersion: z.literal("2.0.15"),
+  engineVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
   bridgeVersion: z.enum(["1", "2"]),
   seed: z.number().int().nonnegative(),
   gameSeed: z.number().int().nonnegative(),
@@ -409,7 +411,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
   getCapabilities() {
     return {
       engine: "forge",
-      version: "2.0.15",
+      version: "stable",
       bridgeVersion: "2",
       bo3: true,
       sideboarding: "native heuristics; actual changes reported",
@@ -431,6 +433,8 @@ export class ForgeEngineAdapter implements CardGameEngine {
     signal?: AbortSignal,
     onGame?: (observation: GameObservation) => Promise<void>,
   ) {
+    const runtime = await resolveRuntime(this.home, req.runtime);
+    const home = runtime.home;
     const dir = await mkdtemp(join(tmpdir(), "magictester-"));
     await mkdir(this.logDir, { recursive: true });
     const logId =
@@ -446,12 +450,8 @@ export class ForgeEngineAdapter implements CardGameEngine {
           writeFile(join(dir, `player-${i}.dck`), deck),
         ),
       );
-      const version = (
-        await readFile(join(this.home, "build.txt"), "utf8")
-      ).trim();
-      const bridge = JSON.parse(
-        await readFile(join(this.home, "magictester-bridge.json"), "utf8"),
-      );
+      const version = (await readFile(join(home, "build.txt"), "utf8")).trim();
+      const bridge = runtime.bridge;
       if (bridge.version !== "2" || !/^[a-f0-9]{64}$/.test(bridge.sourceHash))
         throw new Error(
           "Forge bridge missing or incompatible; rerun bootstrap",
@@ -488,18 +488,20 @@ export class ForgeEngineAdapter implements CardGameEngine {
           [
             "-Xmx" + (process.env.FORGE_HEAP || "1024m"),
             "-Djava.awt.headless=true",
+            "-Dmagictester.engineVersion=" + bridge.engineVersion,
             "-Dfile.encoding=UTF-8",
             "-cp",
-            join(this.home, bridge.classDirectory || "magictester-bridge") +
+            join(home, bridge.classDirectory || "magictester-bridge") +
               ":" +
               join(
-                this.home,
-                "forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+                home,
+                bridge.release?.jarName ||
+                  `forge-gui-desktop-${bridge.engineVersion}-jar-with-dependencies.jar`,
               ),
             "MagicTesterBridge",
             configFile,
           ],
-          { cwd: this.home, stdio: ["ignore", "pipe", "pipe"], detached: true },
+          { cwd: home, stdio: ["ignore", "pipe", "pipe"], detached: true },
         );
         let killed = false;
         let forceTimer: NodeJS.Timeout | undefined;
@@ -568,7 +570,9 @@ export class ForgeEngineAdapter implements CardGameEngine {
               )
                 throw new Error("Invalid match observation identity");
               expectedGame++;
-              game.engineVersion = "2.0.15 / " + version;
+              if (game.engineVersion !== bridge.engineVersion)
+                throw new Error("Engine version mismatch");
+              game.engineVersion = bridge.engineVersion + " / " + version;
               game.bridgeSourceHash = bridge.sourceHash;
               game.logId = logId;
               resetWatchdog(90000);
@@ -599,7 +603,9 @@ export class ForgeEngineAdapter implements CardGameEngine {
               throw new Error(
                 "Match observation count or resource limit mismatch",
               );
-            result.engineVersion = "2.0.15 / " + version;
+            if (result.engineVersion !== bridge.engineVersion)
+              throw new Error("Engine version mismatch");
+            result.engineVersion = bridge.engineVersion + " / " + version;
             result.bridgeSourceHash = bridge.sourceHash;
             result.logId = logId;
             if (result.unit === "match")

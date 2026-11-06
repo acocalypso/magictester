@@ -276,6 +276,15 @@ export default function Home() {
   const formatRef = useRef(format);
   formatRef.current = format;
   const [view, setView] = useState<View>("analysis");
+  const [engineStatus, setEngineStatus] = useState<{
+    engine: string;
+    forgeUpdates: {
+      status: string;
+      latestVersion?: string;
+      checkedAt?: string;
+      error?: string;
+    };
+  }>({ engine: "Forge", forgeUpdates: { status: "checking" } });
   const [operations, setOperations] = useState<{
     runner: { status: string; active?: number; max?: number };
     metadata: { status: string; lastSuccessAt?: string; error?: string };
@@ -335,15 +344,17 @@ export default function Home() {
   >("name");
   const refresh = useCallback(async () => {
     try {
-      const [s, j, f, feeds, current] = await Promise.all([
+      const [s, j, f, feeds, current, engine] = await Promise.all([
         api<Snapshot[]>(`/meta/${format}/snapshots`),
         api<Job[]>("/simulations"),
         api<FormatInfo[]>("/formats"),
         api<Feed[]>("/meta/feeds"),
         api<DailyMeta>(`/meta/${format}/current`),
+        api<typeof engineStatus>("/status"),
       ]);
       if (formatRef.current !== format) return;
       setDailyMeta(current);
+      setEngineStatus(engine);
       setFormats(f);
       setFeeds(feeds);
       setSnapshots(s);
@@ -600,7 +611,7 @@ export default function Home() {
           <span className={connected ? "status-dot" : "status-dot off"} />
           <span>
             {connected ? "Workspace connected" : "Reconnecting…"}
-            <small>Forge 2.0.15</small>
+            <small>{engineStatus.engine} · stable</small>
           </span>
         </div>
       </header>
@@ -1351,6 +1362,17 @@ export default function Home() {
                     <p role="status">
                       {operations.metadata.error || operations.cacheReloadError}
                     </p>
+                  )}
+                  <p>
+                    Stable Forge updates: {engineStatus.forgeUpdates.status}.
+                    Latest release{" "}
+                    {engineStatus.forgeUpdates.latestVersion || "not checked"}.
+                    {engineStatus.forgeUpdates.checkedAt && (
+                      <> Checked {date(engineStatus.forgeUpdates.checkedAt)}.</>
+                    )}
+                  </p>
+                  {engineStatus.forgeUpdates.error && (
+                    <p role="status">{engineStatus.forgeUpdates.error}</p>
                   )}
                   <label htmlFor="maintenance-token">Admin token</label>
                   <input

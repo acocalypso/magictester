@@ -27,20 +27,23 @@ async function save() {
   await writeFile(path, JSON.stringify(state));
   await rename(path, root + "/maintenance.json");
 }
-async function refresh() {
+async function refresh(engineUpdate = false) {
   if (active) return false;
   active = true;
   let lock: PoolClient | undefined;
   let locked = false;
   try {
-    lock = await pool.connect();
-    locked = (
-      await lock.query("SELECT pg_try_advisory_lock(7193199) AS locked")
-    ).rows[0].locked;
-    if (!locked) return false;
+    if (!engineUpdate) {
+      lock = await pool.connect();
+      locked = (
+        await lock.query("SELECT pg_try_advisory_lock(7193199) AS locked")
+      ).rows[0].locked;
+      if (!locked) return false;
+    }
     state = {
       ...state,
       status: "refreshing",
+      operation: engineUpdate ? "forge" : "cards",
       startedAt: new Date().toISOString(),
       error: null,
     };
@@ -48,10 +51,16 @@ async function refresh() {
     await new Promise<void>((resolve, reject) => {
       child = spawn(
         process.execPath,
-        ["scripts/bootstrap.mjs", "--refresh-cards"],
-        { stdio: "inherit", env: process.env, detached: true },
+        engineUpdate
+          ? ["scripts/update-forge.mjs"]
+          : ["scripts/bootstrap.mjs", "--refresh-cards", "--metadata-only"],
+        {
+          stdio: "inherit",
+          env: process.env,
+          detached: true,
+        },
       );
-      const timer = setTimeout(() => killRefresh("SIGKILL"), 15 * 60 * 1000);
+      const timer = setTimeout(() => killRefresh("SIGKILL"), 30 * 60 * 1000);
       timer.unref();
       child.once("error", reject);
       child.once("close", (code) => {
@@ -64,7 +73,9 @@ async function refresh() {
     state = {
       ...state,
       status: "idle",
-      lastSuccessAt: new Date().toISOString(),
+      ...(engineUpdate
+        ? { lastEngineCheckAt: new Date().toISOString() }
+        : { lastSuccessAt: new Date().toISOString() }),
       error: null,
     };
     await save();
@@ -81,21 +92,35 @@ async function refresh() {
   }
 }
 app.get("/health", async () => ({ status: "ok", active, refresh: state }));
-app.post("/refresh", async (req, reply) => {
-  const secret = Buffer.from(process.env.ADMIN_TOKEN || "");
-  const token = Buffer.from(
-    (req.headers.authorization || "").replace(/^Bearer /, ""),
-  );
-  if (
-    !secret.length ||
-    token.length !== secret.length ||
-    !timingSafeEqual(secret, token)
-  )
-    return reply.code(401).send({ error: "Admin token required" });
-  if (active) return reply.code(409).send({ error: "Refresh already running" });
-  void refresh();
-  return reply.code(202).send({ status: "accepted" });
-});
+app.post<{ Querystring: { engine?: string } }>(
+  "/refresh",
+  async (req, reply) => {
+    const secret = Buffer.from(process.env.ADMIN_TOKEN || "");
+    const token = Buffer.from(
+      (req.headers.authorization || "").replace(/^Bearer /, ""),
+    );
+    if (
+      !secret.length ||
+      token.length !== secret.length ||
+      !timingSafeEqual(secret, token)
+    )
+      return reply.code(401).send({ error: "Admin token required" });
+    if (active)
+      return reply.code(409).send({ error: "Refresh already running" });
+    void refresh(req.query.engine === "stable");
+    return reply.code(202).send({ status: "accepted" });
+  },
+);
+const forgeHours = Number(process.env.FORGE_CHECK_HOURS || 1);
+if (!Number.isFinite(forgeHours) || forgeHours < 1)
+  throw Error("FORGE_CHECK_HOURS must be at least one");
+let nextForgeCheck = 0;
+const forgeTimer = setInterval(() => {
+  if (active || Date.now() < nextForgeCheck) return;
+  nextForgeCheck = Date.now() + forgeHours * 3600000;
+  void refresh(true);
+}, 60000);
+forgeTimer.unref();
 const hours = Number(process.env.CARD_REFRESH_HOURS || 24);
 if (!Number.isFinite(hours) || hours < 1)
   throw new Error("CARD_REFRESH_HOURS must be at least one");
@@ -111,7 +136,11 @@ timer.unref();
 for (const signal of ["SIGTERM", "SIGINT"])
   process.once(signal, () => {
     clearInterval(timer);
+    clearInterval(forgeTimer);
     killRefresh("SIGTERM");
     void app.close().then(() => pool.end());
   });
 await app.listen({ port: 3004, host: "0.0.0.0" });
+
+nextForgeCheck = Date.now() + forgeHours * 3600000;
+void refresh(true);

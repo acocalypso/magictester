@@ -16,12 +16,15 @@ jobs:
           node-version: 24
       - run: node -e 'require("fs").appendFileSync(process.env.GITHUB_ENV, "ADMIN_TOKEN="+require("crypto").randomBytes(32).toString("hex")+"\n")'
       - run: docker compose up --build -d --wait
-      - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
       - run: mkdir -p data
+      - run: docker compose exec -T forge-runner node scripts/runtime-pinning-smoke.mjs
+      - run: docker compose exec -T forge-runner cat /tmp/runtime-pinning.json > data/runtime-pinning.json
+      - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
+
       - run: docker compose exec -T forge-runner cat /tmp/bridge-report.json > data/bridge-smoke.json
-      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/bridge-builds/$(docker compose exec -T api node -p "require('/data/forge/magictester-bridge.json').sourceHash"):/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/DuelContracts.java
-      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/bridge-builds/$(docker compose exec -T api node -p "require('/data/forge/magictester-bridge.json').sourceHash"):/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/MatchContracts.java
-      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/bridge-builds/$(docker compose exec -T api node -p "require('/data/forge/magictester-bridge.json').sourceHash"):/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/CommanderColorContracts.java
+      - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs DuelContracts
+      - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs MatchContracts
+      - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs CommanderColorContracts
       - run: docker compose exec -T -e COMMANDER_COLORS_REPORT=/tmp/commander-colors.json forge-runner node scripts/commander-colors-smoke.mjs
       - run: docker compose exec -T forge-runner cat /tmp/commander-colors.json > data/commander-colors.json
       - run: docker compose exec -T -e BO3_REPORT=/tmp/bo3-engine-report.json forge-runner node scripts/bo3-engine-smoke.mjs
@@ -47,6 +50,8 @@ jobs:
       - run: node scripts/selection-browser.mjs
       - run: docker compose exec -T -e OPERATIONS_REPORT=/tmp/operations-engine.json forge-runner node scripts/operations-engine-smoke.mjs
       - run: docker compose exec -T forge-runner cat /tmp/operations-engine.json > data/operations-engine.json
+      - run: node scripts/daily-meta-smoke.mjs
+      - run: node scripts/daily-meta-browser.mjs
       - run: node scripts/maintenance-smoke.mjs
       - run: node scripts/recovery-smoke.mjs
       - if: always()
@@ -73,5 +78,7 @@ jobs:
             data/maintenance-smoke.json
             data/recovery-smoke.json
             data/commander-colors.json
+            data/daily-metagame-report.json
+            data/runtime-pinning.json
       - if: always()
         run: docker compose down

@@ -1,3 +1,5 @@
+import { resolveRuntime } from "./runtime.mjs";
+import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { FORMATS } from "./formats.js";
@@ -141,6 +143,15 @@ export class CachedCardDataProvider implements CardDataProvider {
   private supported = new Set<string>();
   provenance: Record<string, unknown> = {};
   async load(dir = process.env.DATA_DIR || "/data") {
+    const runtime = await resolveRuntime(
+      process.env.FORGE_HOME || dir + "/forge",
+    ).catch((e) => {
+      if (e.code === "ENOENT") return null;
+      throw e;
+    });
+    const metadataRoot = runtime?.bridge.metadataDirectory
+      ? resolve(runtime.home, runtime.bridge.metadataDirectory)
+      : dir;
     const raw = await readFile(dir + "/cards.json", "utf8");
     const data = JSON.parse(raw);
     this.provenance = {
@@ -159,14 +170,20 @@ export class CachedCardDataProvider implements CardDataProvider {
     this.supported = new Set(
       (
         JSON.parse(
-          await readFile(dir + "/forge-cards.json", "utf8"),
+          await readFile(metadataRoot + "/forge-cards.json", "utf8"),
         ) as string[]
       ).map(normalize),
     );
     try {
-      const factsRaw = await readFile(dir + "/forge-facts.json", "utf8");
+      const factsRaw = await readFile(
+        metadataRoot + "/forge-facts.json",
+        "utf8",
+      );
       const factsData = JSON.parse(factsRaw);
-      if (factsData.schemaVersion !== 1 || factsData.engineVersion !== "2.0.15")
+      if (
+        factsData.schemaVersion !== 1 ||
+        factsData.engineVersion !== (runtime?.bridge.engineVersion || "2.0.15")
+      )
         throw new Error("Incompatible Forge facts cache");
       this.facts = new Map(
         Object.entries(factsData.cards as Record<string, ForgeCardFacts>).map(
@@ -184,13 +201,7 @@ export class CachedCardDataProvider implements CardDataProvider {
       this.provenance.engineFacts = { available: false };
     }
     try {
-      this.provenance.engineBridge = JSON.parse(
-        await readFile(
-          (process.env.FORGE_HOME || dir + "/forge") +
-            "/magictester-bridge.json",
-          "utf8",
-        ),
-      );
+      this.provenance.engineBridge = runtime?.bridge;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }

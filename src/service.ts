@@ -1,3 +1,4 @@
+import { updateStatus, runtimeRoot, stableReleaseProblem } from "./runtime.mjs";
 import { currentMetagame } from "./meta-current.js";
 import { getFormat } from "./formats.js";
 import { randomUUID, createHash } from "node:crypto";
@@ -71,6 +72,14 @@ export async function createSimulation(
     bestOf && !getFormat(input.format)!.commander
       ? (input.sideboardMode ?? "forge")
       : "none";
+  const updates = await updateStatus(runtimeRoot());
+  const activeBridge = provider.provenance.engineBridge as
+    { engineVersion?: string; sourceHash?: string } | undefined;
+  const releaseProblem = stableReleaseProblem(
+    updates,
+    activeBridge?.engineVersion,
+  );
+  if (releaseProblem) throw new RequestError(503, releaseProblem);
   const validation = validateDeck(input.decklist, input.format, provider);
   if (!validation.valid)
     throw new RequestError(422, "Deck validation failed", validation.errors);
@@ -192,7 +201,7 @@ export async function createSimulation(
               ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"
               : `equal ${bestOf ? "matches" : "games"} per selected deck; remainder assigned in snapshot order`,
         engine: "forge",
-        forgeRelease: "2.0.15",
+        forgeRelease: activeBridge?.engineVersion,
         bridgeVersion: "2",
         aiProfile: "Default",
         bridge: provider.provenance.engineBridge,

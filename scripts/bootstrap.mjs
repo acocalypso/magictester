@@ -9,7 +9,7 @@ import {
   mkdtemp,
   chmod,
 } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createGunzip } from "node:zlib";
@@ -18,7 +18,31 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
 const root = process.env.DATA_DIR || "/data";
-const home = process.env.FORGE_HOME || root + "/forge";
+const { baseline, resolveRuntime, registerRuntime, runtimeRoot } =
+  await import("../src/runtime.mjs");
+const registryRoot = runtimeRoot();
+let activeRuntime;
+try {
+  activeRuntime = await resolveRuntime(registryRoot);
+} catch (e) {
+  if (e.code !== "ENOENT") throw e;
+}
+const candidate = Boolean(process.env.FORGE_RELEASE_FILE);
+const home = candidate
+  ? process.env.FORGE_CANDIDATE_HOME
+  : activeRuntime?.home || registryRoot;
+const release = candidate
+  ? JSON.parse(await readFile(process.env.FORGE_RELEASE_FILE, "utf8"))
+  : activeRuntime?.bridge.release || baseline;
+const metadataRoot = candidate
+  ? home
+  : activeRuntime?.bridge.metadataDirectory
+    ? resolve(home, activeRuntime.bridge.metadataDirectory)
+    : root;
+const jarPath = home + "/" + release.jarName;
+if (activeRuntime && !candidate)
+  await registerRuntime(registryRoot, activeRuntime.home, activeRuntime.bridge);
+
 const headers = {
   "User-Agent": "MagicTester/0.1 (https://github.com/acocalypso/magictester)",
   Accept: "application/json",
@@ -31,9 +55,8 @@ async function get(url) {
 await mkdir(root, { recursive: true });
 await mkdir(home, { recursive: true });
 if (!existsSync(home + "/build.txt")) {
-  const archive = root + "/forge.tar.bz2";
-  const url =
-    "https://github.com/Card-Forge/forge/releases/download/forge-2.0.15/forge-installer-2.0.15.tar.bz2";
+  const archive = home + "/forge.tar.bz2";
+  const url = release.archiveUrl;
   console.log(JSON.stringify({ event: "downloading_forge", url }));
   await pipeline(
     Readable.fromWeb((await get(url)).body),
@@ -41,10 +64,7 @@ if (!existsSync(home + "/build.txt")) {
   );
   const hash = createHash("sha256");
   for await (const b of createReadStream(archive)) hash.update(b);
-  if (
-    hash.digest("hex") !==
-    "4468f182b60f6ca62d89697baa208981085af744f116781af751c611826db600"
-  )
+  if (hash.digest("hex") !== release.archiveSha256)
     throw new Error("Forge archive checksum mismatch");
   execFileSync("tar", ["-xjf", archive, "-C", home]);
   await rm(archive);
@@ -113,20 +133,24 @@ if (cachedSchema !== 2 || process.argv.includes("--refresh-cards")) {
   console.log(JSON.stringify({ event: "cards_cached", count: cards.length }));
 }
 // Extract supported card names from the release's scripts archive using the JDK jar utility.
-if (!existsSync(root + "/forge-cards.json")) {
+if (!existsSync(metadataRoot + "/forge-cards.json")) {
   const archive = home + "/res/cardsfolder/cardsfolder.zip";
   // Python isn't required: the `jar tf` list contains named script paths, but the card's actual
   // Name field can differ. Use a tiny Java ZIP reader to preserve exact names.
   const source = `import java.util.zip.*;import java.io.*;import java.nio.charset.StandardCharsets;public class CardNames{public static void main(String[]a)throws Exception{try(ZipFile z=new ZipFile(a[0])){var entries=z.entries();while(entries.hasMoreElements()){var e=entries.nextElement();if(e.isDirectory())continue;try(var r=new BufferedReader(new InputStreamReader(z.getInputStream(e),StandardCharsets.UTF_8))){String l;while((l=r.readLine())!=null){if(l.startsWith("Name:"))System.out.println(l.substring(5).trim());}}}}}}`;
   await writeFile(root + "/CardNames.java", source);
   // Source launch requires a JDK. Bootstrap image carries one; the runner uses a JRE.
-  const names = execFileSync("java", [root + "/CardNames.java", archive], {
-    maxBuffer: 16 * 1024 * 1024,
-  })
+  const names = execFileSync(
+    "java",
+    ["-Xmx128m", root + "/CardNames.java", archive],
+    {
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  )
     .toString()
     .split("\n")
     .filter(Boolean);
-  await writeFile(root + "/forge-cards.json", JSON.stringify(names));
+  await writeFile(metadataRoot + "/forge-cards.json", JSON.stringify(names));
   await rm(root + "/CardNames.java");
 }
 const factsSource = new URL(
@@ -138,32 +162,44 @@ const factsSourceHash = createHash("sha256")
   .digest("hex");
 let factsCache;
 try {
-  factsCache = JSON.parse(await readFile(root + "/forge-facts.json", "utf8"));
+  factsCache = JSON.parse(
+    await readFile(metadataRoot + "/forge-facts.json", "utf8"),
+  );
 } catch {
   /* first bootstrap */
 }
-if (factsCache?.sourceHash !== factsSourceHash) {
+if (
+  factsCache?.sourceHash !== factsSourceHash ||
+  factsCache?.engineVersion !== release.version
+) {
   const sourceFile = root + "/CardFacts.java";
   await writeFile(sourceFile, await readFile(factsSource));
   execFileSync(
     "java",
     [
+      "-Xmx1024m",
       "-cp",
-      home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+      jarPath,
       sourceFile,
       home + "/res/cardsfolder/cardsfolder.zip",
-      root + "/forge-facts.json.tmp",
+      metadataRoot + "/forge-facts.json.tmp",
     ],
     { cwd: home, maxBuffer: 16 * 1024 * 1024 },
   );
   const facts = JSON.parse(
-    await readFile(root + "/forge-facts.json.tmp", "utf8"),
+    await readFile(metadataRoot + "/forge-facts.json.tmp", "utf8"),
   );
   facts.sourceHash = factsSourceHash;
-  facts.engineVersion = "2.0.15";
+  facts.engineVersion = release.version;
   facts.fetchedAt = new Date().toISOString();
-  await writeFile(root + "/forge-facts.json.tmp", JSON.stringify(facts));
-  await rename(root + "/forge-facts.json.tmp", root + "/forge-facts.json");
+  await writeFile(
+    metadataRoot + "/forge-facts.json.tmp",
+    JSON.stringify(facts),
+  );
+  await rename(
+    metadataRoot + "/forge-facts.json.tmp",
+    metadataRoot + "/forge-facts.json",
+  );
   await rm(sourceFile);
   console.log(
     JSON.stringify({
@@ -173,19 +209,45 @@ if (factsCache?.sourceHash !== factsSourceHash) {
     }),
   );
 }
+if (process.argv.includes("--metadata-only")) {
+  console.log(
+    JSON.stringify({
+      event: "metadata_refresh_complete",
+      engineVersion: release.version,
+    }),
+  );
+  process.exit(0);
+}
 // Compile the maintained bridge against exactly this release. Runtime needs only a JRE.
 const bridgeSource = new URL(
   "../services/forge-runner/bridge/MagicTesterBridge.java",
   import.meta.url,
 );
 const bridgeBytes = await readFile(bridgeSource);
-const patchBytes = await readFile(
+let patchBytes = await readFile(
   new URL("../services/forge-runner/bridge/patches.json", import.meta.url),
 );
-const patches = JSON.parse(patchBytes);
+let patches = JSON.parse(patchBytes);
+if (release.sourceCommit !== baseline.sourceCommit) {
+  patches = await Promise.all(
+    patches.map(async (p) => {
+      const url = p.url.replace(baseline.sourceCommit, release.sourceCommit);
+      if (url === p.url)
+        throw Error("Patch source is not pinned to baseline commit");
+      const bytes = Buffer.from(await (await get(url)).arrayBuffer());
+      return {
+        ...p,
+        url,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      };
+    }),
+  );
+  patchBytes = Buffer.from(JSON.stringify(patches));
+}
 const bridgeHash = createHash("sha256")
   .update(bridgeBytes)
   .update(patchBytes)
+  .update(JSON.stringify(release))
   .digest("hex");
 const classDirectory = "bridge-builds/" + bridgeHash;
 const classPath = home + "/" + classDirectory;
@@ -235,7 +297,7 @@ if (
       "-m",
       "jdk.compiler/com.sun.tools.javac.Main",
       "-cp",
-      home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+      jarPath,
       "-d",
       buildClasses,
       sourceFile,
@@ -253,7 +315,9 @@ if (
     manifestTemp,
     JSON.stringify({
       version: "2",
-      engineVersion: "2.0.15",
+      engineVersion: release.version,
+      release,
+      metadataDirectory: metadataRoot === home ? "." : "..",
       sourceHash: bridgeHash,
       classDirectory,
       upstreamOverrides: patches.map((p) => ({
@@ -269,8 +333,15 @@ if (
     JSON.stringify({ event: "forge_bridge_compiled", sourceHash: bridgeHash }),
   );
 }
+if (!candidate)
+  await registerRuntime(
+    registryRoot,
+    home,
+    JSON.parse(await readFile(home + "/magictester-bridge.json", "utf8")),
+  );
 // mkdtemp defaults to owner-only; the runtime runs as the unprivileged node user.
 await chmod(classPath, 0o755);
+await chmod(home, 0o755);
 console.log(
   JSON.stringify({
     event: "bootstrap_complete",

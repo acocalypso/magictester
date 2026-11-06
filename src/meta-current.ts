@@ -1,5 +1,8 @@
 import { pool } from "./db.js";
-export async function currentMetagame(format: string) {
+export async function currentMetagame(
+  format: string,
+  provenance?: Record<string, unknown>,
+) {
   const row = (
     await pool.query(
       `SELECT s.*,f.id AS feed_id,f.name AS feed_name,f.last_success_at,f.last_checked_at,f.next_check_at,f.last_error,f.enabled FROM meta_feeds f LEFT JOIN meta_snapshots s ON s.id=f.snapshot_id WHERE f.format=$1 AND f.provider!='json' ORDER BY f.enabled DESC,f.last_success_at DESC NULLS LAST LIMIT 1`,
@@ -29,6 +32,14 @@ export async function currentMetagame(format: string) {
     (!row.last_success_at ||
       new Date(row.last_checked_at).getTime() >
         new Date(row.last_success_at).getTime());
+  const validation = snapshot?.metadata?.cardData;
+  const bridge = provenance?.engineBridge as
+    { sourceHash?: string } | undefined;
+  const revalidating =
+    provenance &&
+    snapshot &&
+    (validation?.sha256 !== provenance.sha256 ||
+      validation?.engineBridge?.sourceHash !== bridge?.sourceHash);
   const status = !row.enabled
     ? "paused"
     : !snapshot
@@ -37,13 +48,15 @@ export async function currentMetagame(format: string) {
         : row.last_error
           ? "error"
           : "pending"
-      : stale
-        ? "stale"
-        : row.last_error
-          ? "degraded"
-          : refreshing
-            ? "refreshing"
-            : "current";
+      : revalidating
+        ? "revalidating"
+        : stale
+          ? "stale"
+          : row.last_error
+            ? "degraded"
+            : refreshing
+              ? "refreshing"
+              : "current";
   return {
     status,
     snapshot,

@@ -1,5 +1,7 @@
 # Forge integration
 
+The historical baseline below is supplemented by [automatic latest stable updates](FORGE_UPDATES.md). Runtime requests resolve the active or job-pinned release from the immutable registry.
+
 ## Verified upstream baseline
 
 - Release: `forge-2.0.15`.

@@ -91,7 +91,7 @@ public class MagicTesterBridge {
         if(!termination.equals("normal")) winner=null;
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("unit","game");result.put("index",resultIndex);result.put("batchIndex",resultIndex);
-        result.put("engine","forge");result.put("engineVersion","2.0.15");result.put("bridgeVersion",VERSION);
+        result.put("engine","forge");result.put("engineVersion",System.getProperty("magictester.engineVersion","2.0.15"));result.put("bridgeVersion",VERSION);
         result.put("mode",request.mode);result.put("mulliganRule","London");result.put("seed",resultSeed);result.put("gameSeed",gameSeed);
         result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started));result.put("termination",termination);result.put("winner",winner);
         result.put("turns",ended?game.getOutcome().getLastTurnNumber():null);result.put("startingPlayer",recorder.startingPlayer);
@@ -164,7 +164,7 @@ public class MagicTesterBridge {
                 for(var game:games) if(game.get("termination").equals("normal")) {int seat=((Number)game.get("winner")).intValue();wins.set(seat,wins.get(seat)+1);}
                 Map<String,Object> result=new LinkedHashMap<>();
                 result.put("unit","match");result.put("bestOf",3);result.put("index",index);result.put("batchIndex",index);
-                result.put("engine","forge");result.put("engineVersion","2.0.15");result.put("bridgeVersion",VERSION);result.put("mode",request.mode);result.put("mulliganRule","London");
+                result.put("engine","forge");result.put("engineVersion",System.getProperty("magictester.engineVersion","2.0.15"));result.put("bridgeVersion",VERSION);result.put("mode",request.mode);result.put("mulliganRule","London");
                 result.put("seed",request.seed);result.put("gameSeed",unitSeed);result.put("winner",winner);result.put("termination",termination);
                 result.put("players",players(winner,2,Map.of(0,2,1,2)));result.put("turns",null);result.put("startingPlayer",null);
                 result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-matchStarted));result.put("gameWins",wins);result.put("games",games);result.put("sideboarding",request.sideboarding);

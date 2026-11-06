@@ -78,10 +78,11 @@ services:
       <<: *env
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       CARD_REFRESH_HOURS: ${CARD_REFRESH_HOURS:-24}
+      FORGE_CHECK_HOURS: ${FORGE_CHECK_HOURS:-1}
       NODE_USE_ENV_PROXY: "1"
       NODE_EXTRA_CA_CERTS: ${RUNTIME_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
     volumes: [runtime:/data]
-    mem_limit: 2g
+    mem_limit: 4g
     depends_on:
       bootstrap: { condition: service_completed_successfully }
     healthcheck:

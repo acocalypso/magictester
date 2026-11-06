@@ -5,7 +5,7 @@ MagicTester is a working private Docker-hosted MTG benchmark lab. Its results co
 | Area             | Implemented behavior                                                                                                                                                       |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Services         | Next.js web, Fastify API, PostgreSQL/Drizzle, Redis/BullMQ worker, bounded Forge runner, bootstrap and scheduled metadata maintenance                                      |
-| Engine           | Pinned Forge 2.0.15 JAR, public-API Java bridge, exact upstream source hashes/replacements, immutable compiled builds and per-game telemetry                               |
+| Engine           | Latest stable Forge with checksum verification and staged native validation, public-API Java bridge, exact upstream source hashes/replacements, immutable compiled builds and per-game telemetry                               |
 | Formats          | Standard, Pioneer, Modern, Pauper, Legacy, Vintage, Commander, cEDH and Duel Commander                                                                                     |
 | Validation       | Names/scripts, legality/bans/restrictions, sizes, copy exceptions, singleton/color identity, legal commanders/partners/backgrounds/Doctors, all ten companion requirements |
 | Constructed/Duel | BO1 or native first-to-two BO3, actual game/match rates, per-game seeds, sideboard changes, companion choices and explicit incomplete matches                              |

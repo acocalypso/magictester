@@ -77,7 +77,7 @@ assert.deepEqual(
   [246810, 247819],
 );
 const report = {
-  engine: "Forge 2.0.15",
+  engine: results[0]?.engineVersion || "Forge",
   results,
   timeouts,
   verifiedAt: new Date().toISOString(),

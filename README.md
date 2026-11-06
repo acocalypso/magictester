@@ -20,7 +20,7 @@ docker compose up --build -d --wait
 
 Open **http://localhost:3000**. Choose **Load example**, validate, select the reference pool, and start a benchmark. API documentation: http://localhost:3000/api/docs.
 
-First boot downloads Forge 2.0.15 (SHA-256 verified, about 297 MB) and Scryfall Oracle bulk data. It creates persistent caches, runs versioned database migrations, and validates/imports the reference pool. Later boots reuse those caches. Forge runs in separate Java processes behind an internal runner; it is never executed inside the API process.
+First boot downloads the verified Forge baseline and Scryfall Oracle bulk data, then checks the latest stable Forge release. [Automatic stable updates](docs/FORGE_UPDATES.md) run hourly and validate each candidate before activation. It creates persistent caches, runs versioned database migrations, and validates/imports the reference pool. Later boots reuse those caches. Forge runs in separate Java processes behind an internal runner; it is never executed inside the API process.
 
 The default deployment listens only on localhost and has no user authentication. All local users can view/cancel jobs. Keep it private. Add authentication and authorization before changing that deployment boundary. Set a database password and admin import token for your own deployment.
 

@@ -25,7 +25,8 @@ async function until(id, condition, seconds = 300) {
   throw new Error("Timed out waiting for " + id);
 }
 const status = await request("/status");
-assert.equal(status.engine, "Forge 2.0.15");
+assert.match(status.engine, /^Forge \d+\.\d+\.\d+$/);
+assert.equal(status.forgeUpdates.channel, "stable");
 const snapshots = await request("/meta/pauper/snapshots");
 assert.ok(snapshots.length);
 const snapshot =
