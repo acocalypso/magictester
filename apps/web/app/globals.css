@@ -2223,3 +2223,40 @@ td strong,
     grid-row: 2;
   }
 }
+
+.saved-deck-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 10px;
+}
+.decklist-dialog .saved-deck-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.decklist-dialog .panel-heading > div {
+  min-width: 0;
+}
+.decklist-dialog h2 {
+  overflow-wrap: anywhere;
+}
+.pod-decklist-links {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pod-decklist-links button {
+  text-align: left;
+  white-space: normal;
+}
+.opponent-decklist-link {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+}

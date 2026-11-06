@@ -1,4 +1,5 @@
 "use client";
+import { DecklistDialog, type SavedDecklist } from "./decklist-dialog";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
   GameDetails,
@@ -362,6 +363,8 @@ export default function Home() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [runPage, setRunPage] = useState(0);
   const [detail, setDetail] = useState<Run | null>(null);
+  const [viewedDeck, setViewedDeck] = useState<SavedDecklist | null>(null);
+  useEffect(() => setViewedDeck(null), [selected, view]);
   const [busy, setBusy] = useState(false);
   const [deckName, setDeckName] = useState("My test deck");
   const [decklist, setDecklist] = useState("");
@@ -1642,6 +1645,18 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="heading-actions">
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        setViewedDeck({
+                          name: result.job.name,
+                          decklist: result.job.deck.decklist,
+                          owner: "your",
+                        })
+                      }
+                    >
+                      View your decklist
+                    </button>
                     <Badge state={result.job.state} />
                     {active.includes(result.job.state) && (
                       <button
@@ -1860,16 +1875,55 @@ export default function Home() {
                             .map((m) => (
                               <tr key={m.opponent.id}>
                                 <td>
-                                  <strong>{m.opponent.name}</strong>
-                                  <small>
-                                    {m.kind === "pod"
-                                      ? m.participants
-                                          ?.map((o) => o.name)
-                                          .join(" / ")
-                                      : m.opponent.archetype +
-                                        " · " +
-                                        m.opponent.strategy}
-                                  </small>
+                                  {m.kind === "pod" ? (
+                                    <>
+                                      <strong>{m.opponent.name}</strong>
+                                      <div className="pod-decklist-links">
+                                        {m.participants?.map(
+                                          (opponent, seat) => (
+                                            <button
+                                              key={opponent.id + "-" + seat}
+                                              className="text-button"
+                                              onClick={() =>
+                                                setViewedDeck({
+                                                  name: opponent.name,
+                                                  decklist: opponent.decklist,
+                                                  owner: "opponent",
+                                                })
+                                              }
+                                            >
+                                              Seat {seat + 2}: {opponent.name} ·
+                                              View decklist
+                                            </button>
+                                          ),
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        className="deck-link"
+                                        aria-label={`View decklist for ${m.opponent.name}`}
+                                        onClick={() =>
+                                          setViewedDeck({
+                                            name: m.opponent.name,
+                                            decklist: m.opponent.decklist,
+                                            owner: "opponent",
+                                          })
+                                        }
+                                      >
+                                        {m.opponent.name}
+                                        <span className="opponent-decklist-link">
+                                          View decklist →
+                                        </span>
+                                      </button>
+                                      <small>
+                                        {m.opponent.archetype +
+                                          " · " +
+                                          m.opponent.strategy}
+                                      </small>
+                                    </>
+                                  )}
                                 </td>
                                 <td>
                                   {m.games}
@@ -2598,6 +2652,9 @@ export default function Home() {
           </footer>
         </main>
       </div>
+      {viewedDeck && (
+        <DecklistDialog deck={viewedDeck} onClose={() => setViewedDeck(null)} />
+      )}
       {detail && (
         <RunDialog
           detail={detail}

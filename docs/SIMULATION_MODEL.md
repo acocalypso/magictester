@@ -68,3 +68,9 @@ Each recorded game opens a readable summary: its outcome, who played first, turn
 A restarted match can leave more than one attempt in its history. The history gives attempts a readable number and explains whether each game contributes to the results. Earlier attempts remain visible and never count toward win rates. Games from a match still in progress wait for its final result. Normal games and rule draws in the finalized attempt enter game statistics; timed-out or failed games do not. A completed game can count even when the overall match reaches its game limit and is excluded from match statistics. Refresh the history to update the status of a running match.
 
 The observation API adds a derived `review` field based on the complete attempt history and saved final result. Attempt numbering stays consistent across pages. Original recorded events remain unchanged; the review status can change as a match finishes or restarts. JSON exports remain available separately for diagnostics.
+
+## Viewing the decklists used
+
+Open a test's results and choose **View your decklist** to see the submitted list. In matchup results, choose an opponent's **View decklist** link; Commander pods have a separate link for each opponent seat. The viewer reads the saved job and opponent snapshot, so later editor changes and daily source updates do not replace the lists being shown. Lists can be copied or downloaded as text.
+
+These are the registered starting lists, including their saved sideboard/commander/companion sections. BO3 changes between games are shown in the individual game summaries; the starting-list viewer does not claim to show each sideboarded game state.
