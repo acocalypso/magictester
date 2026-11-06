@@ -16,6 +16,7 @@ jobs:
           node-version: 24
       - run: docker compose up --build -d --wait
       - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
+      - run: mkdir -p data
       - run: docker compose cp forge-runner:/tmp/bridge-report.json data/bridge-smoke.json
       - run: node scripts/smoke.mjs
       - run: npm ci
