@@ -311,7 +311,9 @@ export default function Home() {
   const [csv, setCsv] = useState(false);
   const [importName, setImportName] = useState("");
   const [importSource, setImportSource] = useState("");
-  const [sort, setSort] = useState<"name" | "rate">("name");
+  const [sort, setSort] = useState<
+    "name" | "rate" | "worst" | "games" | "meta" | "archetype"
+  >("name");
   const refresh = useCallback(async () => {
     try {
       const [s, j, f, feeds] = await Promise.all([
@@ -1517,12 +1519,14 @@ export default function Home() {
                       <select
                         aria-label="Sort matchups"
                         value={sort}
-                        onChange={(e) =>
-                          setSort(e.target.value as "rate" | "name")
-                        }
+                        onChange={(e) => setSort(e.target.value as typeof sort)}
                       >
                         <option value="name">By opponent</option>
-                        <option value="rate">By win rate</option>
+                        <option value="rate">Best win rate</option>
+                        <option value="worst">Worst win rate</option>
+                        <option value="games">Most games</option>
+                        <option value="meta">Source meta share</option>
+                        <option value="archetype">By archetype</option>
                       </select>
                     </div>
                     <div className="table-scroll">
@@ -1544,9 +1548,21 @@ export default function Home() {
                             .sort((a, b) =>
                               sort === "rate"
                                 ? (b.winRate ?? -1) - (a.winRate ?? -1)
-                                : a.opponent.name.localeCompare(
-                                    b.opponent.name,
-                                  ),
+                                : sort === "worst"
+                                  ? (a.winRate ?? Infinity) -
+                                    (b.winRate ?? Infinity)
+                                  : sort === "games"
+                                    ? b.games - a.games
+                                    : sort === "meta"
+                                      ? (b.opponent.metaShare ?? -1) -
+                                        (a.opponent.metaShare ?? -1)
+                                      : sort === "archetype"
+                                        ? a.opponent.archetype.localeCompare(
+                                            b.opponent.archetype,
+                                          )
+                                        : a.opponent.name.localeCompare(
+                                            b.opponent.name,
+                                          ),
                             )
                             .map((m) => (
                               <tr key={m.opponent.id}>
