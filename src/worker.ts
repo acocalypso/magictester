@@ -153,6 +153,9 @@ const worker = new Worker(
                       null,
                   ),
                   games: plan.games,
+                  indices: pending
+                    .map((r) => r.batchIndex)
+                    .sort((a, b) => a - b),
                   seed: plan.seed,
                   clockSeconds: job.clockSeconds,
                   traceId: id + "_" + plan.key,

@@ -8,7 +8,7 @@ permissions:
 jobs:
   forge:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,8 +19,8 @@ jobs:
       - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
       - run: mkdir -p data
       - run: docker compose exec -T forge-runner cat /tmp/bridge-report.json > data/bridge-smoke.json
-      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/magictester-bridge:/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/DuelContracts.java
-      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/magictester-bridge:/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/MatchContracts.java
+      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/bridge-builds/$(docker compose exec -T api node -p "require('/data/forge/magictester-bridge.json').sourceHash"):/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/DuelContracts.java
+      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/bridge-builds/$(docker compose exec -T api node -p "require('/data/forge/magictester-bridge.json').sourceHash"):/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/MatchContracts.java
       - run: docker compose exec -T -e BO3_REPORT=/tmp/bo3-engine-report.json forge-runner node scripts/bo3-engine-smoke.mjs
       - run: docker compose exec -T forge-runner cat /tmp/bo3-engine-report.json > data/bo3-engine-smoke.json
       - run: docker compose exec -T -e COMPANION_REPORT=/tmp/companion-report.json forge-runner node scripts/companion-smoke.mjs
@@ -41,6 +41,10 @@ jobs:
       - run: node scripts/feeds-browser.mjs
       - run: node scripts/selection-smoke.mjs
       - run: node scripts/selection-browser.mjs
+      - run: docker compose exec -T -e OPERATIONS_REPORT=/tmp/operations-engine.json forge-runner node scripts/operations-engine-smoke.mjs
+      - run: docker compose exec -T forge-runner cat /tmp/operations-engine.json > data/operations-engine.json
+      - run: node scripts/maintenance-smoke.mjs
+      - run: node scripts/recovery-smoke.mjs
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: always()
@@ -60,5 +64,8 @@ jobs:
             data/bo3-smoke.json
             data/feeds-smoke.json
             data/selection-smoke.json
+            data/operations-engine.json
+            data/maintenance-smoke.json
+            data/recovery-smoke.json
       - if: always()
         run: docker compose down

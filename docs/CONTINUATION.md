@@ -12,8 +12,8 @@ User instruction: finish the remaining core work, push each completed change ind
 | 5b    | Enable Duel execution with 20 life, no commander-damage win and first-cast partner lock; verify against current rules                                                     | PUSHED `711cb87` |
 | 6     | Verify and implement real BO3 match execution and actual Forge sideboarding behavior; distinguish game and match rates                                                    | PUSHED `5e11d49` |
 | 7     | Research permitted metagame sources; implement versioned remote feed ingestion, source-backed pools, scheduling and freshness reporting without bypassing access controls | PUSHED `25ff1aa`          |
-| 8     | Finish custom/weighted benchmark selection and opponent/pod controls with transparent methodology                                                                         | VERIFIED          |
-| 9     | Complete operations: metadata refresh, bounded log retention, per-game watchdogs, observability and restart/cancellation acceptance                                       | PENDING          |
+| 8     | Finish custom/weighted benchmark selection and opponent/pod controls with transparent methodology                                                                         | PUSHED `c9127b7`          |
+| 9     | Complete operations: metadata refresh, bounded log retention, per-game watchdogs, observability and restart/cancellation acceptance                                       | VERIFIED          |
 | 10    | Run all-format acceptance, real 1000-game benchmark where appropriate, final CI and documentation                                                                         | PENDING          |
 
 Original advanced non-goals (billing, social features, mobile apps, Kubernetes and a human MTG client) remain outside this project. Unsupported engine measurements must be investigated or explicitly reported as unavailable; no fake game statistics or claimed sideboarding intelligence are permitted.

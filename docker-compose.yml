@@ -13,8 +13,8 @@ x-app: &app
     FORGE_HOME: /data/forge
     RUNNER_URL: http://forge-runner:3002
     LOG_DIR: /app/logs
-    NO_PROXY: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web
-    no_proxy: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web
+    NO_PROXY: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web,maintenance
+    no_proxy: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web,maintenance
     MAX_GAMES_PER_JOB: ${MAX_GAMES_PER_JOB:-1000}
     SIMULATION_CONCURRENCY: ${SIMULATION_CONCURRENCY:-1}
     MAX_FORGE_PROCESSES: ${MAX_FORGE_PROCESSES:-1}
@@ -67,6 +67,34 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     restart: "no"
+  maintenance:
+    <<: *app
+    image: magictester-bootstrap
+    build:
+      context: .
+      target: bootstrap
+    command: ["node", "dist/maintenance.js"]
+    environment:
+      <<: *env
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      CARD_REFRESH_HOURS: ${CARD_REFRESH_HOURS:-24}
+      NODE_USE_ENV_PROXY: "1"
+      NODE_EXTRA_CA_CERTS: ${RUNTIME_CA_PATH:-/etc/ssl/certs/ca-certificates.crt}
+    volumes: [runtime:/data]
+    mem_limit: 2g
+    depends_on:
+      bootstrap: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3004/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
   forge-runner:
     <<: *app
     image: magictester-runner
@@ -77,6 +105,10 @@ services:
     environment:
       <<: *env
       FORGE_HEAP: ${FORGE_HEAP:-1024m}
+      LOG_FILE_MB: ${LOG_FILE_MB:-8}
+      LOG_TOTAL_MB: ${LOG_TOTAL_MB:-512}
+      LOG_MAX_FILES: ${LOG_MAX_FILES:-500}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-7}
     volumes: [runtime:/data:ro, forge-logs:/app/logs]
     tmpfs: ["/tmp:mode=1777,size=128m"]
     mem_limit: ${RUNNER_MEMORY:-2g}

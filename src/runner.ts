@@ -13,9 +13,14 @@ app.get("/health", async (_req, reply) => {
       engine.home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
     );
     await access(engine.home + "/magictester-bridge.json");
-    await access(engine.home + "/magictester-bridge/MagicTesterBridge.class");
     const bridge = JSON.parse(
       await readFile(engine.home + "/magictester-bridge.json", "utf8"),
+    );
+    await access(
+      engine.home +
+        "/" +
+        (bridge.classDirectory || "magictester-bridge") +
+        "/MagicTesterBridge.class",
     );
     if (bridge.version !== "2") throw new Error("Incompatible bridge");
     return {
@@ -38,6 +43,11 @@ app.post("/games", async (req, reply) => {
       companions: z.array(z.string().min(1).max(150).nullable()).optional(),
       decks: z.array(z.string().min(1).max(65536)).min(2).max(4),
       games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
+      indices: z
+        .array(z.number().int().nonnegative())
+        .min(1)
+        .max(config.MAX_GAMES_PER_JOB)
+        .optional(),
       seed: z.number().int().min(0).max(2147483646),
       clockSeconds: z.number().int().min(1).max(120),
       mode: z.enum(["constructed", "commander", "duel"]).optional(),
@@ -46,6 +56,14 @@ app.post("/games", async (req, reply) => {
         .regex(/^[a-f0-9_-]{1,80}$/)
         .optional(),
     })
+    .refine(
+      (data) =>
+        !data.indices ||
+        data.indices.every(
+          (n, i) => n < data.games && (i === 0 || n > data.indices![i - 1]),
+        ),
+      "Invalid unit indices",
+    )
     .refine(
       (data) => data.mode === "commander" || data.decks.length === 2,
       "Constructed games require two players",

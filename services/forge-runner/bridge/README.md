@@ -16,3 +16,5 @@ The Duel property is set only for `mode: duel`; all other modes retain the norma
 The upstream source retains its Forge Team copyright and GPL-3.0-or-later notices; see `../FORGE_LICENSE.txt`. The MagicTester bridge and patch specifications are GPL-3.0-only, compatible with that distribution. Full corresponding upstream source is available at the pinned URLs/commit in the manifest. Apply the manifest to reproduce the compiled overrides; inspect its narrow replacements before updating the pinned release.
 
 Protocol 2 distinguishes games from first-to-two BO3 matches and streams real game observations before match completion. Game-limit matches have no winner; child rule draws remain draws. Interrupted match attempts retain audit observations, while retry rebuilds the native match from its start. No outcomes or sideboard swaps are synthesized.
+
+Runtime class directories are immutable and named by the bridge source hash. Bootstrap publishes the completed build and manifest atomically. Optional sorted absolute unit indices allow checkpoint recovery without replaying completed work; each index retains its original seed.

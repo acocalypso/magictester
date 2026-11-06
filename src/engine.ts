@@ -1,7 +1,7 @@
+import { boundedLog } from "./logs.js";
 import { z } from "zod";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm, mkdir, readFile } from "node:fs/promises";
-import { createWriteStream } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -92,6 +92,7 @@ export interface EngineRequest {
   sideboarding?: boolean;
   companions?: (string | null)[];
   games: number;
+  indices?: number[];
   seed: number;
   clockSeconds: number;
   mode?: "constructed" | "commander" | "duel";
@@ -425,7 +426,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
         : "") +
       dir.split("/").pop()! +
       ".log";
-    const log = createWriteStream(join(this.logDir, logId));
+    const log = await boundedLog(this.logDir, logId);
     try {
       await Promise.all(
         req.decks.map((deck, i) =>
@@ -442,8 +443,21 @@ export class ForgeEngineAdapter implements CardGameEngine {
         throw new Error(
           "Forge bridge missing or incompatible; rerun bootstrap",
         );
+      const indices =
+        req.indices || Array.from({ length: req.games }, (_, i) => i);
+      if (
+        !indices.length ||
+        indices.some(
+          (n, i) =>
+            !Number.isInteger(n) ||
+            n < 0 ||
+            n >= req.games ||
+            (i > 0 && n <= indices[i - 1]),
+        )
+      )
+        throw new Error("Invalid unit indices");
       let count = 0;
-      while (count < req.games) {
+      while (count < indices.length) {
         if (signal?.aborted) throw new Error("CANCELLED");
         const startIndex = count;
         const configFile = join(dir, "request.json");
@@ -463,7 +477,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
             "-Djava.awt.headless=true",
             "-Dfile.encoding=UTF-8",
             "-cp",
-            join(this.home, "magictester-bridge") +
+            join(this.home, bridge.classDirectory || "magictester-bridge") +
               ":" +
               join(
                 this.home,
@@ -520,7 +534,10 @@ export class ForgeEngineAdapter implements CardGameEngine {
             log.write(line + "\n");
             const event = parseStructuredEvent(line);
             if (event?.type === "game_started") {
-              if (event.index !== count || event.gameIndex !== expectedGame)
+              if (
+                event.index !== indices[count] ||
+                event.gameIndex !== expectedGame
+              )
                 throw new Error("Invalid bridge game start identity");
               resetWatchdog((req.clockSeconds + 5) * 1000);
             }
@@ -531,8 +548,8 @@ export class ForgeEngineAdapter implements CardGameEngine {
                 game.index !== expectedGame ||
                 game.players.length !== req.decks.length ||
                 game.index >= (req.maxMatchGames ?? 5) ||
-                event.matchIndex !== count ||
-                game.seed !== (req.seed + count * 1009) % 2147483647 ||
+                event.matchIndex !== indices[count] ||
+                game.seed !== (req.seed + indices[count] * 1009) % 2147483647 ||
                 game.gameSeed !== (game.seed + game.index * 307) % 2147483647 ||
                 game.bridgeVersion !== "2"
               )
@@ -552,11 +569,12 @@ export class ForgeEngineAdapter implements CardGameEngine {
             )
               throw new Error("Runner returned the wrong result unit");
             if (
-              result.index !== count ||
-              result.batchIndex !== count ||
+              result.index !== indices[count] ||
+              result.batchIndex !== indices[count] ||
               result.seed !== req.seed ||
               result.players.length !== req.decks.length ||
-              result.gameSeed !== (req.seed + count * 1009) % 2147483647
+              result.gameSeed !==
+                (req.seed + indices[count] * 1009) % 2147483647
             )
               throw new Error("Invalid bridge result identity");
             if (
@@ -592,7 +610,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
             end.code === 75 &&
             count > startIndex &&
             ["timeout", "engine_error"].includes(lastTermination || "");
-          if (!interruptedGame && (end.code !== 0 || count !== req.games))
+          if (!interruptedGame && (end.code !== 0 || count !== indices.length))
             throw new Error(
               `FORGE_ERROR exit=${end.code} signal=${end.signal} results=${count}/${req.games}`,
             );
@@ -609,7 +627,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
         }
       }
     } finally {
-      log.end();
+      await log.close();
       await rm(dir, { recursive: true, force: true });
     }
   }

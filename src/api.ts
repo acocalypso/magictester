@@ -32,7 +32,39 @@ const app = Fastify({
   bodyLimit: 2 * 1024 * 1024,
   trustProxy: false,
 });
-const cards = await new CachedCardDataProvider().load();
+let cards = await new CachedCardDataProvider().load();
+let cacheFingerprint = "";
+let cacheReloadError: string | null = null;
+let reloading = false;
+const cacheTimer = setInterval(() => {
+  if (reloading) return;
+  reloading = true;
+  void (async () => {
+    const { stat } = await import("node:fs/promises");
+    const root = process.env.DATA_DIR || "/data";
+    const fingerprint = (
+      await Promise.all(
+        ["cards.json", "forge-facts.json", "forge/magictester-bridge.json"].map(
+          async (file) => (await stat(root + "/" + file)).mtimeMs,
+        ),
+      )
+    ).join(":");
+    if (fingerprint !== cacheFingerprint) {
+      const next = await new CachedCardDataProvider().load();
+      cards = next;
+      cacheFingerprint = fingerprint;
+      cacheReloadError = null;
+    }
+  })()
+    .catch((e) => {
+      cacheReloadError = (e as Error).message;
+      app.log.error(e);
+    })
+    .finally(() => {
+      reloading = false;
+    });
+}, 30000);
+cacheTimer.unref();
 await app.register(cors, {
   origin: (process.env.CORS_ORIGINS || "http://localhost:3000").split(","),
 });
@@ -447,6 +479,50 @@ const feedTimer = setInterval(() => {
     });
 }, 60000);
 feedTimer.unref();
+app.get("/api/v1/operations", async () => {
+  const [states, runner, metadata] = await Promise.all([
+    pool.query(
+      "SELECT state,count(*)::int AS count FROM simulation_jobs GROUP BY state",
+    ),
+    fetch((process.env.RUNNER_URL || "http://localhost:3002") + "/health", {
+      signal: AbortSignal.timeout(3000),
+    })
+      .then((r) => r.json())
+      .catch(() => ({ status: "unavailable" })),
+    import("node:fs/promises")
+      .then((fs) =>
+        fs.readFile(
+          (process.env.DATA_DIR || "/data") + "/maintenance.json",
+          "utf8",
+        ),
+      )
+      .then(JSON.parse)
+      .catch(() => ({ status: "unavailable" })),
+  ]);
+  return {
+    jobs: states.rows,
+    runner,
+    metadata,
+    cardData: cards.provenance,
+    cacheReloadError,
+    feeds: await listFeeds(),
+  };
+});
+app.post(
+  "/api/v1/operations/refresh-cards",
+  { preHandler: requireAdmin },
+  async (req, reply) => {
+    const response = await fetch(
+      (process.env.MAINTENANCE_URL || "http://maintenance:3004") + "/refresh",
+      {
+        method: "POST",
+        headers: { authorization: req.headers.authorization || "" },
+        signal: AbortSignal.timeout(5000),
+      },
+    );
+    return reply.code(response.status).send(await response.json());
+  },
+);
 app.get("/api/v1/status", { schema: { tags: ["Operations"] } }, async () => ({
   queue: await queue.getJobCounts("waiting", "active", "failed"),
   limits: config,
@@ -467,6 +543,7 @@ for (const signal of ["SIGTERM", "SIGINT"])
       void (async () => {
         clearInterval(reconcileTimer);
         clearInterval(feedTimer);
+        clearInterval(cacheTimer);
         await app.close();
         await closeServices();
       })(),

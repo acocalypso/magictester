@@ -118,3 +118,9 @@ Authorized remote JSON ingestion passed against the public project-authored refe
 ## Opponent selection (continuation task 8)
 
 Seven real Pauper games (`fde23dbd-6bc4-4297-88be-1bde7a50ba0e`) completed with a saved 3:1 custom weighting, producing exactly five and two games per opponent. Live API rejected all-zero weights and unavailable source shares. Unit checks cover exact totals, deterministic tie breaking, selected-member validation, bounded seeded rosters, zero-weight exclusions, repetition restrictions and explicit ordered pod allocations. All 43 local tests, build and lint passed. Browser checks exercise custom weights, ordered pod seat controls and mobile overflow. See [allocation contract](OPPONENT_SELECTION.md) for the approximation used by weighted multiplayer sampling.
+
+## Operations (continuation task 9)
+
+The new immutable source build `a6b75c4bb8248bdda19d3efd827bfcba7bd4bcfabf20cd2bfcc4b21e719558da` compiled successfully. A direct real-engine request executed only absolute indices `[2,5]`, preserving seeds `[14363,17390]`. BO3 API/cancellation acceptance passed again (`28a594a7-6879-461d-b1af-8405d4f14354`, resumed `096e6fa3-937c-400b-886a-a328261c69d6`).
+
+Restart acceptance killed the worker after one completed match, restarted PostgreSQL and Redis, and let BullMQ recover job `a4b4a5cb-3441-4d7a-b517-e237bb5322bc`. All four matches/nine actual games finished normally, and the previously saved checkpoint was identical. No manual job retry was required. Real Scryfall refresh succeeded through the admin API; the API hot-loaded the cache fetched at `2026-11-06T20:34:37.052Z`, with no cache reload error or engine-source change. The log test writes over its cap and confirms truncation, expired-log removal and active-file protection. All 44 local tests, production build and lint passed. General browser acceptance passed again at 1440/768/390 px. See [operations](OPERATIONS.md).

@@ -186,6 +186,8 @@ const bridgeHash = createHash("sha256")
   .update(bridgeBytes)
   .update(patchBytes)
   .digest("hex");
+const classDirectory = "bridge-builds/" + bridgeHash;
+const classPath = home + "/" + classDirectory;
 let bridgeCache;
 try {
   bridgeCache = JSON.parse(
@@ -197,12 +199,10 @@ try {
 if (
   bridgeCache?.version !== "2" ||
   bridgeCache?.sourceHash !== bridgeHash ||
-  !existsSync(home + "/magictester-bridge/MagicTesterBridge.class") ||
+  bridgeCache?.classDirectory !== classDirectory ||
+  !existsSync(classPath + "/MagicTesterBridge.class") ||
   patches.some(
-    (p) =>
-      !existsSync(
-        home + "/magictester-bridge/" + p.path.replace(/\.java$/, ".class"),
-      ),
+    (p) => !existsSync(classPath + "/" + p.path.replace(/\.java$/, ".class")),
   )
 ) {
   const buildSource = await mkdtemp(root + "/bridge-source-");
@@ -225,8 +225,8 @@ if (
     await writeFile(destination, patched);
     patchedSources.push(destination);
   }
-  await rm(home + "/magictester-bridge", { recursive: true, force: true });
-  await mkdir(home + "/magictester-bridge", { recursive: true });
+  await mkdir(home + "/bridge-builds", { recursive: true });
+  const buildClasses = await mkdtemp(home + "/bridge-builds/.compile-");
   execFileSync(
     "java",
     [
@@ -236,18 +236,24 @@ if (
       "-cp",
       home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
       "-d",
-      home + "/magictester-bridge",
+      buildClasses,
       sourceFile,
       ...patchedSources,
     ],
     { cwd: home, stdio: "inherit" },
   );
+  if (!existsSync(classPath)) await rename(buildClasses, classPath);
+  else await rm(buildClasses, { recursive: true, force: true });
+  // Publish only complete immutable builds. Running JVMs retain their original path.
+  const manifestTemp =
+    home + "/magictester-bridge.json." + process.pid + ".tmp";
   await writeFile(
-    home + "/magictester-bridge.json",
+    manifestTemp,
     JSON.stringify({
       version: "2",
       engineVersion: "2.0.15",
       sourceHash: bridgeHash,
+      classDirectory,
       upstreamOverrides: patches.map((p) => ({
         path: p.path,
         sha256: p.sha256,
@@ -255,6 +261,7 @@ if (
       })),
     }),
   );
+  await rename(manifestTemp, home + "/magictester-bridge.json");
   await rm(buildSource, { recursive: true, force: true });
   console.log(
     JSON.stringify({ event: "forge_bridge_compiled", sourceHash: bridgeHash }),

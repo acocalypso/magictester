@@ -29,6 +29,7 @@ public class MagicTesterBridge {
     static void emit(Object value) {System.out.println(PREFIX+JSON.toJson(value));System.out.flush();}
     static class Request {
         String[] decks,companions;
+        int[] indices;
         int games,seed,clockSeconds,startIndex,bestOf,maxMatchGames;
         boolean sideboarding;
         String mode;
@@ -100,7 +101,12 @@ public class MagicTesterBridge {
             System.setProperty("magictester.duel",Boolean.toString(duel));
             if(duel && request.decks.length!=2) throw new IllegalArgumentException("Duel requires two players");
             GameType type=commander?GameType.Commander:GameType.Constructed;
-            for(int index=request.startIndex;index<request.games;index++) {
+            int[] indices=request.indices;
+            if(indices==null) {indices=new int[request.games];for(int i=0;i<request.games;i++) indices[i]=i;}
+            int previous=-1;
+            for(int value:indices) {if(value<=previous || value<0 || value>=request.games) throw new IllegalArgumentException("Invalid unit indices");previous=value;}
+            for(int offset=request.startIndex;offset<indices.length;offset++) {
+                int index=indices[offset];
                 int unitSeed=(int)(((long)request.seed+(long)index*1009)%2147483647L);MyRandom.setRandom(new Random(unitSeed));
                 GameRules rules=new GameRules(type);rules.setAppliedVariants(EnumSet.of(type));rules.setGamesPerMatch(bestOf);
                 rules.setAISideboardingEnabled(bestOf==3 && request.sideboarding);

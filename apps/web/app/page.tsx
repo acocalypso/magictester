@@ -259,6 +259,21 @@ export default function Home() {
   const formatRef = useRef(format);
   formatRef.current = format;
   const [view, setView] = useState<View>("analysis");
+  const [operations, setOperations] = useState<{
+    runner: { status: string; active?: number; max?: number };
+    metadata: { status: string; lastSuccessAt?: string; error?: string };
+    cacheReloadError: string | null;
+  } | null>(null);
+  useEffect(() => {
+    if (view !== "queue") return;
+    const load = () =>
+      void api<NonNullable<typeof operations>>("/operations")
+        .then(setOperations)
+        .catch((e) => setError(e.message));
+    load();
+    const timer = setInterval(load, 20000);
+    return () => clearInterval(timer);
+  }, [view]);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [feedUrl, setFeedUrl] = useState("");
   const [feedPermission, setFeedPermission] = useState("");
@@ -1227,6 +1242,63 @@ export default function Home() {
                 open={(id) => navigate("results", id)}
                 action={act}
               />
+              {operations && (
+                <details className="panel import-panel">
+                  <summary>Service health & maintenance</summary>
+                  <p>
+                    Engine {operations.runner.status} ·{" "}
+                    {operations.runner.active ?? "—"} /{" "}
+                    {operations.runner.max ?? "—"} slots in use.
+                  </p>
+                  <p>
+                    Card metadata: {operations.metadata.status}. Last refresh{" "}
+                    {operations.metadata.lastSuccessAt
+                      ? date(operations.metadata.lastSuccessAt)
+                      : "no scheduled refresh recorded"}
+                    .
+                  </p>
+                  {(operations.metadata.error ||
+                    operations.cacheReloadError) && (
+                    <p role="status">
+                      {operations.metadata.error || operations.cacheReloadError}
+                    </p>
+                  )}
+                  <label htmlFor="maintenance-token">Admin token</label>
+                  <input
+                    id="maintenance-token"
+                    type="password"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <button
+                    className="secondary"
+                    disabled={
+                      !token || operations.metadata.status === "refreshing"
+                    }
+                    onClick={async () => {
+                      try {
+                        await api("/operations/refresh-cards", {}, token);
+                        setOperations((old) =>
+                          old
+                            ? {
+                                ...old,
+                                metadata: {
+                                  ...old.metadata,
+                                  status: "refreshing",
+                                },
+                              }
+                            : old,
+                        );
+                      } catch (e) {
+                        setError((e as Error).message);
+                      }
+                    }}
+                  >
+                    Refresh card metadata
+                  </button>
+                </details>
+              )}
             </>
           )}
           {view === "results" && !selected && (
