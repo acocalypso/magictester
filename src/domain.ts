@@ -368,7 +368,14 @@ export function validateDeck(
     valid: errors.length === 0,
     cards,
     errors,
-    counts: { mainboard: main, sideboard: side },
+    counts: {
+      mainboard: main,
+      sideboard: side,
+      commanders: cards
+        .filter((c) => c.section === "COMMANDER")
+        .reduce((n, c) => n + c.quantity, 0),
+      companions: companions.reduce((n, c) => n + c.quantity, 0),
+    },
     cardData: provider.provenance,
   };
 }

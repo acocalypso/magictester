@@ -1,5 +1,5 @@
 import { referencePool } from "./reference-pools.js";
-import { enabledFormatIds, validationFormatIds } from "./formats.js";
+import { enabledFormatIds, validationFormatIds, getFormat } from "./formats.js";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
@@ -148,10 +148,21 @@ app.post(
         snapshotId: z.uuid(),
         games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
         seed: z.number().int().min(0).max(2147483646).default(12345),
-        clockSeconds: z.number().int().min(5).max(120).default(30),
+        clockSeconds: z.number().int().min(5).max(120).optional(),
       })
       .parse(req.body);
-    return reply.code(201).send(await createSimulation(input, req.ip, cards));
+    return reply.code(201).send(
+      await createSimulation(
+        {
+          ...input,
+          clockSeconds:
+            input.clockSeconds ??
+            (getFormat(input.format)?.commander ? 120 : 30),
+        },
+        req.ip,
+        cards,
+      ),
+    );
   },
 );
 app.get(
@@ -183,6 +194,12 @@ app.get<{ Params: { id: string } }>(
   "/api/v1/simulations/:id/matchups",
   { schema: { tags: ["Results"], params: idSchema } },
   async (req) => (await resultsFor(req.params.id)).matchups,
+);
+app.get<{ Params: { id: string } }>(
+  "/api/v1/simulations/:id/pods",
+  { schema: { tags: ["Results"], params: idSchema } },
+  async (req) =>
+    (await resultsFor(req.params.id)).matchups.filter((m) => m.kind === "pod"),
 );
 app.get<{
   Params: { id: string };

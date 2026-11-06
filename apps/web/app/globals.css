@@ -1922,3 +1922,52 @@ td strong,
 .pool-format-filter select {
   flex: 1;
 }
+
+.pod-preview {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+.pod-preview li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.pod-preview span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.pod-statistics dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  margin: 0 0 1rem;
+}
+.pod-statistics dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+.pod-statistics dd {
+  margin: 0;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.pod-statistics small {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stat-grid > .panel {
+  margin: 0;
+}
+.stat-grid .stat:first-child {
+  padding-left: 24px;
+}

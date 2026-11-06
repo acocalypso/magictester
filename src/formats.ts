@@ -47,7 +47,7 @@ const commander = (
 ): FormatDefinition => ({
   id,
   name,
-  enabled: false,
+  enabled: id !== "duel",
   validationSupported: true,
   legalityKey: id === "cedh" ? "commander" : id,
   min: 100,

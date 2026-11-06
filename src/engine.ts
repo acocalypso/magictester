@@ -33,7 +33,12 @@ export interface GameResult {
   seed: number;
   batchIndex: number;
   winner: number | null;
-  players: { id: string; placement: number | null }[];
+  players: {
+    id: string;
+    deckId?: string;
+    seat?: number;
+    placement: number | null;
+  }[];
   turns: number | null;
   startingPlayer: number | null;
   durationMs: number;

@@ -23,6 +23,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: node scripts/commander-smoke.mjs
+      - run: node scripts/pods-smoke.mjs
+      - run: node scripts/pods-browser.mjs
       - run: node scripts/formats-smoke.mjs
       - run: node scripts/formats-browser.mjs
       - if: always()
@@ -37,5 +39,6 @@ jobs:
             data/browser/
             data/formats-smoke.json
             data/bridge-smoke.json
+            data/pods-smoke.json
       - if: always()
         run: docker compose down

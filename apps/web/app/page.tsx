@@ -6,6 +6,8 @@ type FormatInfo = {
   name: string;
   enabled: boolean;
   validationSupported: boolean;
+  commander: boolean;
+  players: number;
 };
 type View = "analysis" | "queue" | "results" | "meta";
 type Deck = {
@@ -27,7 +29,7 @@ type Snapshot = {
   selectionMethod: string;
 };
 type Job = {
-  config?: { bridgeVersion?: string };
+  config?: { bridgeVersion?: string; players?: number };
   format: string;
   id: string;
   name: string;
@@ -46,6 +48,16 @@ type Job = {
   seed: number;
 };
 type Summary = {
+  averagePlacement: number | null;
+  placementGames: number;
+  placementDistribution: Record<string, number>;
+  commanderTiming: {
+    observedGames: number;
+    castGames: number;
+    notCastGames: number;
+    averageFirstCastPlayerTurn: number | null;
+    averageCasts: number | null;
+  } | null;
   games: number;
   attempted: number;
   wins: number;
@@ -66,7 +78,12 @@ type Summary = {
 type Results = {
   job: Job;
   summary: Summary;
-  matchups: ({ opponent: Deck; planned: number } & Summary)[];
+  matchups: ({
+    opponent: Deck;
+    planned: number;
+    kind?: string;
+    participants?: Deck[];
+  } & Summary)[];
   limitations: string[];
 };
 type Run = {
@@ -78,6 +95,7 @@ type Run = {
   error: string | null;
   result: {
     engineVersion: string;
+    gameSeed?: number;
     winner: number | null;
     turns: number | null;
     startingPlayer: number | null;
@@ -201,7 +219,12 @@ export default function Home() {
   const [validation, setValidation] = useState<{
     valid: boolean;
     errors: { message: string; line?: number; card?: string }[];
-    counts: { mainboard: number; sideboard: number };
+    counts: {
+      mainboard: number;
+      sideboard: number;
+      commanders: number;
+      companions: number;
+    };
   } | null>(null);
   const [importText, setImportText] = useState("");
   const [token, setToken] = useState("");
@@ -281,6 +304,7 @@ export default function Home() {
         .then(setRuns)
         .catch((e) => setError(e.message));
   }, [view, selected, runPage, result?.job.completed, result?.job.failed]);
+  const [clockSeconds, setClockSeconds] = useState(30);
   const submit = async () => {
     setBusy(true);
     setError("");
@@ -298,6 +322,7 @@ export default function Home() {
           snapshotId,
           games,
           seed,
+          clockSeconds,
         });
         await refresh();
         navigate("results", job.id);
@@ -323,7 +348,25 @@ export default function Home() {
   };
   const turnLabel =
     result?.job.config?.bridgeVersion === "1" ? "Player turns" : "End round";
+  const selectedFormat = formats.find((f) => f.id === format);
+  const isPod = selectedFormat?.players === 4;
+  const resultIsPod = result?.job.config?.players === 4;
   const pool = snapshots.find((s) => s.id === snapshotId);
+  const podPreview =
+    isPod && pool
+      ? pool.decks
+          .map((_, i) => ({
+            name: `Pod ${i + 1}`,
+            opponents: Array.from(
+              { length: 3 },
+              (_, seat) => pool.decks[(i + seat) % pool.decks.length],
+            ),
+            games:
+              Math.floor(games / pool.decks.length) +
+              (i < games % pool.decks.length ? 1 : 0),
+          }))
+          .filter((p) => p.games > 0)
+      : [];
   const running = jobs.filter((j) => active.includes(j.state));
   return (
     <div className="app-shell">
@@ -460,7 +503,11 @@ export default function Home() {
                     <div className="deck-editor">
                       <div className="editor-toolbar">
                         <span className="tiny-dot" />
-                        <span>MAINBOARD / SIDEBOARD</span>
+                        <span>
+                          {selectedFormat?.commander
+                            ? "LIBRARY / COMMANDER / COMPANION"
+                            : "MAINBOARD / SIDEBOARD"}
+                        </span>
                         <span className="editor-count">
                           {decklist ? decklist.split("\n").length : 0} lines
                         </span>
@@ -480,8 +527,9 @@ export default function Home() {
                       />
                     </div>
                     <div className="editor-note">
-                      Mainboard and sideboard supported. Your exact list is
-                      saved with each analysis.
+                      {selectedFormat?.commander
+                        ? "Exactly 100 cards including commanders. Declare Commander and optional Companion sections."
+                        : "Mainboard and sideboard supported. Your exact list is saved with each analysis."}
                     </div>
                     {validation && (
                       <div
@@ -497,7 +545,9 @@ export default function Home() {
                             <strong>✓ Deck validated</strong>
                             <span>
                               {validation.counts.mainboard} mainboard ·{" "}
-                              {validation.counts.sideboard} sideboard
+                              {selectedFormat?.commander
+                                ? `${validation.counts.commanders} commander(s) · ${validation.counts.companions} companion(s)`
+                                : `${validation.counts.sideboard} sideboard`}
                             </span>
                           </>
                         ) : (
@@ -553,6 +603,12 @@ export default function Home() {
                         value={format}
                         onChange={(event) => {
                           setFormat(event.target.value);
+                          setClockSeconds(
+                            formats.find((f) => f.id === event.target.value)
+                              ?.commander
+                              ? 120
+                              : 30,
+                          );
                           setSnapshots([]);
                           setSnapshotId("");
                           setValidation(null);
@@ -585,8 +641,8 @@ export default function Home() {
                           <span>◈</span>
                           <div>
                             <strong>
-                              {pool.decks.length} opponent decks · Equal
-                              allocation
+                              {pool.decks.length} opponent decks ·{" "}
+                              {isPod ? "4-player pods" : "Equal allocation"}
                             </strong>
                             <p>{pool.source}</p>
                             <small>Snapshot {date(pool.createdAt)}</small>
@@ -634,11 +690,38 @@ export default function Home() {
                           />
                         </div>
                       </div>
+                      <label htmlFor="clock">Game clock (seconds)</label>
+                      <input
+                        id="clock"
+                        type="number"
+                        min={5}
+                        max={120}
+                        value={clockSeconds}
+                        onChange={(e) =>
+                          setClockSeconds(Number(e.target.value))
+                        }
+                      />
                       <p className="distribution">
                         {pool
-                          ? `${games} games across ${Math.min(pool.decks.length, games)} opponents. ${Math.floor(games / pool.decks.length)}–${Math.ceil(games / pool.decks.length)} games per deck.`
+                          ? isPod
+                            ? `${games} games across ${podPreview.length} rotating pods. Your deck occupies seat 1. ${pool.decks.length < 3 ? "Lists repeat to fill the three opponent seats." : "Opponent lists rotate through the other seats."}`
+                            : `${games} games across ${Math.min(pool.decks.length, games)} opponents. ${Math.floor(games / pool.decks.length)}–${Math.ceil(games / pool.decks.length)} games per deck.`
                           : "Import a benchmark pool to begin."}
                       </p>
+                      {isPod && (
+                        <ol className="pod-preview" aria-label="Planned pods">
+                          {podPreview.map((p) => (
+                            <li key={p.name}>
+                              <strong>
+                                {p.name} · {p.games} games
+                              </strong>
+                              <span>
+                                {p.opponents.map((o) => o.name).join(" / ")}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
                       <button
                         className="primary analyze-button"
                         disabled={
@@ -646,7 +729,9 @@ export default function Home() {
                           !decklist.trim() ||
                           !snapshotId ||
                           games < 1 ||
-                          games > 1000
+                          games > 1000 ||
+                          clockSeconds < 5 ||
+                          clockSeconds > 120
                         }
                         onClick={() => void submit()}
                       >
@@ -855,9 +940,14 @@ export default function Home() {
                   <section className="panel">
                     <div className="panel-heading">
                       <div>
-                        <h2>Matchup performance</h2>
+                        <h2>
+                          {resultIsPod
+                            ? "Pod performance"
+                            : "Matchup performance"}
+                        </h2>
                         <span className="muted">
-                          {result.matchups.length} opponents
+                          {result.matchups.length}{" "}
+                          {resultIsPod ? "pods" : "opponents"}
                         </span>
                       </div>
                       <select
@@ -875,7 +965,11 @@ export default function Home() {
                       <table>
                         <thead>
                           <tr>
-                            <th>Opponent / archetype</th>
+                            <th>
+                              {resultIsPod
+                                ? "Pod / opponent seats"
+                                : "Opponent / archetype"}
+                            </th>
                             <th>Games</th>
                             <th>Record</th>
                             <th>Win rate</th>
@@ -895,8 +989,13 @@ export default function Home() {
                                 <td>
                                   <strong>{m.opponent.name}</strong>
                                   <small>
-                                    {m.opponent.archetype} ·{" "}
-                                    {m.opponent.strategy}
+                                    {m.kind === "pod"
+                                      ? m.participants
+                                          ?.map((o) => o.name)
+                                          .join(" / ")
+                                      : m.opponent.archetype +
+                                        " · " +
+                                        m.opponent.strategy}
                                   </small>
                                 </td>
                                 <td>
@@ -952,6 +1051,64 @@ export default function Home() {
                     </div>
                   </section>
                 </div>
+                {resultIsPod && (
+                  <section
+                    className="panel pod-statistics"
+                    aria-label="Commander results"
+                  >
+                    <div className="panel-heading">
+                      <h2>Commander results</h2>
+                      <span className="muted">Observed engine events</span>
+                    </div>
+                    <div className="panel-body">
+                      <dl>
+                        <div>
+                          <dt>Average placement</dt>
+                          <dd>
+                            {result.summary.averagePlacement?.toFixed(2) ?? "—"}{" "}
+                            / 4{" "}
+                            <small>
+                              from {result.summary.placementGames} completed
+                              placements
+                            </small>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Placement distribution</dt>
+                          <dd>
+                            {Object.entries(
+                              result.summary.placementDistribution,
+                            )
+                              .map(([place, n]) => `${place}: ${n}`)
+                              .join(" · ") || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>First commander cast</dt>
+                          <dd>
+                            {result.summary.commanderTiming?.averageFirstCastPlayerTurn?.toFixed(
+                              1,
+                            ) ?? "—"}{" "}
+                            <small>
+                              caster’s own turn ·{" "}
+                              {result.summary.commanderTiming?.castGames ?? 0}{" "}
+                              games with a cast;{" "}
+                              {result.summary.commanderTiming?.notCastGames ??
+                                0}{" "}
+                              without one
+                            </small>
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="muted">
+                        The submitted deck stays in seat 1. Tied eliminations
+                        share a placement. Commander timing measures actual
+                        commander spells cast by the submitted player; games
+                        without a cast have no first-cast turn.
+                      </p>
+                    </div>
+                  </section>
+                )}
                 <section className="panel">
                   <div className="panel-heading">
                     <h2>Game length distribution</h2>
@@ -1474,8 +1631,9 @@ function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
       </div>
       <div className="panel-body">
         <p>
-          The seed applies to the opponent batch. The game index locates this
-          game in that batch.
+          {detail.result?.gameSeed !== undefined
+            ? `Game seed ${detail.result.gameSeed}. Player entries identify each seat and its deck version.`
+            : "The legacy seed applies to the opponent batch; the game index locates this game in that batch."}
         </p>
         <pre>{JSON.stringify(detail, null, 2)}</pre>
       </div>

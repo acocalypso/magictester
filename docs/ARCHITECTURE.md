@@ -16,7 +16,7 @@ The API does inexpensive parsing, validation, snapshot import, job planning and 
 
 `CardDataProvider` loads a single cached Scryfall bulk dataset plus script names and role/ability facts extracted through the pinned Forge rules parser. Exact card names win over face aliases; tokens/emblems cannot overwrite real cards. `MetaDeckProvider` implementations normalize manual JSON/CSV imports before simulation. Each deck and opponent snapshot is immutable.
 
-The API transaction inserts a deck version, job and every planned run. A stable `(job_id, opponent_id, batch_index)` identity prevents duplicate counting. The job table acts as a durable enqueue outbox. A reconciliation loop inserts missing BullMQ jobs after Redis/network interruptions. A PostgreSQL session advisory lock prevents concurrent workers from owning the same benchmark.
+The API transaction inserts a deck version, immutable job configuration/roster and every planned run. Commander/cEDH use stable ordered pod keys in the run identity; saved rosters resolve exclusively against their immutable opponent snapshot. A stable `(job_id, opponent_id, batch_index)` identity prevents duplicate counting. The job table acts as a durable enqueue outbox. A reconciliation loop inserts missing BullMQ jobs after Redis/network interruptions. A PostgreSQL session advisory lock prevents concurrent workers from owning the same benchmark.
 
 The worker runs one opponent batch at a time and checkpoints each completed game. The runner streams NDJSON results and heartbeats. Its process counter is the global JVM bound; only one runner replica should be deployed. Worker concurrency may exceed engine capacity, in which case workers wait rather than spawning more JVMs.
 

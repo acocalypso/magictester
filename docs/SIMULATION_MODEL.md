@@ -8,6 +8,16 @@ Standard, Pioneer, Modern, Pauper, Legacy and Vintage; two AI players, best of o
 
 The reference pool contains project-authored lists solely for a functioning local benchmark and integration checks. It is not presented as a current competitive meta. Import authorized tournament/curated data with its provenance and date for meaningful comparisons. At most 50 normalized opponents are accepted per import.
 
+## Commander and cEDH pods
+
+Commander and cEDH add the submitted deck to three opponent seats at 40 life. Consecutive lists from immutable snapshot order fill those seats; the next pod rotates the starting list by one. Games are allocated equally across these ordered pods, with the remainder in snapshot order. Pools smaller than three repeat lists across seats; the preview explicitly shows the repeated names. A pod's ordered roster determines a stable key. The saved execution plan, seeds, clock and deck/snapshot references cannot be edited after submission.
+
+Each player has a unique seat identity plus a deck identity, even when lists repeat. Recovery reads the saved roster and leaves completed results untouched. Per-pod rates describe that entire roster, not an independent one-on-one matchup with any single opponent. `GET /api/v1/simulations/:id/pods` returns these pod summaries; `results.matchups` retains a display-compatible pod label and full `participants`.
+
+Average placement and placement distributions use only actual completed placements. Simultaneous losses share a competition rank. Commander timing uses observed spells cast by the submitted player and the caster's own turn number; games without a cast have no first-cast turn and are counted separately. Constructed reports do not display Commander metrics. The submitted deck stays in the first displayed seat; Forge chooses the actual first player. This is not randomized or balanced seating.
+
+The default game clock is 120 seconds for Commander-family API jobs, 30 for constructed, configurable from 5–120 seconds. Commander AI can exceed the clock on complex or stalled boards. Reference Commander/cEDH lists are explicitly integration fixtures and are not a competitive cEDH field.
+
 ## Outcomes and statistics
 
 - Normal wins/losses and rule draws count as valid games.
@@ -29,4 +39,4 @@ Seeds are stored and passed to the engine; deterministic replay across versions 
 
 ## Unavailable / deferred
 
-The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Public Commander pod planning is a separate pending milestone. Commander damage totals, mulligans, cards drawn/cast, BO3, intelligent sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.
+The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligans, cards drawn/cast, BO3, intelligent sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.

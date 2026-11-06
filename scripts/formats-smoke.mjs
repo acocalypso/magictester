@@ -28,6 +28,7 @@ async function request(path, body, expected = 200, admin = false) {
 const formats = (await request("/formats")).filter(
   (f) =>
     f.enabled &&
+    !f.commander &&
     (!process.env.FORMAT_FILTER ||
       process.env.FORMAT_FILTER.split(",").includes(f.id)),
 );

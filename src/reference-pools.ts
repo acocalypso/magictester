@@ -72,8 +72,38 @@ const green = [
 ];
 export function referencePool(format: string, provider: CardDataProvider) {
   const definition = getFormat(format);
-  if (!definition?.enabled || definition.commander)
+  if (!definition?.enabled)
     throw new Error("Reference pool is not available for this format");
+  if (definition.commander) {
+    const decks = ["Bruvac the Grandiloquent", "Ambassador Laquatus"].map(
+      (commander, index) => {
+        const decklist = `40 Island\n59 Persistent Petitioners\nCommander\n1 ${commander}`;
+        const validation = validateDeck(decklist, format, provider);
+        if (!validation.valid)
+          throw new Error(
+            "Commander reference failed validation: " +
+              JSON.stringify(validation.errors),
+          );
+        return {
+          name: index === 0 ? "Bruvac reference" : "Laquatus reference",
+          archetype:
+            index === 0 ? "Bruvac mill reference" : "Laquatus mill reference",
+          strategy: "CONTROL" as const,
+          decklist,
+          sourceUrl: null,
+          metaShare: null,
+        };
+      },
+    );
+    return {
+      name: `${definition.name} · Local reference pool`,
+      format: definition.id,
+      source:
+        "Project-authored Commander integration lists, not tournament data or a competitive cEDH metagame. Small pools repeat lists across opponent seats.",
+      selectionMethod: "custom_pool" as const,
+      decks,
+    };
+  }
   const deck = (land: string, candidates: string[], name: string) => {
     const chosen = candidates
       .filter((n) => {

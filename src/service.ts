@@ -4,7 +4,8 @@ import { and, eq, inArray, sql, desc } from "drizzle-orm";
 import { db, pool } from "./db.js";
 import { jobs, runs, snapshots, deckVersions, events } from "./schema.js";
 import { config, ACTIVE } from "./config.js";
-import { planGames, validateDeck, type CardDataProvider } from "./domain.js";
+import { validateDeck, type CardDataProvider } from "./domain.js";
+import { planBenchmark, storePlans, executionPlans } from "./planning.js";
 import { summarize } from "./analytics.js";
 import { queue, enqueue } from "./queue.js";
 export class RequestError extends Error {
@@ -40,6 +41,12 @@ export async function createSimulation(
     .where(eq(snapshots.id, input.snapshotId));
   if (!snapshot || snapshot.format !== input.format)
     throw new RequestError(422, "Snapshot missing or format mismatch");
+  const plans = planBenchmark(
+    input.format,
+    input.games,
+    snapshot.decks,
+    input.seed,
+  );
   const clientKey = createHash("sha256").update(client).digest("hex");
   const id = randomUUID();
   const versionId = randomUUID();
@@ -78,8 +85,12 @@ export async function createSimulation(
       config: {
         benchmarkMode: snapshot.selectionMethod,
         gameMode: "BO1",
+        executionPlan: storePlans(plans),
+        players: getFormat(input.format)!.players,
         distribution:
-          "equal games per selected deck; remainder assigned in snapshot order",
+          getFormat(input.format)!.players === 4
+            ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"
+            : "equal games per selected deck; remainder assigned in snapshot order",
         engine: "forge",
         forgeRelease: "2.0.15",
         bridgeVersion: "1",
@@ -91,12 +102,12 @@ export async function createSimulation(
         submittedSeat: 0,
       },
     });
-    for (const plan of planGames(input.games, snapshot.decks, input.seed))
+    for (const plan of plans)
       await tx.insert(runs).values(
         Array.from({ length: plan.games }, (_, batchIndex) => ({
           id: randomUUID(),
           jobId: id,
-          opponentId: plan.opponent.id,
+          opponentId: plan.key,
           batchIndex,
           seed: plan.seed,
         })),
@@ -155,19 +166,35 @@ export async function resultsFor(id: string) {
   return {
     job,
     summary: {
-      ...summarize(results),
+      ...summarize(results, 0, !!getFormat(job.format)?.commander),
       errors: rows.filter((r) => r.state === "ERROR").length,
     },
-    matchups: job.snapshot.decks.map((opponent) => ({
-      opponent,
-      planned: rows.filter((r) => r.opponentId === opponent.id).length,
+    matchups: executionPlans(job).map((plan) => ({
+      opponent:
+        plan.kind === "pod"
+          ? {
+              cards: [],
+              decklist: "",
+              sourceUrl: null,
+              metaShare: null,
+              strategy: "UNKNOWN" as const,
+              id: plan.key,
+              name: plan.name,
+              archetype: plan.opponents.map((o) => o.archetype).join(" / "),
+            }
+          : plan.opponents[0],
+      kind: plan.kind,
+      participants: plan.opponents,
+      planned: rows.filter((r) => r.opponentId === plan.key).length,
       ...summarize(
         rows
-          .filter((r) => r.opponentId === opponent.id)
+          .filter((r) => r.opponentId === plan.key)
           .flatMap((r) => (r.result ? [r.result] : [])),
+        0,
+        !!getFormat(job.format)?.commander,
       ),
       errors: rows.filter(
-        (r) => r.opponentId === opponent.id && r.state === "ERROR",
+        (r) => r.opponentId === plan.key && r.state === "ERROR",
       ).length,
     })),
     limitations: [

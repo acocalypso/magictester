@@ -9,7 +9,7 @@ import { readFile } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 try {
   const cards = await new CachedCardDataProvider().load();
-  for (const format of FORMATS.filter((f) => f.enabled && !f.commander)) {
+  for (const format of FORMATS.filter((f) => f.enabled)) {
     const name = `${format.name} · Local reference pool`;
     if (
       (
@@ -26,22 +26,23 @@ try {
         : referencePool(format.id, cards),
       cards,
     );
-    await db
-      .insert(snapshots)
-      .values({
-        id: randomUUID(),
-        format: data.format,
-        name: data.name,
-        source: data.source,
-        selectionMethod: data.selectionMethod,
-        decks: data.decks,
-        metadata: {
-          purpose:
-            "Project-authored reference lists, not a current tournament metagame.",
-          cardData: cards.provenance,
-          weighting: "equal games per deck",
-        },
-      });
+    await db.insert(snapshots).values({
+      id: randomUUID(),
+      format: data.format,
+      name: data.name,
+      source: data.source,
+      selectionMethod: data.selectionMethod,
+      decks: data.decks,
+      metadata: {
+        purpose:
+          "Project-authored reference lists, not a current tournament metagame.",
+        cardData: cards.provenance,
+        weighting:
+          format.players === 4
+            ? "equal games per rotating pod; small pools repeat lists"
+            : "equal games per deck",
+      },
+    });
     console.log(
       JSON.stringify({ event: "reference_pool_seeded", format: format.id }),
     );

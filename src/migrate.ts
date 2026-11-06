@@ -7,7 +7,7 @@ try {
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
   );
-  for (const name of ["0001_initial.sql"]) {
+  for (const name of ["0001_initial.sql", "0002_immutable_job_plan.sql"]) {
     if (
       !(
         await client.query("SELECT 1 FROM schema_migrations WHERE name=$1", [

@@ -9,6 +9,8 @@ import {
 } from "../src/domain.js";
 import { referencePool } from "../src/reference-pools.js";
 import { normalizeSnapshot } from "../src/meta.js";
+const constructedIds = () =>
+  FORMATS.filter((f) => f.enabled && !f.commander).map((f) => f.id);
 const legalities = Object.fromEntries(
   enabledFormatIds().map((format) => [format, "legal"]),
 );
@@ -38,7 +40,7 @@ const provider: CardDataProvider = {
   provenance: { source: "test" },
 };
 test("the six constructed formats validate legal decks with centralized deck and sideboard bounds", () => {
-  for (const id of enabledFormatIds()) {
+  for (const id of constructedIds()) {
     assert.equal(validateDeck("60 Forest", id, provider).valid, true, id);
     assert.ok(
       validateDeck("59 Forest", id, provider).errors.some(
@@ -51,7 +53,7 @@ test("the six constructed formats validate legal decks with centralized deck and
       ),
     );
   }
-  assert.equal(FORMATS.filter((f) => f.enabled).length, 6);
+  assert.equal(FORMATS.filter((f) => f.enabled && !f.commander).length, 6);
 });
 test("Vintage restricted status is legal for one copy and counts the sideboard", () => {
   assert.equal(
@@ -97,7 +99,7 @@ test(
   { skip: !process.env.DATA_DIR },
   async () => {
     const cards = await new CachedCardDataProvider().load();
-    for (const format of enabledFormatIds()) {
+    for (const format of constructedIds()) {
       const snapshot = normalizeSnapshot(referencePool(format, cards), cards);
       assert.equal(snapshot.decks.length, 2);
       for (const deck of snapshot.decks) {

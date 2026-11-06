@@ -8,7 +8,8 @@ import { config, redisOptions } from "./config.js";
 import { getJob } from "./service.js";
 import { queue } from "./queue.js";
 import { serializeDeck, type GameResult } from "./engine.js";
-import { planGames } from "./domain.js";
+import { executionPlans } from "./planning.js";
+import { getFormat } from "./formats.js";
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ event, ...data }));
 const activeControllers = new Map<string, AbortController>();
@@ -89,7 +90,7 @@ const worker = new Worker(
           throw new Error(
             "This queued job predates the structured engine bridge. Resubmit it to use the current result and seed contract.",
           );
-        for (const plan of planGames(job.games, job.snapshot.decks, job.seed)) {
+        for (const plan of executionPlans(job)) {
           if (controller.signal.aborted) throw new Error("Job interrupted");
           const pending = await db
             .select()
@@ -97,7 +98,7 @@ const worker = new Worker(
             .where(
               and(
                 eq(runs.jobId, id),
-                eq(runs.opponentId, plan.opponent.id),
+                eq(runs.opponentId, plan.key),
                 eq(runs.state, "PENDING"),
               ),
             );
@@ -109,16 +110,16 @@ const worker = new Worker(
           await db.insert(events).values({
             id: randomUUID(),
             jobId: id,
-            kind: "MATCHUP_STARTED",
+            kind: plan.kind === "pod" ? "POD_STARTED" : "MATCHUP_STARTED",
             data: {
-              opponentId: plan.opponent.id,
-              name: plan.opponent.name,
+              opponentId: plan.key,
+              name: plan.name,
               seed: plan.seed,
             },
           });
-          log("matchup_started", {
+          log(plan.kind === "pod" ? "pod_started" : "matchup_started", {
             jobId: id,
-            opponentId: plan.opponent.id,
+            opponentId: plan.key,
             games: plan.games,
           });
           let response: Response | undefined;
@@ -132,12 +133,15 @@ const worker = new Worker(
                 body: JSON.stringify({
                   decks: [
                     serializeDeck(job.deck.cards, "player-0"),
-                    serializeDeck(plan.opponent.cards, "player-1"),
+                    ...plan.opponents.map((opponent, i) =>
+                      serializeDeck(opponent.cards, `player-${i + 1}`),
+                    ),
                   ],
+                  mode: getFormat(job.format)!.engineGameType,
                   games: plan.games,
                   seed: plan.seed,
                   clockSeconds: job.clockSeconds,
-                  traceId: id + "_" + plan.opponent.id,
+                  traceId: id + "_" + plan.key,
                 }),
                 signal: controller.signal,
               },
@@ -197,7 +201,9 @@ const worker = new Worker(
                   );
                 result.players = result.players.map((p, i) => ({
                   ...p,
-                  id: i === 0 ? job.deck.id : plan.opponent.id,
+                  id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
+                  deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
+                  seat: i,
                 }));
                 await db
                   .update(runs)
@@ -210,7 +216,7 @@ const worker = new Worker(
                   .where(
                     and(
                       eq(runs.jobId, id),
-                      eq(runs.opponentId, plan.opponent.id),
+                      eq(runs.opponentId, plan.key),
                       eq(runs.batchIndex, result.index),
                       eq(runs.state, "PENDING"),
                     ),

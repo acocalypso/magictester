@@ -16,7 +16,11 @@ function median(a: number[]) {
   const b = [...a].sort((x, y) => x - y);
   return (b[Math.floor((b.length - 1) / 2)] + b[Math.floor(b.length / 2)]) / 2;
 }
-export function summarize(results: GameResult[], submittedSeat = 0) {
+export function summarize(
+  results: GameResult[],
+  submittedSeat = 0,
+  commander = false,
+) {
   const valid = results.filter(
     (r) => r.termination === "normal" || r.termination === "rule_draw",
   );
@@ -37,7 +41,34 @@ export function summarize(results: GameResult[], submittedSeat = 0) {
     };
   };
   const turns = valid.flatMap((r) => (r.turns === null ? [] : [r.turns]));
+  const placements = valid.flatMap((r) =>
+    r.players?.[submittedSeat]?.placement == null
+      ? []
+      : [r.players[submittedSeat].placement!],
+  );
+  const withCasts = valid.filter((r) => Array.isArray(r.commanderCasts));
+  const castLists = withCasts.map((r) =>
+    r.commanderCasts!.filter((c) => c.player === submittedSeat),
+  );
+  const firstCasts = castLists.flatMap((c) => (c.length ? [c[0]] : []));
   return {
+    averagePlacement: mean(placements),
+    placementGames: placements.length,
+    placementDistribution: Object.fromEntries(
+      [...new Set(placements)]
+        .sort((a, b) => a - b)
+        .map((p) => [p, placements.filter((x) => x === p).length]),
+    ),
+    commanderTiming: commander
+      ? {
+          observedGames: withCasts.length,
+          castGames: firstCasts.length,
+          notCastGames: withCasts.length - firstCasts.length,
+          averageFirstCastPlayerTurn: mean(firstCasts.map((c) => c.playerTurn)),
+          averageFirstCastGlobalTurn: mean(firstCasts.map((c) => c.turn)),
+          averageCasts: mean(castLists.map((c) => c.length)),
+        }
+      : null,
     games: n,
     attempted: results.length,
     wins,
