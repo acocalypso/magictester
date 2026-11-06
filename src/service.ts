@@ -5,7 +5,12 @@ import { db, pool } from "./db.js";
 import { jobs, runs, snapshots, deckVersions, events } from "./schema.js";
 import { config, ACTIVE } from "./config.js";
 import { validateDeck, type CardDataProvider } from "./domain.js";
-import { planBenchmark, storePlans, executionPlans } from "./planning.js";
+import {
+  planBenchmark,
+  storePlans,
+  executionPlans,
+  type BenchmarkSelection,
+} from "./planning.js";
 import { gameResults } from "./engine.js";
 import { summarize, summarizeMatches } from "./analytics.js";
 import { queue, enqueue } from "./queue.js";
@@ -30,6 +35,7 @@ export async function createSimulation(
     gameMode?: "BO1" | "BO3";
     maxMatchGames?: number;
     sideboardMode?: "none" | "forge";
+    selection?: BenchmarkSelection;
   },
   client: string,
   provider: CardDataProvider,
@@ -72,12 +78,18 @@ export async function createSimulation(
     .where(eq(snapshots.id, input.snapshotId));
   if (!snapshot || snapshot.format !== input.format)
     throw new RequestError(422, "Snapshot missing or format mismatch");
-  const plans = planBenchmark(
-    input.format,
-    input.games,
-    snapshot.decks,
-    input.seed,
-  );
+  let plans;
+  try {
+    plans = planBenchmark(
+      input.format,
+      input.games,
+      snapshot.decks,
+      input.seed,
+      input.selection,
+    );
+  } catch (e) {
+    throw new RequestError(422, (e as Error).message);
+  }
   const clientKey = createHash("sha256").update(client).digest("hex");
   const id = randomUUID();
   const versionId = randomUUID();
@@ -121,6 +133,7 @@ export async function createSimulation(
         maxGameAttempts: input.games * maxMatchGames,
         sideboardMode,
         executionPlan: storePlans(plans),
+        selection: input.selection || { mode: "equal" },
         players: getFormat(input.format)!.players,
         rules: {
           format: input.format,
@@ -128,10 +141,15 @@ export async function createSimulation(
           mulliganRule: "London",
           startingLife: getFormat(input.format)!.startingLife,
         },
-        distribution:
-          getFormat(input.format)!.players === 4
-            ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"
-            : `equal ${bestOf ? "matches" : "games"} per selected deck; remainder assigned in snapshot order`,
+        distribution: input.selection?.pods
+          ? "explicit ordered pods; largest-remainder weighted allocation"
+          : input.selection?.mode && input.selection.mode !== "equal"
+            ? getFormat(input.format)!.players === 4
+              ? "at most 50 seeded weighted roster draws; equal allocation across draws; approximate seat shares"
+              : "largest-remainder allocation using selected weights; ties in snapshot order"
+            : getFormat(input.format)!.players === 4
+              ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"
+              : `equal ${bestOf ? "matches" : "games"} per selected deck; remainder assigned in snapshot order`,
         engine: "forge",
         forgeRelease: "2.0.15",
         bridgeVersion: "2",

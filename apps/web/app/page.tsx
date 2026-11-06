@@ -374,6 +374,23 @@ export default function Home() {
   const [clockSeconds, setClockSeconds] = useState(30);
   const [gameMode, setGameMode] = useState<"BO1" | "BO3">("BO1");
   const [maxMatchGames, setMaxMatchGames] = useState(5);
+  const [allocationMode, setAllocationMode] = useState<
+    "equal" | "meta" | "custom"
+  >("equal");
+  const [excludedDecks, setExcludedDecks] = useState<string[]>([]);
+  const [opponentWeights, setOpponentWeights] = useState<
+    Record<string, number>
+  >({});
+  const [allowRepeatedLists, setAllowRepeatedLists] = useState(true);
+  const [customPods, setCustomPods] = useState<
+    { opponentIds: string[]; weight: number }[]
+  >([]);
+  useEffect(() => {
+    setExcludedDecks([]);
+    setOpponentWeights({});
+    setCustomPods([]);
+    setAllocationMode("equal");
+  }, [snapshotId]);
   const [sideboardMode, setSideboardMode] = useState<"none" | "forge">("forge");
   const submit = async () => {
     setBusy(true);
@@ -391,6 +408,22 @@ export default function Home() {
           format,
           snapshotId,
           games,
+          selection: {
+            mode: allocationMode,
+            opponentIds: pool?.decks
+              .filter((d) => !excludedDecks.includes(d.id))
+              .map((d) => d.id),
+            weights:
+              allocationMode === "custom"
+                ? Object.fromEntries(
+                    (pool?.decks || [])
+                      .filter((d) => !excludedDecks.includes(d.id))
+                      .map((d) => [d.id, opponentWeights[d.id] ?? 1]),
+                  )
+                : undefined,
+            allowRepeatedLists,
+            pods: isPod && customPods.length ? customPods : undefined,
+          },
           seed,
           clockSeconds,
           gameMode,
@@ -806,12 +839,209 @@ export default function Home() {
                           <div>
                             <strong>
                               {pool.decks.length} opponent decks ·{" "}
-                              {isPod ? "4-player pods" : "Equal allocation"}
+                              {isPod
+                                ? "4-player pods"
+                                : `${allocationMode} allocation`}
                             </strong>
                             <p>{pool.source}</p>
                             <small>Snapshot {date(pool.createdAt)}</small>
                           </div>
                         </div>
+                      )}
+                      {pool && (
+                        <details className="opponent-controls">
+                          <summary>Choose opponents & allocation</summary>
+                          <label htmlFor="allocation-mode">Allocation</label>
+                          <select
+                            id="allocation-mode"
+                            value={allocationMode}
+                            onChange={(e) =>
+                              setAllocationMode(
+                                e.target.value as typeof allocationMode,
+                              )
+                            }
+                          >
+                            <option value="equal">Equal allocation</option>
+                            <option value="meta">
+                              Source-reported meta shares
+                            </option>
+                            <option value="custom">Custom weights</option>
+                          </select>
+                          {pool.decks.map((d) => (
+                            <div className="opponent-choice" key={d.id}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={!excludedDecks.includes(d.id)}
+                                  onChange={(e) =>
+                                    setExcludedDecks((old) =>
+                                      e.target.checked
+                                        ? old.filter((id) => id !== d.id)
+                                        : [...old, d.id],
+                                    )
+                                  }
+                                />
+                                {d.name}
+                              </label>
+                              {allocationMode === "custom" && (
+                                <input
+                                  aria-label={`Weight for ${d.name}`}
+                                  type="number"
+                                  min="0"
+                                  max="1000000"
+                                  step="0.1"
+                                  value={opponentWeights[d.id] ?? 1}
+                                  onChange={(e) =>
+                                    setOpponentWeights((old) => ({
+                                      ...old,
+                                      [d.id]: Number(e.target.value),
+                                    }))
+                                  }
+                                />
+                              )}
+                              {allocationMode === "meta" && (
+                                <small>
+                                  {d.metaShare === null
+                                    ? "Share unavailable"
+                                    : pct(d.metaShare)}
+                                </small>
+                              )}
+                            </div>
+                          ))}
+                          <p className="muted">
+                            Zero weights exclude a list. Two-player allocation
+                            uses largest remainders, with ties in snapshot
+                            order. Missing source shares cannot be estimated.
+                          </p>
+                          {isPod && (
+                            <>
+                              <label className="checkbox-label">
+                                <input
+                                  type="checkbox"
+                                  checked={allowRepeatedLists}
+                                  onChange={(e) =>
+                                    setAllowRepeatedLists(e.target.checked)
+                                  }
+                                />
+                                Allow repeated lists within a pod
+                              </label>
+                              <p className="muted">
+                                Equal mode rotates selected lists. Weighted mode
+                                samples up to 50 seeded ordered rosters, then
+                                divides games across those draws; seat shares
+                                are approximate.
+                              </p>
+                              {customPods.map((pod, i) => (
+                                <div className="custom-pod" key={i}>
+                                  <strong>Pod {i + 1}</strong>
+                                  {pod.opponentIds.map((id, seat) => (
+                                    <select
+                                      key={seat}
+                                      aria-label={`Pod ${i + 1} seat ${seat + 2}`}
+                                      value={id}
+                                      onChange={(e) =>
+                                        setCustomPods((old) =>
+                                          old.map((p, n) =>
+                                            n === i
+                                              ? {
+                                                  ...p,
+                                                  opponentIds:
+                                                    p.opponentIds.map((v, s) =>
+                                                      s === seat
+                                                        ? e.target.value
+                                                        : v,
+                                                    ),
+                                                }
+                                              : p,
+                                          ),
+                                        )
+                                      }
+                                    >
+                                      {pool.decks
+                                        .filter(
+                                          (d) => !excludedDecks.includes(d.id),
+                                        )
+                                        .map((d) => (
+                                          <option key={d.id} value={d.id}>
+                                            {d.name}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  ))}
+                                  <label>
+                                    Pod weight
+                                    <input
+                                      aria-label={`Pod ${i + 1} weight`}
+                                      type="number"
+                                      min="0.1"
+                                      max="1000000"
+                                      step="0.1"
+                                      value={pod.weight}
+                                      onChange={(e) =>
+                                        setCustomPods((old) =>
+                                          old.map((p, n) =>
+                                            n === i
+                                              ? {
+                                                  ...p,
+                                                  weight: Number(
+                                                    e.target.value,
+                                                  ),
+                                                }
+                                              : p,
+                                          ),
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                  <button
+                                    className="text-button"
+                                    onClick={() =>
+                                      setCustomPods((old) =>
+                                        old.filter((_, n) => n !== i),
+                                      )
+                                    }
+                                  >
+                                    Remove pod {i + 1}
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                className="secondary"
+                                disabled={
+                                  customPods.length >= 50 ||
+                                  pool.decks.every((d) =>
+                                    excludedDecks.includes(d.id),
+                                  )
+                                }
+                                onClick={() => {
+                                  const selected = pool.decks.filter(
+                                    (d) => !excludedDecks.includes(d.id),
+                                  );
+                                  setCustomPods((old) => [
+                                    ...old,
+                                    {
+                                      opponentIds: Array.from(
+                                        { length: 3 },
+                                        (_, i) =>
+                                          selected[i % selected.length].id,
+                                      ),
+                                      weight: 1,
+                                    },
+                                  ]);
+                                }}
+                              >
+                                Add an ordered pod
+                              </button>
+                              {customPods.length > 0 && (
+                                <p className="muted">
+                                  Explicit pods override sampled rosters. Pod
+                                  weights determine game counts; opponent seats
+                                  stay in the order shown.
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </details>
                       )}
                       <label>How many {unitLabel}?</label>
                       <div className="presets">

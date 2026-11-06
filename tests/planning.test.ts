@@ -76,3 +76,72 @@ test("multiplayer summaries use actual placements and omit uncast commander timi
     null,
   );
 });
+
+test("weighted selection conserves units, excludes zero weights and freezes deterministic rosters", async () => {
+  const { allocateWeighted } = await import("../src/planning.js");
+  assert.deepEqual(allocateWeighted(7, [3, 1, 0]), [5, 2, 0]);
+  assert.deepEqual(allocateWeighted(2, [1, 1, 1]), [1, 1, 0]);
+  assert.throws(() => allocateWeighted(2, [0, 0]));
+  const selection = {
+    mode: "custom" as const,
+    weights: { a: 3, b: 1, c: 0, d: 0 },
+  };
+  const plan = planBenchmark("modern", 7, opponents, 12, selection);
+  assert.deepEqual(
+    plan.map((p) => [p.key, p.games]),
+    [
+      ["a", 5],
+      ["b", 2],
+    ],
+  );
+  assert.throws(() =>
+    planBenchmark("modern", 7, opponents, 12, { mode: "meta" }),
+  );
+  const pods = planBenchmark("commander", 1000, opponents, 12, {
+    ...selection,
+    allowRepeatedLists: true,
+  });
+  assert.equal(
+    pods.reduce((n, p) => n + p.games, 0),
+    1000,
+  );
+  assert.ok(pods.length <= 50);
+  assert.ok(
+    pods.every((p) => p.opponents.every((d) => ["a", "b"].includes(d.id))),
+  );
+  assert.deepEqual(
+    planBenchmark("commander", 1000, opponents, 12, {
+      ...selection,
+      allowRepeatedLists: true,
+    }),
+    pods,
+  );
+  assert.throws(() =>
+    planBenchmark("commander", 10, opponents, 12, {
+      ...selection,
+      allowRepeatedLists: false,
+    }),
+  );
+  const explicit = planBenchmark("commander", 7, opponents, 12, {
+    mode: "equal",
+    allowRepeatedLists: false,
+    pods: [
+      { opponentIds: ["a", "b", "c"], weight: 3 },
+      { opponentIds: ["d", "c", "b"], weight: 1 },
+    ],
+  });
+  assert.deepEqual(
+    explicit.map((p) => p.games),
+    [5, 2],
+  );
+  assert.deepEqual(
+    explicit[1].opponents.map((d) => d.id),
+    ["d", "c", "b"],
+  );
+  assert.throws(() =>
+    planBenchmark("modern", 2, opponents, 12, {
+      mode: "equal",
+      opponentIds: ["unknown"],
+    }),
+  );
+});

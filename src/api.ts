@@ -1,3 +1,4 @@
+import { selectionSchema } from "./planning.js";
 import { createFeed, listFeeds, syncFeed, syncDueFeeds } from "./feeds.js";
 import { referencePool } from "./reference-pools.js";
 import { enabledFormatIds, validationFormatIds, getFormat } from "./formats.js";
@@ -139,6 +140,7 @@ app.post(
           seed: { type: "integer", minimum: 0, maximum: 2147483646 },
           gameMode: { type: "string", enum: ["BO1", "BO3"], default: "BO1" },
           maxMatchGames: { type: "integer", minimum: 3, maximum: 9 },
+          selection: { type: "object", additionalProperties: true },
           sideboardMode: { type: "string", enum: ["none", "forge"] },
           clockSeconds: { type: "integer", minimum: 5, maximum: 120 },
         },
@@ -155,6 +157,7 @@ app.post(
         gameMode: z.enum(["BO1", "BO3"]).default("BO1"),
         maxMatchGames: z.number().int().min(3).max(9).optional(),
         sideboardMode: z.enum(["none", "forge"]).optional(),
+        selection: selectionSchema.optional(),
         clockSeconds: z.number().int().min(5).max(120).optional(),
       })
       .parse(req.body);
