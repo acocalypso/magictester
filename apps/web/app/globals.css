@@ -2008,7 +2008,7 @@ td strong,
 .checkbox-label input[type="checkbox"] {
   width: auto;
   margin: 0;
-  accent-color: #bfc99b;
+  accent-color: var(--accent);
 }
 .opponent-choice input[type="number"] {
   width: 82px;
@@ -2019,5 +2019,5 @@ td strong,
   gap: 8px;
   margin: 16px 0;
   padding: 12px;
-  border: 1px solid #35383a;
+  border: 1px solid var(--border);
 }
