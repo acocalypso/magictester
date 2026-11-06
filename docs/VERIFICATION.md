@@ -37,7 +37,7 @@ The 250-game run used 125 real games against each of the two reference lists. It
 - **RUNTIME VERIFIED:** snapshot and deck-version SQL updates were rejected by immutable-record triggers.
 - **RUNTIME VERIFIED:** controlled BullMQ failure exhausted its attempt budget, reconciliation marked the run failed, it stayed failed across another reconciliation interval, and an explicit retry completed one real game.
 - **UNIT TESTED / RUNTIME VERIFIED:** snow basic lands are exempt from copy limits; the live API accepted 60 Snow-Covered Mountain.
-- **UNIT TESTED:** 18 local tests passed, including real cached card-data validation. Standard CI omits the optional local data test when no runtime cache exists.
+- **UNIT TESTED:** 19 local tests passed, including real cached card-data validation. Standard CI omits the optional local data test when no runtime cache exists.
 
 ## GitHub verification
 

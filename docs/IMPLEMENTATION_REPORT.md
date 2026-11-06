@@ -23,7 +23,7 @@
 | Cancellation            | RUNTIME VERIFIED — durable flag, request abort, Java process-group termination; completed results retained                                                                  |
 | Recovery                | RUNTIME VERIFIED — abrupt worker kill after six saves, all retained exactly, 50 unique completions; bounded exhausted retries and explicit resume                           |
 | Persistence             | RUNTIME VERIFIED — database/Redis/API/worker restart preserved 250 completed games and exact aggregates                                                                     |
-| Automated tests         | UNIT TESTED — 18 local tests passed; separate HTTP/Docker smoke verifies API and queue behavior                                                                             |
+| Automated tests         | UNIT TESTED — 19 local tests passed; separate HTTP/Docker smoke verifies API and queue behavior                                                                             |
 | Forge integration tests | RUNTIME VERIFIED — actual Linux Docker game, native clock test, six-game cancel/resume smoke, 50/250-game workloads                                                         |
 | Docker smoke            | RUNTIME VERIFIED — clean Compose build/start and real-game smoke passed on GitHub Actions; local executor used equivalent flattened runtime images due VFS disk constraints |
 | 50-game benchmark       | RUNTIME VERIFIED — 50 valid, zero timeout/error, 204.5 s including deliberate recovery/queue wait; 14.7 games/min is not clean throughput                                   |

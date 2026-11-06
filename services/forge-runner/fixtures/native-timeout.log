@@ -1,0 +1,96 @@
+Error handling registered!
+17:00:02 [INFO ] GuiBase: ##########################################
+17:00:02 [INFO ] GuiBase: APP: Forge v.2.0.15-SNAPSHOT-09.28
+17:00:02 [INFO ] GuiBase: Java: 21.0.13.0.3 (Alpine)
+17:00:02 [INFO ] GuiBase: OS: Linux 6.18.57 amd64
+17:00:02 [INFO ] GuiBase: RAM: 1024 MB max, 2 CPUs
+17:00:02 [INFO ] GuiBase: ##########################################
+Language 'en-US' loaded successfully.
+(ThreadUtil first call): Running with priority 5
+Read cards: 34010 archived files in 1 ms (25 parts) using thread pool
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+The card A-Alrund's Epiphany was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Baba Lysaga, Night Witch was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Divide by Zero was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Esika's Chariot was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Faceless Haven was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Fires of Invention was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Goldspan Dragon was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Hullbreaker Horror was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Kumano Faces Kakkazan was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Luminarch Aspirant was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Monster Manual was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Omnath, Locus of Creation was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-The Meathook Massacre was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card A-Unholy Heat was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Blinding Radiance was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Goblin Bruiser was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Ogre Painbringer was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Titanic Pelagosaur was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+The card Treetop Recluse was not assigned to any set. Adding it to UNKNOWN set... to fix see res/editions/ folder. 
+Upcoming set Star Trek (TRK) dated in the future. All `upcoming` cards will be added to this set with unknown rarity.
+Read cards: 854 files in 0 ms (8 parts) using thread pool
+Simulation mode
+Ai(1)-deck-a vs Ai(2)-deck-b - one game of Constructed seed 12345
+Mountain Did not have activator set in SpellAbilityRestriction.canPlay()
+Stopping slow match as draw
+Mulligan: Ai(2)-deck-b has mulliganed down to 6 cards.
+java.lang.InterruptedException
+	at java.base/java.util.concurrent.FutureTask.awaitDone(FutureTask.java:471)
+	at java.base/java.util.concurrent.FutureTask.get(FutureTask.java:203)
+	at forge.ai.AiController.chooseSpellAbilityToPlayFromList(AiController.java:1686)
+	at forge.ai.AiController.getSpellAbilityToPlay(AiController.java:1577)
+	at forge.ai.AiController.chooseSpellAbilityToPlay(AiController.java:1397)
+	at forge.ai.PlayerControllerAi.chooseSpellAbilityToPlay(PlayerControllerAi.java:833)
+	at forge.game.phase.PhaseHandler.mainLoopStep(PhaseHandler.java:1056)
+	at forge.game.phase.PhaseHandler.mainGameLoop(PhaseHandler.java:1035)
+	at forge.game.phase.PhaseHandler.startFirstTurn(PhaseHandler.java:1029)
+	at forge.game.GameAction.startGame(GameAction.java:2373)
+	at forge.game.Match.startGame(Match.java:92)
+	at forge.game.Match.startGame(Match.java:77)
+	at forge.view.SimulateMatch.lambda$simulateSingleMatch$0(SimulateMatch.java:219)
+	at forge.view.TimeLimitedCodeBlock.lambda$runWithTimeout$0(TimeLimitedCodeBlock.java:18)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Mulligan: Ai(1)-deck-a has kept a hand of 7 cards
+Mulligan: Ai(2)-deck-b has kept a hand of 6 cards
+Turn: Turn 1 (Ai(1)-deck-a)
+Phase: Ai(1)-deck-a's Untap step
+Phase: Ai(1)-deck-a's Upkeep step
+Phase: Ai(1)-deck-a's Draw step
+Phase: Ai(1)-deck-a's Main phase, precombat
+Land: Ai(1)-deck-a played Mountain (24)
+Mana: Mountain (24) - {T}: Add {R}.
+Add To Stack: Ai(1)-deck-a cast Monastery Swiftspear
+Resolve Stack: Monastery Swiftspear - Creature 1 / 2
+Phase: Ai(1)-deck-a's Beginning of Combat Step
+Phase: Ai(1)-deck-a's Declare Attackers Step
+Combat: Ai(1)-deck-a assigned Monastery Swiftspear (7) to attack Ai(2)-deck-b.
+Phase: Ai(1)-deck-a's Declare Blockers Step
+Combat: Ai(2)-deck-b didn't block Monastery Swiftspear (7).
+Phase: Ai(1)-deck-a's First Strike Damage Step
+Phase: Ai(1)-deck-a's Combat Damage Step
+Damage: Monastery Swiftspear (7) deals 1 combat damage to Ai(2)-deck-b.
+Life: Life: Ai(2)-deck-b 20 > 19
+Phase: Ai(1)-deck-a's End of Combat Step
+Phase: Ai(1)-deck-a's Main phase, postcombat
+Phase: Ai(1)-deck-a's End step
+Phase: Ai(1)-deck-a's Cleanup step
+Turn: Turn 2 (Ai(2)-deck-b)
+Phase: Ai(2)-deck-b's Untap step
+Phase: Ai(2)-deck-b's Upkeep step
+Phase: Ai(2)-deck-b's Draw step
+Phase: Ai(2)-deck-b's Main phase, precombat
+Land: Ai(2)-deck-b played Forest (97)
+Player Control: Ai(1)-deck-a has restored control over themself
+Player Control: Ai(2)-deck-b has restored control over themself
+Game Outcome: Match Duration 0m : 00s
+Game Outcome: Turn 1
+Game Outcome: Ai(1)-deck-a has won because all opponents have lost
+Game Outcome: Ai(2)-deck-b has won because all opponents have lost
+Match Result: Ai(1)-deck-a: 0 Ai(2)-deck-b: 1 
+
+Game Result: Game 1 ended in 1175 ms. Ai(2)-deck-b has won!
+

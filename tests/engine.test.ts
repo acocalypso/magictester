@@ -58,3 +58,17 @@ test("timeout overrides an apparent Forge win", () => {
   assert.equal(r.winner, null);
   assert.ok(r.players.every((p) => p.placement === null));
 });
+
+test("native clock expiry takes precedence over interruption stack traces", async () => {
+  const parser = new ForgeResultParser("2.0.15", 12345);
+  const results = (
+    await readFile("services/forge-runner/fixtures/native-timeout.log", "utf8")
+  )
+    .split("\n")
+    .map((l) => parser.line(l))
+    .filter(Boolean);
+  assert.equal(results.length, 1);
+  assert.equal(results[0]!.termination, "timeout");
+  assert.equal(results[0]!.winner, null);
+  assert.ok(results[0]!.players.every((p) => p.placement === null));
+});

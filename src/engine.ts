@@ -123,10 +123,10 @@ export class ForgeResultParser {
       turns: this.turns,
       startingPlayer: this.startingPlayer,
       durationMs: Number(match[2]),
-      termination: this.error
-        ? "engine_error"
-        : this.timeout
-          ? "timeout"
+      termination: this.timeout
+        ? "timeout"
+        : this.error
+          ? "engine_error"
           : draw
             ? "rule_draw"
             : "normal",

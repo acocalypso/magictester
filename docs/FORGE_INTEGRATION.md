@@ -35,7 +35,7 @@ Actual stdout fixture: `services/forge-runner/fixtures/real-game.log`, captured 
 - `Game Result: Game N ended in a Draw! Took ... ms.`: draw.
 - `Stopping slow match as draw`: timeout overrides any later apparent winner.
 
-The native clock can produce a winner-looking result after timeout; timeout wins are deliberately discarded. A nonzero exit, missing final results or exception output is an engine error. An external deadline also covers JVM/database startup and hangs outside the native clock. Child processes are killed as a process group, with a forced kill fallback.
+The native clock can produce a winner-looking result after timeout; timeout wins are deliberately discarded. Native clock expiry can also emit `InterruptedException`; the explicit clock-expiry signal takes precedence over these interruption errors. A nonzero exit, missing final results or exception output is an engine error. An external deadline also covers JVM/database startup and hangs outside the native clock. Child processes are killed as a process group, with a forced kill fallback.
 
 A seed initializes `MyRandom` for a batch, not a fresh independent RNG for each game. Store the batch seed together with `batchIndex`. Exact deterministic replay is not promised: Forge initializes some state before applying the seed and may use multiple internal threads.
 
