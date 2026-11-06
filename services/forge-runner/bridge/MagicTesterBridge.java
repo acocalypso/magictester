@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only
- * MagicTester bridge for Forge 2.0.15. Uses the public engine API without
- * reimplementing card resolution or modifying the upstream release.
+ * Maintained Forge 2.0.15 bridge. Public engine API plus pinned opt-in overrides.
  */
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.*;
@@ -8,6 +7,7 @@ import forge.GuiDesktop;
 import forge.gui.GuiBase;
 import forge.model.FModel;
 import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.deck.io.DeckSerializer;
 import forge.game.*;
 import forge.game.card.Card;
@@ -22,94 +22,128 @@ import java.util.concurrent.*;
 
 public class MagicTesterBridge {
     static final String PREFIX = "@@MAGICTESTER ";
-    static final String VERSION = "1";
+    static final String VERSION = "2";
+    static List<GameLogEntry> pendingLog=List.of();
+    static void dumpLog() {for(var entry:pendingLog) System.out.println(entry);pendingLog=List.of();}
     static final Gson JSON = new GsonBuilder().serializeNulls().create();
-    static void emit(Object value) { System.out.println(PREFIX + JSON.toJson(value)); System.out.flush(); }
+    static void emit(Object value) {System.out.println(PREFIX+JSON.toJson(value));System.out.flush();}
     static class Request {
-        String[] decks;
-        int games, seed, clockSeconds, startIndex;
+        String[] decks,companions;
+        int games,seed,clockSeconds,startIndex,bestOf,maxMatchGames;
+        boolean sideboarding;
         String mode;
+    }
+    static List<Map<String,Object>> players(Integer winner,int count,Map<Integer,Integer> placements) {
+        List<Map<String,Object>> values=new ArrayList<>();
+        for(int i=0;i<count;i++) {Map<String,Object> p=new LinkedHashMap<>();p.put("id","player-"+i);p.put("placement",winner==null?null:(winner==i?1:placements.get(i)));values.add(p);}
+        return values;
+    }
+    static Map<String,Integer> main(RegisteredPlayer player) {
+        Map<String,Integer> counts=new TreeMap<>();
+        for(var entry:player.getDeck().getMain()) counts.merge(entry.getKey().getName(),entry.getValue(),Integer::sum);
+        return counts;
+    }
+    static List<Map<String,Object>> difference(Map<String,Integer> after,Map<String,Integer> before) {
+        List<Map<String,Object>> changes=new ArrayList<>();
+        for(var entry:after.entrySet()) {int quantity=entry.getValue()-before.getOrDefault(entry.getKey(),0);if(quantity>0) changes.add(Map.of("name",entry.getKey(),"quantity",quantity));}
+        return changes;
+    }
+    static Map<String,Object> play(Match match,List<RegisteredPlayer> registered,Request request,int unitIndex,int gameIndex,int resultIndex,int resultSeed,int gameSeed) throws Exception {
+        MyRandom.setRandom(new Random(gameSeed));
+        List<Map<String,Integer>> previous=new ArrayList<>();for(var p:registered) previous.add(main(p));
+        ObservedGame game=new ObservedGame(registered,match.getRules(),match);game.setNoGUIUser();
+        Recorder recorder=new Recorder(game,registered,previous,request,gameIndex);game.recorder=recorder;game.subscribeToEvents(recorder);
+        emit(Map.of("type","game_started","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"bridgeVersion",VERSION));
+        long started=System.nanoTime();String termination="normal";
+        ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"forge-game");t.setDaemon(true);return t;});
+        Future<?> running=executor.submit(()->match.startGame(game,recorder::captureSetup));
+        try {running.get(request.clockSeconds,TimeUnit.SECONDS);}
+        catch(TimeoutException timeout) {termination="timeout";running.cancel(true);}
+        catch(ExecutionException error) {termination="engine_error";error.getCause().printStackTrace();}
+        finally {executor.shutdownNow();}
+        boolean ended=termination.equals("normal") && game.isGameOver() && game.getOutcome()!=null;
+        if(termination.equals("normal") && (!ended || recorder.eventError)) termination="engine_error";
+        if(termination.equals("normal") && game.getOutcome().isDraw()) termination="rule_draw";
+        Integer winner=null;
+        if(termination.equals("normal")) {
+            for(Player p:game.getRegisteredPlayers()) if(p.getOutcome()!=null && p.getOutcome().hasWon()) winner=recorder.seat(p);
+            if(winner==null || recorder.placements.size()!=registered.size()-1) termination="engine_error";
+        }
+        if(!termination.equals("normal")) winner=null;
+        Map<String,Object> result=new LinkedHashMap<>();
+        result.put("unit","game");result.put("index",resultIndex);result.put("batchIndex",resultIndex);
+        result.put("engine","forge");result.put("engineVersion","2.0.15");result.put("bridgeVersion",VERSION);
+        result.put("mode",request.mode);result.put("mulliganRule","London");result.put("seed",resultSeed);result.put("gameSeed",gameSeed);
+        result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started));result.put("termination",termination);result.put("winner",winner);
+        result.put("turns",ended?game.getOutcome().getLastTurnNumber():null);result.put("startingPlayer",recorder.startingPlayer);
+        result.put("startingLife",new ArrayList<>(recorder.startingLife));result.put("players",players(winner,registered.size(),recorder.placements));
+        result.put("commanderCasts",new ArrayList<>(recorder.commanderCasts));result.put("eliminations",new ArrayList<>(recorder.eliminations));
+        result.put("sideboardChanges",recorder.setupComplete?new ArrayList<>(recorder.sideboardChanges):null);
+        result.put("companionSelections",recorder.setupComplete?new ArrayList<>(recorder.companionSelections):null);
+        if(termination.equals("normal") || termination.equals("rule_draw")) {
+            var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);pendingLog=log;
+        }
+        return result;
     }
     public static void main(String[] args) {
         try {
-            Thread.setDefaultUncaughtExceptionHandler((thread,error) -> {error.printStackTrace(); System.exit(1);});
-            System.setProperty("java.awt.headless","true");
-            System.setProperty("file.encoding","UTF-8");
-            GuiBase.setInterface(new GuiDesktop());
-            FModel.initialize(null,null);
+            Thread.setDefaultUncaughtExceptionHandler((thread,error)->{error.printStackTrace();System.exit(1);});
+            System.setProperty("java.awt.headless","true");System.setProperty("file.encoding","UTF-8");
+            GuiBase.setInterface(new GuiDesktop());FModel.initialize(null,null);
             forge.StaticData.instance().setMulliganRule(forge.MulliganDefs.MulliganRule.London);
-            Request request = JSON.fromJson(Files.readString(Path.of(args[0])),Request.class);
-            if (request.decks.length < 2 || request.decks.length > 4 || request.games < 1 || request.clockSeconds < 1) throw new IllegalArgumentException("Invalid bridge request");
-            boolean duel = "duel".equals(request.mode);
-            boolean commander = duel || "commander".equals(request.mode);
+            Request request=JSON.fromJson(Files.readString(Path.of(args[0])),Request.class);
+            if(request.decks.length<2 || request.decks.length>4 || request.games<1 || request.clockSeconds<1) throw new IllegalArgumentException("Invalid bridge request");
+            if(request.bestOf!=0 && request.bestOf!=1 && request.bestOf!=3) throw new IllegalArgumentException("Unsupported match mode");
+            int bestOf=request.bestOf==3?3:1,limit=request.maxMatchGames==0?5:request.maxMatchGames;
+            if(bestOf==3 && (request.decks.length!=2 || limit<3 || limit>9)) throw new IllegalArgumentException("Invalid BO3 limits");
+            boolean duel="duel".equals(request.mode),commander=duel || "commander".equals(request.mode);
             System.setProperty("magictester.duel",Boolean.toString(duel));
-            if(duel && request.decks.length!=2) throw new IllegalArgumentException("Duel Commander requires two players");
-            GameType type = commander ? GameType.Commander : GameType.Constructed;
-            for (int index=request.startIndex; index<request.games; index++) {
-                int gameSeed = (int)(((long)request.seed + (long)index * 1009) % 2147483647L);
-                MyRandom.setRandom(new Random(gameSeed));
-                GameRules rules = new GameRules(type);
-                rules.setAppliedVariants(EnumSet.of(type));
-                rules.setGamesPerMatch(1);
-                List<RegisteredPlayer> registered = new ArrayList<>();
-                for (int seat=0;seat<request.decks.length;seat++) {
+            if(duel && request.decks.length!=2) throw new IllegalArgumentException("Duel requires two players");
+            GameType type=commander?GameType.Commander:GameType.Constructed;
+            for(int index=request.startIndex;index<request.games;index++) {
+                int unitSeed=(int)(((long)request.seed+(long)index*1009)%2147483647L);MyRandom.setRandom(new Random(unitSeed));
+                GameRules rules=new GameRules(type);rules.setAppliedVariants(EnumSet.of(type));rules.setGamesPerMatch(bestOf);
+                rules.setAISideboardingEnabled(bestOf==3 && request.sideboarding);
+                List<RegisteredPlayer> registered=new ArrayList<>();
+                for(int seat=0;seat<request.decks.length;seat++) {
                     Deck deck=DeckSerializer.fromFile(new File(request.decks[seat]));
-                    if (deck==null || deck.getMain().isEmpty()) throw new IllegalArgumentException("Could not load deck "+seat);
-                    RegisteredPlayer player=commander ? RegisteredPlayer.forCommander(deck) : new RegisteredPlayer(deck);
-                    if(duel) player.setStartingLife(20);
-                    player.setPlayer(GamePlayerUtil.createAiPlayer("player-"+seat,seat,"Default"));
-                    registered.add(player);
+                    if(deck==null || deck.getMain().isEmpty()) throw new IllegalArgumentException("Could not load deck "+seat);
+                    for(var section:deck) for(var entry:section.getValue()) {
+                        if(entry.getKey().getRules()==null || entry.getKey().getRules().isUnsupported()) throw new IllegalArgumentException("Pinned Forge cannot load card: "+entry.getKey().getName());
+                    }
+                    RegisteredPlayer player=commander?RegisteredPlayer.forCommander(deck):new RegisteredPlayer(deck);if(duel) player.setStartingLife(20);
+                    player.setPlayer(GamePlayerUtil.createAiPlayer("player-"+seat,seat,"Default"));registered.add(player);
+                    System.setProperty("magictester.companion.player-"+seat,request.companions!=null && request.companions[seat]!=null?request.companions[seat]:"");
                 }
                 Match match=new Match(rules,registered,"MagicTester");
-                ObservedGame game=new ObservedGame(registered,rules,match);
-                game.setNoGUIUser();
-                Recorder recorder=new Recorder(game);
-                game.recorder=recorder;
-                game.subscribeToEvents(recorder);
-                emit(Map.of("type","game_started","index",index,"gameSeed",gameSeed,"bridgeVersion",VERSION));
-                long start=System.nanoTime();
-                String termination="normal";
-                ExecutorService executor=Executors.newSingleThreadExecutor(r -> {Thread t=new Thread(r,"forge-game");t.setDaemon(true);return t;});
-                Future<?> running=executor.submit(() -> match.startGame(game));
-                try { running.get(request.clockSeconds,TimeUnit.SECONDS); }
-                catch (TimeoutException timeout) {termination="timeout";running.cancel(true);}
-                catch (ExecutionException error) {termination="engine_error";error.getCause().printStackTrace();}
-                finally {executor.shutdownNow();}
-                boolean ended=termination.equals("normal") && game.isGameOver() && game.getOutcome()!=null;
-                if (termination.equals("normal") && (!ended || recorder.eventError)) termination="engine_error";
-                if (termination.equals("normal") && game.getOutcome().isDraw()) termination="rule_draw";
+                if(bestOf==1) {
+                    Map<String,Object> result=play(match,registered,request,index,0,index,request.seed,unitSeed);
+                    emit(Map.of("type","result","result",result));dumpLog();
+                    if(List.of("timeout","engine_error").contains(result.get("termination"))) System.exit(75);
+                    continue;
+                }
+                long matchStarted=System.nanoTime();List<Map<String,Object>> games=new ArrayList<>();String termination="normal";
+                for(int gameIndex=0;gameIndex<limit && !match.isMatchOver();gameIndex++) {
+                    int gameSeed=(int)(((long)unitSeed+(long)gameIndex*307)%2147483647L);
+                    Map<String,Object> game=play(match,registered,request,index,gameIndex,gameIndex,unitSeed,gameSeed);games.add(game);
+                    emit(Map.of("type","match_game","matchIndex",index,"result",game));dumpLog();
+                    if(List.of("timeout","engine_error").contains(game.get("termination"))) {termination=(String)game.get("termination");break;}
+                }
                 Integer winner=null;
-                if (termination.equals("normal")) {
-                    for (Player player:game.getRegisteredPlayers()) if (player.getOutcome()!=null && player.getOutcome().hasWon()) winner=recorder.seat(player);
-                    if (winner==null) termination="engine_error";
+                if(termination.equals("normal")) {
+                    if(!match.isMatchOver()) termination="game_limit";
+                    else {winner=registered.indexOf(match.getWinner());if(winner<0) {winner=null;termination="engine_error";}}
                 }
-                // Read game state only after the engine thread has finished. A timed-out
-                // JVM exits immediately after its result; it is never reused for another game.
+                List<Integer> wins=new ArrayList<>(List.of(0,0));
+                for(var game:games) if(game.get("termination").equals("normal")) {int seat=((Number)game.get("winner")).intValue();wins.set(seat,wins.get(seat)+1);}
                 Map<String,Object> result=new LinkedHashMap<>();
-                result.put("mode",request.mode);
-                result.put("mulliganRule",forge.StaticData.instance().getMulliganRule().name());
-                result.put("index",index);result.put("batchIndex",index);
-                result.put("engine","forge");result.put("engineVersion","2.0.15");
-                result.put("bridgeVersion",VERSION);result.put("seed",request.seed);result.put("gameSeed",gameSeed);
-                result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start));
-                result.put("termination",termination);result.put("winner",winner);
-                result.put("turns",termination.equals("normal") || termination.equals("rule_draw") ? game.getOutcome().getLastTurnNumber() : null);
-                result.put("startingPlayer",recorder.startingPlayer);
-                result.put("startingLife",recorder.startingLife);
-                List<Map<String,Object>> players=new ArrayList<>();
-                for(int seat=0;seat<registered.size();seat++) {
-                    Map<String,Object> player=new LinkedHashMap<>();player.put("id","player-"+seat);
-                    player.put("placement",winner==null ? null : (winner==seat ? 1 : recorder.placements.get(seat)));
-                    players.add(player);
-                }
-                result.put("players",players);
-                result.put("commanderCasts",recorder.commanderCasts);
-                result.put("eliminations",recorder.eliminations);
+                result.put("unit","match");result.put("bestOf",3);result.put("index",index);result.put("batchIndex",index);
+                result.put("engine","forge");result.put("engineVersion","2.0.15");result.put("bridgeVersion",VERSION);result.put("mode",request.mode);result.put("mulliganRule","London");
+                result.put("seed",request.seed);result.put("gameSeed",unitSeed);result.put("winner",winner);result.put("termination",termination);
+                result.put("players",players(winner,2,Map.of(0,2,1,2)));result.put("turns",null);result.put("startingPlayer",null);
+                result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-matchStarted));result.put("gameWins",wins);result.put("games",games);result.put("sideboarding",request.sideboarding);
                 emit(Map.of("type","result","result",result));
-                if (termination.equals("timeout") || termination.equals("engine_error")) System.exit(75);
-                // The native log remains useful for auditing individual engine decisions.
-                var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);
-                for(var entry:log) System.out.println(entry);
+                if(List.of("timeout","engine_error").contains(termination)) System.exit(75);
             }
             System.exit(0);
         } catch(Throwable error) {error.printStackTrace();System.exit(1);}
@@ -132,7 +166,27 @@ public class MagicTesterBridge {
         volatile Integer startingPlayer=null;
         final List<Integer> startingLife=new CopyOnWriteArrayList<>();
         volatile boolean eventError=false;
-        Recorder(Game game) {this.game=game;}
+        final List<RegisteredPlayer> registered;
+        final List<Map<String,Integer>> previous;
+        final Request request;
+        final int gameIndex;
+        final List<Map<String,Object>> sideboardChanges=new CopyOnWriteArrayList<>(),companionSelections=new CopyOnWriteArrayList<>();
+        volatile boolean setupComplete=false;
+        Recorder(Game game,List<RegisteredPlayer> registered,List<Map<String,Integer>> previous,Request request,int gameIndex) {this.game=game;this.registered=registered;this.previous=previous;this.request=request;this.gameIndex=gameIndex;}
+        void captureSetup() {
+            boolean missing=false;
+            for(int i=0;i<registered.size();i++) {
+                Map<String,Integer> current=main(registered.get(i));int size=0;for(int quantity:current.values()) size+=quantity;
+                int side=0;var pool=registered.get(i).getDeck().get(DeckSection.Sideboard);if(pool!=null) for(var entry:pool) side+=entry.getValue();
+                sideboardChanges.add(Map.of("player",i,"added",difference(current,previous.get(i)),"removed",difference(previous.get(i),current),"mainboardSize",size,"sideboardSize",side));
+                String declared=request.companions==null?null:request.companions[i],selected=null;
+                for(Card card:game.getRegisteredPlayers().get(i).getCardsIn(forge.game.zone.ZoneType.Command)) if(!card.isCommander() && card.hasKeyword(forge.game.keyword.Keyword.COMPANION)) selected=card.getName();
+                Map<String,Object> choice=new LinkedHashMap<>();choice.put("player",i);choice.put("declared",declared);choice.put("selected",selected);companionSelections.add(choice);
+                if(gameIndex==0 && declared!=null && !declared.equals(selected)) missing=true;
+            }
+            setupComplete=true;
+            if(missing) throw new IllegalStateException("Pinned Forge could not select the validated companion");
+        }
         int seat(Player player) {for(int i=0;i<game.getMatch().getPlayers().size();i++) if(game.getMatch().getPlayers().get(i).getPlayer().equals(player.getLobbyPlayer())) return i;throw new IllegalStateException("Unknown engine player");}
         void losses() {
             List<Integer> group=new ArrayList<>();Map<String,String> reasons=new LinkedHashMap<>();

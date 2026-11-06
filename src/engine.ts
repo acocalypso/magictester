@@ -9,6 +9,19 @@ import { createInterface } from "node:readline";
 export type Termination =
   "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
+  unit?: "game";
+  sideboardChanges?:
+    | {
+        player: number;
+        added: { name: string; quantity: number }[];
+        removed: { name: string; quantity: number }[];
+        mainboardSize: number;
+        sideboardSize: number;
+      }[]
+    | null;
+  companionSelections?:
+    | { player: number; declared: string | null; selected: string | null }[]
+    | null;
   logId?: string;
   mulliganRule?: "London";
   mode?: "constructed" | "commander" | "duel";
@@ -46,8 +59,38 @@ export interface GameResult {
   durationMs: number;
   termination: Termination;
 }
+export interface MatchResult extends Omit<
+  GameResult,
+  | "unit"
+  | "termination"
+  | "startingLife"
+  | "commanderCasts"
+  | "eliminations"
+  | "sideboardChanges"
+  | "companionSelections"
+> {
+  unit: "match";
+  bestOf: 3;
+  termination: Termination | "game_limit";
+  games: GameResult[];
+  gameWins: number[];
+  sideboarding: boolean;
+}
+export type EngineResult = GameResult | MatchResult;
+export interface GameObservation {
+  matchIndex: number;
+  result: GameResult;
+}
+export const gameResults = (results: EngineResult[]) =>
+  results.flatMap((result) =>
+    result.unit === "match" ? result.games : [result],
+  );
 export interface EngineRequest {
   decks: string[];
+  bestOf?: 1 | 3;
+  maxMatchGames?: number;
+  sideboarding?: boolean;
+  companions?: (string | null)[];
   games: number;
   seed: number;
   clockSeconds: number;
@@ -58,8 +101,9 @@ export interface CardGameEngine {
   getCapabilities(): Record<string, unknown>;
   runGames(
     request: EngineRequest,
-    onResult: (result: GameResult) => Promise<void>,
+    onResult: (result: EngineResult) => Promise<void>,
     signal?: AbortSignal,
+    onGame?: (observation: GameObservation) => Promise<void>,
   ): Promise<void>;
 }
 export function serializeDeck(
@@ -170,13 +214,40 @@ export class ForgeResultParser {
   }
 }
 const structuredResult = z.object({
+  unit: z.literal("game").optional(),
+  sideboardChanges: z
+    .array(
+      z.object({
+        player: z.number().int().nonnegative(),
+        added: z.array(
+          z.object({ name: z.string(), quantity: z.number().int().positive() }),
+        ),
+        removed: z.array(
+          z.object({ name: z.string(), quantity: z.number().int().positive() }),
+        ),
+        mainboardSize: z.number().int().nonnegative(),
+        sideboardSize: z.number().int().nonnegative(),
+      }),
+    )
+    .nullable()
+    .optional(),
+  companionSelections: z
+    .array(
+      z.object({
+        player: z.number().int().nonnegative(),
+        declared: z.string().nullable(),
+        selected: z.string().nullable(),
+      }),
+    )
+    .nullable()
+    .optional(),
   index: z.number().int().nonnegative(),
   batchIndex: z.number().int().nonnegative(),
   mode: z.enum(["constructed", "commander", "duel"]).optional(),
   mulliganRule: z.literal("London").optional(),
   engine: z.literal("forge"),
   engineVersion: z.literal("2.0.15"),
-  bridgeVersion: z.literal("1"),
+  bridgeVersion: z.enum(["1", "2"]),
   seed: z.number().int().nonnegative(),
   gameSeed: z.number().int().nonnegative(),
   winner: z.number().int().nonnegative().nullable(),
@@ -212,40 +283,109 @@ const structuredResult = z.object({
     }),
   ),
 });
+const structuredMatch = structuredResult
+  .omit({
+    startingLife: true,
+    commanderCasts: true,
+    eliminations: true,
+    sideboardChanges: true,
+    companionSelections: true,
+  })
+  .extend({
+    unit: z.literal("match"),
+    bestOf: z.literal(3),
+    termination: z.enum([
+      "normal",
+      "rule_draw",
+      "timeout",
+      "engine_error",
+      "game_limit",
+    ]),
+    games: z.array(structuredResult).min(1).max(9),
+    gameWins: z.array(z.number().int().nonnegative()).length(2),
+    sideboarding: z.boolean(),
+    turns: z.null(),
+    startingPlayer: z.null(),
+    players: structuredResult.shape.players.length(2),
+  });
 export const BRIDGE_PREFIX = "@@MAGICTESTER ";
+function validateGame(result: GameResult) {
+  const n = result.players.length;
+  if (
+    (result.winner !== null && result.winner >= n) ||
+    (result.startingPlayer !== null && result.startingPlayer >= n) ||
+    result.commanderCasts?.some((c) => c.player >= n) ||
+    result.eliminations?.some((e) => e.players.some((p) => p >= n))
+  )
+    throw new Error("Invalid bridge player identity");
+  if (
+    result.termination !== "normal" &&
+    (result.winner !== null || result.players.some((p) => p.placement !== null))
+  )
+    throw new Error("Incomplete games cannot have winners or placements");
+  if (
+    result.termination === "normal" &&
+    (result.winner === null || result.players.some((p) => p.placement === null))
+  )
+    throw new Error("Completed games require observed placements");
+}
 export function parseStructuredEvent(line: string) {
   if (!line.startsWith(BRIDGE_PREFIX)) return null;
   const event = JSON.parse(line.slice(BRIDGE_PREFIX.length));
-  if (event.type === "result") {
-    const result = structuredResult.parse(event.result);
-    const n = result.players.length;
-    if (
-      (result.winner !== null && result.winner >= n) ||
-      (result.startingPlayer !== null && result.startingPlayer >= n) ||
-      result.commanderCasts.some((c) => c.player >= n) ||
-      result.eliminations.some((e) => e.players.some((p) => p >= n))
-    )
-      throw new Error("Invalid bridge player identity");
-    if (
-      result.termination !== "normal" &&
-      (result.winner !== null ||
-        result.players.some((p) => p.placement !== null))
-    )
-      throw new Error("Incomplete games cannot have winners or placements");
-    if (
-      result.termination === "normal" &&
-      (result.winner === null ||
-        result.players.some((p) => p.placement === null))
-    )
-      throw new Error("Completed games require observed placements");
-    return { type: "result" as const, result };
-  }
   if (event.type === "game_started")
     return {
       type: "game_started" as const,
       index: z.number().int().nonnegative().parse(event.index),
+      gameIndex: z
+        .number()
+        .int()
+        .nonnegative()
+        .parse(event.gameIndex ?? 0),
     };
-  throw new Error("Unknown bridge event");
+  if (event.type === "match_game") {
+    const result = structuredResult.parse(event.result);
+    validateGame(result);
+    return {
+      type: "match_game" as const,
+      matchIndex: z.number().int().nonnegative().parse(event.matchIndex),
+      result,
+    };
+  }
+  if (event.type !== "result") throw new Error("Unknown bridge event");
+  if (event.result.unit !== "match") {
+    const result = structuredResult.parse(event.result);
+    validateGame(result);
+    return { type: "result" as const, result };
+  }
+  const result = structuredMatch.parse(event.result);
+  result.games.forEach(validateGame);
+  const wins = [0, 0];
+  result.games.forEach((g, i) => {
+    if (g.index !== i || g.players.length !== 2)
+      throw new Error("Invalid match game identity");
+    if (g.termination === "normal" && g.winner !== null) wins[g.winner]++;
+  });
+  if (
+    result.termination === "game_limit" &&
+    (result.games.length < 3 || wins.some((w) => w >= 2))
+  )
+    throw new Error("A resource-limited match cannot already have a winner");
+  if (wins.some((w, i) => w !== result.gameWins[i]))
+    throw new Error("Match score differs from actual game outcomes");
+  if (
+    result.termination === "normal" &&
+    (result.winner === null ||
+      result.winner > 1 ||
+      wins[result.winner] < 2 ||
+      result.players[result.winner].placement !== 1)
+  )
+    throw new Error("A BO3 match requires two observed wins");
+  if (
+    result.termination !== "normal" &&
+    (result.winner !== null || result.players.some((p) => p.placement !== null))
+  )
+    throw new Error("Incomplete matches cannot have winners or placements");
+  return { type: "result" as const, result };
 }
 export class ForgeEngineAdapter implements CardGameEngine {
   constructor(
@@ -256,7 +396,9 @@ export class ForgeEngineAdapter implements CardGameEngine {
     return {
       engine: "forge",
       version: "2.0.15",
-      bridgeVersion: "1",
+      bridgeVersion: "2",
+      bo3: true,
+      sideboarding: "native heuristics; actual changes reported",
       bo1: true,
       commander: true,
       duel: true,
@@ -271,8 +413,9 @@ export class ForgeEngineAdapter implements CardGameEngine {
   }
   async runGames(
     req: EngineRequest,
-    onResult: (r: GameResult) => Promise<void>,
+    onResult: (r: EngineResult) => Promise<void>,
     signal?: AbortSignal,
+    onGame?: (observation: GameObservation) => Promise<void>,
   ) {
     const dir = await mkdtemp(join(tmpdir(), "magictester-"));
     await mkdir(this.logDir, { recursive: true });
@@ -295,7 +438,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
       const bridge = JSON.parse(
         await readFile(join(this.home, "magictester-bridge.json"), "utf8"),
       );
-      if (bridge.version !== "1" || !/^[a-f0-9]{64}$/.test(bridge.sourceHash))
+      if (bridge.version !== "2" || !/^[a-f0-9]{64}$/.test(bridge.sourceHash))
         throw new Error(
           "Forge bridge missing or incompatible; rerun bootstrap",
         );
@@ -371,17 +514,43 @@ export class ForgeEngineAdapter implements CardGameEngine {
         proc.stderr!.on("data", (b) => log.write(b));
         const lines = createInterface({ input: proc.stdout! });
         let lastTermination: string | undefined;
+        let expectedGame = 0;
         try {
           for await (const line of lines) {
             log.write(line + "\n");
             const event = parseStructuredEvent(line);
             if (event?.type === "game_started") {
-              if (event.index !== count)
+              if (event.index !== count || event.gameIndex !== expectedGame)
                 throw new Error("Invalid bridge game start identity");
               resetWatchdog((req.clockSeconds + 5) * 1000);
             }
+            if (event?.type === "match_game") {
+              const game: GameResult = event.result;
+              if (
+                req.bestOf !== 3 ||
+                game.index !== expectedGame ||
+                game.players.length !== req.decks.length ||
+                game.index >= (req.maxMatchGames ?? 5) ||
+                event.matchIndex !== count ||
+                game.seed !== (req.seed + count * 1009) % 2147483647 ||
+                game.gameSeed !== (game.seed + game.index * 307) % 2147483647 ||
+                game.bridgeVersion !== "2"
+              )
+                throw new Error("Invalid match observation identity");
+              expectedGame++;
+              game.engineVersion = "2.0.15 / " + version;
+              game.bridgeSourceHash = bridge.sourceHash;
+              game.logId = logId;
+              resetWatchdog(90000);
+              await onGame?.({ matchIndex: event.matchIndex, result: game });
+            }
             if (event?.type !== "result") continue;
-            const result: GameResult = event.result;
+            const result: EngineResult = event.result;
+            if (
+              (req.bestOf === 3) !== (result.unit === "match") ||
+              result.bridgeVersion !== "2"
+            )
+              throw new Error("Runner returned the wrong result unit");
             if (
               result.index !== count ||
               result.batchIndex !== count ||
@@ -390,12 +559,28 @@ export class ForgeEngineAdapter implements CardGameEngine {
               result.gameSeed !== (req.seed + count * 1009) % 2147483647
             )
               throw new Error("Invalid bridge result identity");
+            if (
+              result.unit === "match" &&
+              (result.games.length !== expectedGame ||
+                (result.termination === "game_limit" &&
+                  result.games.length !== (req.maxMatchGames ?? 5)))
+            )
+              throw new Error(
+                "Match observation count or resource limit mismatch",
+              );
             result.engineVersion = "2.0.15 / " + version;
             result.bridgeSourceHash = bridge.sourceHash;
             result.logId = logId;
+            if (result.unit === "match")
+              for (const game of result.games) {
+                game.engineVersion = result.engineVersion;
+                game.bridgeSourceHash = bridge.sourceHash;
+                game.logId = logId;
+              }
             lastTermination = result.termination;
             await onResult(result);
             count++;
+            expectedGame = 0;
             resetWatchdog(90000);
           }
           const end = await exited;

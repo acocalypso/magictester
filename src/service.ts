@@ -6,7 +6,8 @@ import { jobs, runs, snapshots, deckVersions, events } from "./schema.js";
 import { config, ACTIVE } from "./config.js";
 import { validateDeck, type CardDataProvider } from "./domain.js";
 import { planBenchmark, storePlans, executionPlans } from "./planning.js";
-import { summarize } from "./analytics.js";
+import { gameResults } from "./engine.js";
+import { summarize, summarizeMatches } from "./analytics.js";
 import { queue, enqueue } from "./queue.js";
 export class RequestError extends Error {
   constructor(
@@ -26,12 +27,42 @@ export async function createSimulation(
     games: number;
     seed: number;
     clockSeconds: number;
+    gameMode?: "BO1" | "BO3";
+    maxMatchGames?: number;
+    sideboardMode?: "none" | "forge";
   },
   client: string,
   provider: CardDataProvider,
 ) {
   if (!getFormat(input.format)?.enabled)
     throw new RequestError(422, "Simulation is not enabled for this format");
+  const bestOf = input.gameMode === "BO3";
+  const maxMatchGames = bestOf ? (input.maxMatchGames ?? 5) : 1;
+  if (bestOf && getFormat(input.format)!.players !== 2)
+    throw new RequestError(422, "BO3 requires a two-player format");
+  if (
+    bestOf &&
+    (!Number.isInteger(maxMatchGames) || maxMatchGames < 3 || maxMatchGames > 9)
+  )
+    throw new RequestError(422, "Match game limit must be between 3 and 9");
+  if (input.games * maxMatchGames > config.MAX_GAMES_PER_JOB)
+    throw new RequestError(
+      422,
+      `The job is limited to ${config.MAX_GAMES_PER_JOB} actual game attempts; reduce matches or the per-match limit.`,
+    );
+  if (
+    bestOf &&
+    getFormat(input.format)!.commander &&
+    input.sideboardMode === "forge"
+  )
+    throw new RequestError(
+      422,
+      "Commander-family formats have no conventional sideboard",
+    );
+  const sideboardMode =
+    bestOf && !getFormat(input.format)!.commander
+      ? (input.sideboardMode ?? "forge")
+      : "none";
   const validation = validateDeck(input.decklist, input.format, provider);
   if (!validation.valid)
     throw new RequestError(422, "Deck validation failed", validation.errors);
@@ -84,7 +115,11 @@ export async function createSimulation(
       clientKey,
       config: {
         benchmarkMode: snapshot.selectionMethod,
-        gameMode: "BO1",
+        gameMode: bestOf ? "BO3" : "BO1",
+        unit: bestOf ? "matches" : "games",
+        maxMatchGames,
+        maxGameAttempts: input.games * maxMatchGames,
+        sideboardMode,
         executionPlan: storePlans(plans),
         players: getFormat(input.format)!.players,
         rules: {
@@ -96,13 +131,17 @@ export async function createSimulation(
         distribution:
           getFormat(input.format)!.players === 4
             ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"
-            : "equal games per selected deck; remainder assigned in snapshot order",
+            : `equal ${bestOf ? "matches" : "games"} per selected deck; remainder assigned in snapshot order`,
         engine: "forge",
         forgeRelease: "2.0.15",
-        bridgeVersion: "1",
+        bridgeVersion: "2",
         aiProfile: "Default",
         bridge: provider.provenance.engineBridge,
-        seedMethod: "(matchupSeed + batchIndex * 1009) modulo 2147483647",
+        seedMethod:
+          "unitSeed = (matchupSeed + batchIndex * 1009) modulo 2147483647",
+        gameSeedMethod: bestOf
+          ? "(unitSeed + gameIndex * 307) modulo 2147483647"
+          : "unitSeed",
         turnUnit:
           "individual player turns (Forge GameOutcome.getLastTurnNumber)",
         submittedSeat: 0,
@@ -142,10 +181,16 @@ export async function getJob(id: string) {
       completed: sql<number>`count(*) filter (where ${runs.state}='DONE')::int`,
       failed: sql<number>`count(*) filter (where ${runs.state}='ERROR')::int`,
       pending: sql<number>`count(*) filter (where ${runs.state}='PENDING')::int`,
+      actualGames: sql<number>`coalesce(sum(case when ${runs.result} is null then 0 when ${runs.result}->>'unit'='match' then jsonb_array_length(${runs.result}->'games') else 1 end),0)::int`,
+      limited: sql<number>`count(*) filter(where ${runs.result}->>'termination'='game_limit')::int`,
       timeouts: sql<number>`count(*) filter (where ${runs.result}->>'termination'='timeout')::int`,
     })
     .from(runs)
     .where(eq(runs.jobId, id));
+  const [observations] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(events)
+    .where(and(eq(events.jobId, id), eq(events.kind, "GAME_OBSERVED")));
   const { clientKey: _clientKey, ...job } = record.job;
   return {
     ...job,
@@ -154,6 +199,10 @@ export async function getJob(id: string) {
     deck: record.deck,
     snapshot: record.snapshot,
     ...stats,
+    observedGames:
+      record.job.config.gameMode === "BO3"
+        ? observations.count
+        : stats.actualGames,
     progress: (stats.completed + stats.failed) / record.job.games,
   };
 }
@@ -172,9 +221,10 @@ export async function resultsFor(id: string) {
   return {
     job,
     summary: {
-      ...summarize(results, 0, !!getFormat(job.format)?.commander),
+      ...summarize(gameResults(results), 0, !!getFormat(job.format)?.commander),
       errors: rows.filter((r) => r.state === "ERROR").length,
     },
+    matchSummary: summarizeMatches(results),
     matchups: executionPlans(job).map((plan) => ({
       opponent:
         plan.kind === "pod"
@@ -193,11 +243,18 @@ export async function resultsFor(id: string) {
       participants: plan.opponents,
       planned: rows.filter((r) => r.opponentId === plan.key).length,
       ...summarize(
+        gameResults(
+          rows
+            .filter((r) => r.opponentId === plan.key)
+            .flatMap((r) => (r.result ? [r.result] : [])),
+        ),
+        0,
+        !!getFormat(job.format)?.commander,
+      ),
+      matchSummary: summarizeMatches(
         rows
           .filter((r) => r.opponentId === plan.key)
           .flatMap((r) => (r.result ? [r.result] : [])),
-        0,
-        !!getFormat(job.format)?.commander,
       ),
       errors: rows.filter(
         (r) => r.opponentId === plan.key && r.state === "ERROR",
@@ -205,11 +262,21 @@ export async function resultsFor(id: string) {
     })),
     limitations: [
       "Forge AI uses heuristics: strongest at aggro/midrange, weaker at control and combo. These results are not human tournament win rates.",
-      "Games are BO1; sideboards are validated and stored but no BO3 sideboarding is performed.",
+      job.config.gameMode === "BO3"
+        ? "BO3 uses native first-to-two wins. Rule draws can extend a match; reaching the saved game limit leaves it incomplete and excludes it from match win rates. Actual games remain visible."
+        : "Games are BO1; no between-game sideboarding is performed.",
+      job.config.sideboardMode === "forge"
+        ? "Sideboarding uses Forge's generic heuristics, not human matchup knowledge. Actual changes and companion selections are recorded; a designated companion may be unavailable after sideboarding."
+        : "Between-game sideboarding is disabled.",
+      ...(job.config.gameMode === "BO3"
+        ? [
+            "Interrupted BO3 match attempts retain observed games as audit evidence. An unfinished match restarts on retry; only finalized attempts enter benchmark summaries.",
+          ]
+        : []),
       "Starting player is observed, not forced; equal play/draw counts are not guaranteed.",
       "Seeds are passed to Forge; exact replay across builds or concurrent engine internals is not guaranteed.",
       "Timeouts and engine errors are excluded from the win-rate denominator; rule draws are non-wins.",
-      job.config.bridgeVersion === "1"
+      ["1", "2"].includes(String(job.config.bridgeVersion))
         ? "Turn count is the number of individual player turns reported by Forge GameOutcome; commander casts also carry the caster’s own turn number."
         : "Legacy turn count is Forge’s reported end round, not individual player turns.",
     ],
@@ -230,6 +297,11 @@ export async function cancelJob(id: string) {
 }
 export async function retryJob(id: string) {
   const job = await getJob(id);
+  if (job.config.bridgeVersion !== "2")
+    throw new RequestError(
+      409,
+      "This analysis uses an older engine version. Start a new analysis instead of mixing result contracts.",
+    );
   if (!["FAILED", "CANCELLED"].includes(job.state))
     throw new RequestError(409, "Only failed or cancelled jobs can be retried");
   const queued = await queue.getJob(id);

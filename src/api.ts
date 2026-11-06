@@ -7,11 +7,11 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { CachedCardDataProvider, FORMATS, validateDeck } from "./domain.js";
 import { config } from "./config.js";
 import { db, pool } from "./db.js";
-import { snapshots, runs } from "./schema.js";
+import { snapshots, runs, events } from "./schema.js";
 import { queue } from "./queue.js";
 import { JsonImportProvider, CsvImportProvider } from "./meta.js";
 import {
@@ -136,6 +136,9 @@ app.post(
             maximum: config.MAX_GAMES_PER_JOB,
           },
           seed: { type: "integer", minimum: 0, maximum: 2147483646 },
+          gameMode: { type: "string", enum: ["BO1", "BO3"], default: "BO1" },
+          maxMatchGames: { type: "integer", minimum: 3, maximum: 9 },
+          sideboardMode: { type: "string", enum: ["none", "forge"] },
           clockSeconds: { type: "integer", minimum: 5, maximum: 120 },
         },
       },
@@ -148,6 +151,9 @@ app.post(
         snapshotId: z.uuid(),
         games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
         seed: z.number().int().min(0).max(2147483646).default(12345),
+        gameMode: z.enum(["BO1", "BO3"]).default("BO1"),
+        maxMatchGames: z.number().int().min(3).max(9).optional(),
+        sideboardMode: z.enum(["none", "forge"]).optional(),
         clockSeconds: z.number().int().min(5).max(120).optional(),
       })
       .parse(req.body);
@@ -200,6 +206,37 @@ app.get<{ Params: { id: string } }>(
   { schema: { tags: ["Results"], params: idSchema } },
   async (req) =>
     (await resultsFor(req.params.id)).matchups.filter((m) => m.kind === "pod"),
+);
+app.get<{
+  Params: { id: string };
+  Querystring: { offset?: string; limit?: string };
+}>(
+  "/api/v1/simulations/:id/observations",
+  {
+    schema: {
+      tags: ["Results"],
+      params: idSchema,
+      querystring: {
+        type: "object",
+        properties: {
+          offset: { type: "integer", minimum: 0, default: 0 },
+          limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+        },
+      },
+    },
+  },
+  async (req) => {
+    await getJob(req.params.id);
+    return db
+      .select()
+      .from(events)
+      .where(
+        and(eq(events.jobId, req.params.id), eq(events.kind, "GAME_OBSERVED")),
+      )
+      .orderBy(events.createdAt, events.id)
+      .limit(Number(req.query.limit || 50))
+      .offset(Number(req.query.offset || 0));
+  },
 );
 app.get<{
   Params: { id: string };
@@ -353,7 +390,7 @@ app.get("/api/v1/status", { schema: { tags: ["Operations"] } }, async () => ({
   limits: config,
   engine: "Forge 2.0.15",
   formats: enabledFormatIds(),
-  model: "AI-vs-AI BO1",
+  model: "AI-vs-AI BO1 / BO3",
   authentication: "local/private deployment only",
 }));
 const reconcileTimer = setInterval(() => {

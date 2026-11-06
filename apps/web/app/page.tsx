@@ -29,7 +29,15 @@ type Snapshot = {
   selectionMethod: string;
 };
 type Job = {
-  config?: { bridgeVersion?: string; players?: number };
+  config?: {
+    bridgeVersion?: string;
+    players?: number;
+    gameMode?: "BO1" | "BO3";
+    maxMatchGames?: number;
+    sideboardMode?: string;
+  };
+  actualGames?: number;
+  observedGames?: number;
   format: string;
   id: string;
   name: string;
@@ -75,7 +83,22 @@ type Summary = {
   lowSample: boolean;
   turnDistribution: Record<string, number>;
 };
+type MatchSummary = {
+  matches: number;
+  attempted: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number | null;
+  confidence95: [number, number] | null;
+  timeouts: number;
+  errors: number;
+  limited: number;
+  gamesPlayed: number;
+  sideboardedGames: number;
+};
 type Results = {
+  matchSummary: MatchSummary | null;
   job: Job;
   summary: Summary;
   matchups: ({
@@ -83,6 +106,7 @@ type Results = {
     planned: number;
     kind?: string;
     participants?: Deck[];
+    matchSummary?: MatchSummary | null;
   } & Summary)[];
   limitations: string[];
 };
@@ -94,6 +118,14 @@ type Run = {
   state: string;
   error: string | null;
   result: {
+    index: number;
+    unit?: "game" | "match";
+    games?: {
+      turns: number | null;
+      winner: number | null;
+      termination: string;
+    }[];
+    gameWins?: number[];
     engineVersion: string;
     gameSeed?: number;
     winner: number | null;
@@ -103,6 +135,16 @@ type Run = {
     termination: string;
     players: { id: string; placement: number | null }[];
   } | null;
+};
+type Observation = {
+  id: string;
+  createdAt: string;
+  data: {
+    matchIndex: number;
+    attemptId: string;
+    opponentId: string;
+    result: NonNullable<Run["result"]>;
+  };
 };
 const displayFormat = (id: string) =>
   id === "cedh"
@@ -190,7 +232,11 @@ function Progress({ job }: { job: Job }) {
         <span style={{ width: job.progress * 100 + "%" }} />
       </div>
       <span>
-        {job.completed + job.failed} / {job.games}
+        {job.completed + job.failed} / {job.games}{" "}
+        {job.config?.gameMode === "BO3" ? "matches" : "games"}
+        {job.config?.gameMode === "BO3" && (
+          <small> · {job.observedGames ?? 0} game observations</small>
+        )}
       </span>
     </div>
   );
@@ -207,6 +253,10 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [selected, setSelected] = useState("");
   const [result, setResult] = useState<Results | null>(null);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const [observations, setObservations] = useState<Observation[] | null>(null);
+  useEffect(() => setObservations(null), [selected]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [runPage, setRunPage] = useState(0);
   const [detail, setDetail] = useState<Run | null>(null);
@@ -282,7 +332,7 @@ export default function Home() {
   const loadResults = useCallback(async (id: string) => {
     try {
       const data = await api<Results>("/simulations/" + id + "/results");
-      setResult(data);
+      if (selectedRef.current === id) setResult(data);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -305,6 +355,9 @@ export default function Home() {
         .catch((e) => setError(e.message));
   }, [view, selected, runPage, result?.job.completed, result?.job.failed]);
   const [clockSeconds, setClockSeconds] = useState(30);
+  const [gameMode, setGameMode] = useState<"BO1" | "BO3">("BO1");
+  const [maxMatchGames, setMaxMatchGames] = useState(5);
+  const [sideboardMode, setSideboardMode] = useState<"none" | "forge">("forge");
   const submit = async () => {
     setBusy(true);
     setError("");
@@ -323,6 +376,12 @@ export default function Home() {
           games,
           seed,
           clockSeconds,
+          gameMode,
+          maxMatchGames: gameMode === "BO3" ? maxMatchGames : undefined,
+          sideboardMode:
+            gameMode === "BO3" && !selectedFormat?.commander
+              ? sideboardMode
+              : "none",
         });
         await refresh();
         navigate("results", job.id);
@@ -346,8 +405,15 @@ export default function Home() {
       setBusy(false);
     }
   };
-  const turnLabel =
-    result?.job.config?.bridgeVersion === "1" ? "Player turns" : "End round";
+  const turnLabel = ["1", "2"].includes(result?.job.config?.bridgeVersion || "")
+    ? "Player turns"
+    : "End round";
+  const resultIsMatch = result?.job.config?.gameMode === "BO3";
+  const maxUnits =
+    gameMode === "BO3"
+      ? Math.floor(1000 / Math.max(3, maxMatchGames || 5))
+      : 1000;
+  const unitLabel = gameMode === "BO3" ? "matches" : "games";
   const selectedFormat = formats.find((f) => f.id === format);
   const isPod = selectedFormat?.players === 4;
   const resultIsPod = result?.job.config?.players === 4;
@@ -598,13 +664,18 @@ export default function Home() {
                     </div>
                     <div className="panel-body">
                       <label htmlFor="format">
-                        Format <span className="muted">/ BO1</span>
+                        Format <span className="muted">/ {gameMode}</span>
                       </label>
                       <select
                         id="format"
                         value={format}
                         onChange={(event) => {
                           setFormat(event.target.value);
+                          if (
+                            formats.find((f) => f.id === event.target.value)
+                              ?.players !== 2
+                          )
+                            setGameMode("BO1");
                           setClockSeconds(
                             formats.find((f) => f.id === event.target.value)
                               ?.commander
@@ -623,6 +694,80 @@ export default function Home() {
                           </option>
                         ))}
                       </select>
+                      <label htmlFor="game-mode">Match format</label>
+                      <select
+                        id="game-mode"
+                        value={gameMode}
+                        onChange={(e) => {
+                          const mode = e.target.value as "BO1" | "BO3";
+                          setGameMode(mode);
+                          if (mode === "BO3")
+                            setGames((n) =>
+                              Math.min(
+                                n,
+                                Math.floor(
+                                  1000 / Math.max(3, maxMatchGames || 5),
+                                ),
+                              ),
+                            );
+                        }}
+                      >
+                        <option value="BO1">BO1 · independent games</option>
+                        <option
+                          value="BO3"
+                          disabled={selectedFormat?.players !== 2}
+                        >
+                          BO3 · first to two wins
+                        </option>
+                      </select>
+                      {gameMode === "BO3" && (
+                        <>
+                          <label htmlFor="match-game-limit">
+                            Game limit per match
+                          </label>
+                          <input
+                            id="match-game-limit"
+                            type="number"
+                            min={3}
+                            max={9}
+                            value={maxMatchGames}
+                            onChange={(e) => {
+                              const n = Number(e.target.value);
+                              setMaxMatchGames(n);
+                              if (n >= 3 && n <= 9)
+                                setGames((g) =>
+                                  Math.min(g, Math.floor(1000 / n)),
+                                );
+                            }}
+                          />
+                          <p className="muted">
+                            Rule draws can extend a match. Reaching this limit
+                            leaves the match incomplete.
+                          </p>
+                          <label htmlFor="sideboarding">
+                            Between-game sideboarding
+                          </label>
+                          <select
+                            id="sideboarding"
+                            value={
+                              selectedFormat?.commander ? "none" : sideboardMode
+                            }
+                            disabled={selectedFormat?.commander}
+                            onChange={(e) =>
+                              setSideboardMode(
+                                e.target.value as "none" | "forge",
+                              )
+                            }
+                          >
+                            <option value="forge">
+                              Forge heuristics · record actual swaps
+                            </option>
+                            <option value="none">
+                              Keep the submitted lists
+                            </option>
+                          </select>
+                        </>
+                      )}
                       <label htmlFor="snapshot">Benchmark pool</label>
                       <select
                         id="snapshot"
@@ -651,31 +796,40 @@ export default function Home() {
                           </div>
                         </div>
                       )}
-                      <label>How many games?</label>
+                      <label>How many {unitLabel}?</label>
                       <div className="presets">
-                        {[
-                          [50, "Quick"],
-                          [250, "Standard"],
-                          [1000, "Deep"],
-                        ].map(([n, label]) => (
+                        {(gameMode === "BO3"
+                          ? [
+                              [10, "Quick"],
+                              [50, "Standard"],
+                              [Math.min(200, maxUnits), "Deep"],
+                            ]
+                          : [
+                              [50, "Quick"],
+                              [250, "Standard"],
+                              [1000, "Deep"],
+                            ]
+                        ).map(([n, label]) => (
                           <button
                             key={n}
                             className={games === n ? "preset chosen" : "preset"}
                             onClick={() => setGames(Number(n))}
                           >
                             <strong>{label}</strong>
-                            <span>{n} games</span>
+                            <span>
+                              {n} {unitLabel}
+                            </span>
                           </button>
                         ))}
                       </div>
                       <div className="two-fields">
                         <div>
-                          <label htmlFor="games">Total games</label>
+                          <label htmlFor="games">Total {unitLabel}</label>
                           <input
                             id="games"
                             type="number"
                             min={1}
-                            max={1000}
+                            max={maxUnits}
                             value={games}
                             onChange={(e) => setGames(Number(e.target.value))}
                           />
@@ -707,7 +861,7 @@ export default function Home() {
                         {pool
                           ? isPod
                             ? `${games} games across ${podPreview.length} rotating pods. Your deck occupies seat 1. ${pool.decks.length < 3 ? "Lists repeat to fill the three opponent seats." : "Opponent lists rotate through the other seats."}`
-                            : `${games} games across ${Math.min(pool.decks.length, games)} opponents. ${Math.floor(games / pool.decks.length)}–${Math.ceil(games / pool.decks.length)} games per deck.`
+                            : `${games} ${unitLabel} across ${Math.min(pool.decks.length, games)} opponents. ${Math.floor(games / pool.decks.length)}–${Math.ceil(games / pool.decks.length)} ${unitLabel} per deck.`
                           : "Import a benchmark pool to begin."}
                       </p>
                       {isPod && (
@@ -731,7 +885,9 @@ export default function Home() {
                           !decklist.trim() ||
                           !snapshotId ||
                           games < 1 ||
-                          games > 1000 ||
+                          games > maxUnits ||
+                          (gameMode === "BO3" &&
+                            (maxMatchGames < 3 || maxMatchGames > 9)) ||
                           clockSeconds < 5 ||
                           clockSeconds > 120
                         }
@@ -804,7 +960,12 @@ export default function Home() {
                 />
                 <Stat
                   title="Games recorded"
-                  value={String(jobs.reduce((s, j) => s + j.completed, 0))}
+                  value={String(
+                    jobs.reduce(
+                      (s, j) => s + (j.actualGames ?? j.completed),
+                      0,
+                    ),
+                  )}
                 />
                 <Stat
                   title="Need attention"
@@ -863,7 +1024,8 @@ export default function Home() {
                       <span>.</span>
                     </h1>
                     <p>
-                      {displayFormat(result.job.format)} BO1{" "}
+                      {displayFormat(result.job.format)}{" "}
+                      {result.job.config?.gameMode || "BO1"}{" "}
                       <span className="slash">/</span>{" "}
                       {result.job.snapshot.name}{" "}
                       <span className="slash">/</span>{" "}
@@ -904,7 +1066,7 @@ export default function Home() {
                 )}
                 <div className="stat-grid">
                   <Stat
-                    title="Overall win rate"
+                    title={resultIsMatch ? "Game win rate" : "Overall win rate"}
                     value={pct(result.summary.winRate)}
                     note={`${result.summary.games} valid games · ${result.summary.wins}W / ${result.summary.losses}L / ${result.summary.draws}D`}
                     accent
@@ -938,6 +1100,87 @@ export default function Home() {
                     note="Excluded from the win-rate denominator"
                   />
                 </div>
+                {resultIsMatch && (
+                  <section
+                    className="panel pod-statistics match-results"
+                    aria-label="Match results"
+                  >
+                    <div className="panel-heading">
+                      <h2>BO3 match record</h2>
+                      <span className="muted">First to two wins</span>
+                    </div>
+                    <div className="panel-body">
+                      <dl>
+                        <div>
+                          <dt>Match win rate</dt>
+                          <dd>
+                            {pct(result.matchSummary?.winRate)}
+                            <small>
+                              {result.matchSummary?.wins ?? 0}W /{" "}
+                              {result.matchSummary?.losses ?? 0}L /{" "}
+                              {result.matchSummary?.draws ?? 0}D ·{" "}
+                              {result.matchSummary?.matches ?? 0} valid matches
+                            </small>
+                            <small>
+                              95% interval{" "}
+                              {result.matchSummary?.confidence95
+                                ?.map(pct)
+                                .join(" – ") || "—"}
+                            </small>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Actual games</dt>
+                          <dd>
+                            {result.matchSummary?.gamesPlayed ?? 0}
+                            <small>
+                              {result.job.completed} match attempts processed
+                            </small>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Games with recorded swaps</dt>
+                          <dd>
+                            {result.matchSummary?.sideboardedGames ?? 0}
+                            <small>
+                              {result.job.config?.sideboardMode === "forge"
+                                ? "Native Forge heuristics"
+                                : "Sideboarding disabled"}
+                            </small>
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="muted">
+                        {result.matchSummary?.limited ?? 0} game-limit matches ·{" "}
+                        {result.matchSummary?.timeouts ?? 0} timed out.
+                        Incomplete matches are excluded from match win rates.
+                        Limit: {result.job.config?.maxMatchGames} games per
+                        match.
+                      </p>
+                      <button
+                        className="text-button"
+                        onClick={async () => {
+                          try {
+                            setObservations(
+                              await api<Observation[]>(
+                                `/simulations/${result.job.id}/observations?limit=50`,
+                              ),
+                            );
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        View observed games ({result.job.observedGames ?? 0}) →
+                      </button>
+                      <p className="muted">
+                        Observations include restarted match attempts.
+                        Unfinished attempts remain audit evidence and do not
+                        enter benchmark summaries.
+                      </p>
+                    </div>
+                  </section>
+                )}
                 <div className="results-grid">
                   <section className="panel">
                     <div className="panel-heading">
@@ -1002,13 +1245,25 @@ export default function Home() {
                                 </td>
                                 <td>
                                   {m.games}
-                                  <small>{m.planned} planned</small>
+                                  <small>
+                                    {m.planned}{" "}
+                                    {resultIsMatch ? "matches" : "games"}{" "}
+                                    planned
+                                  </small>
                                 </td>
                                 <td>
                                   {m.wins}–{m.losses}–{m.draws}
                                 </td>
                                 <td className="rate-cell">
-                                  <strong>{pct(m.winRate)}</strong>
+                                  <strong>
+                                    {pct(m.winRate)}{" "}
+                                    {resultIsMatch ? "game" : ""}
+                                  </strong>
+                                  {resultIsMatch && (
+                                    <small>
+                                      {pct(m.matchSummary?.winRate)} match
+                                    </small>
+                                  )}
                                   <div className="mini-bar">
                                     <span
                                       style={{
@@ -1032,8 +1287,14 @@ export default function Home() {
                     </div>
                     <div className="panel-body">
                       {[
-                        ["On the play", result.summary.onPlay],
-                        ["On the draw", result.summary.onDraw],
+                        [
+                          resultIsPod ? "Started first" : "On the play",
+                          result.summary.onPlay,
+                        ],
+                        [
+                          resultIsPod ? "Started later" : "On the draw",
+                          result.summary.onDraw,
+                        ],
                       ].map(([label, s]) => {
                         const item = s as Summary["onPlay"];
                         return (
@@ -1191,9 +1452,9 @@ export default function Home() {
                       <thead>
                         <tr>
                           <th>Opponent</th>
-                          <th>Game</th>
+                          <th>{resultIsMatch ? "Match" : "Game"}</th>
                           <th>Outcome</th>
-                          <th>{turnLabel}</th>
+                          <th>{resultIsMatch ? "Turns by game" : turnLabel}</th>
                           <th>Duration</th>
                           <th>Seed</th>
                           <th />
@@ -1218,15 +1479,24 @@ export default function Home() {
                                     : "Loss"
                                   : r.result.termination
                                 : r.state.toLowerCase()}
+                              {r.result?.unit === "match" && (
+                                <small>{r.result.gameWins?.join("–")}</small>
+                              )}
                             </td>
-                            <td>{r.result?.turns ?? "—"}</td>
+                            <td>
+                              {r.result?.unit === "match"
+                                ? r.result.games
+                                    ?.map((g) => g.turns ?? "—")
+                                    .join(" / ")
+                                : (r.result?.turns ?? "—")}
+                            </td>
                             <td>
                               {r.result
                                 ? (r.result.durationMs / 1000).toFixed(1) + "s"
                                 : "—"}
                             </td>
                             <td>
-                              <code>{r.seed}</code>
+                              <code>{r.result?.gameSeed ?? r.seed}</code>
                             </td>
                             <td>
                               <button
@@ -1243,7 +1513,7 @@ export default function Home() {
                   </div>
                   <div className="pagination">
                     <span>
-                      Games {runPage * 25 + 1}–
+                      {resultIsMatch ? "Matches" : "Games"} {runPage * 25 + 1}–
                       {Math.min((runPage + 1) * 25, result.job.games)} of{" "}
                       {result.job.games}
                     </span>
@@ -1263,6 +1533,79 @@ export default function Home() {
                     </button>
                   </div>
                 </section>
+                {observations && (
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <h2>Observed match games</h2>
+                      <span className="muted">
+                        Includes interrupted/restarted attempts
+                      </span>
+                    </div>
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Opponent</th>
+                            <th>Match</th>
+                            <th>Game</th>
+                            <th>Outcome</th>
+                            <th>Attempt / evidence</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {observations.map((o) => (
+                            <tr key={o.id}>
+                              <td>
+                                {result.matchups.find(
+                                  (m) => m.opponent.id === o.data.opponentId,
+                                )?.opponent.name || "—"}
+                              </td>
+                              <td>{o.data.matchIndex + 1}</td>
+                              <td>
+                                {(o.data.result as unknown as { index: number })
+                                  .index + 1}
+                              </td>
+                              <td>
+                                {o.data.result.termination === "normal"
+                                  ? o.data.result.winner === 0
+                                    ? "Win"
+                                    : "Loss"
+                                  : o.data.result.termination}
+                              </td>
+                              <td>
+                                <details>
+                                  <summary>
+                                    {o.data.attemptId.slice(-22)}
+                                  </summary>
+                                  <pre className="observation-json">
+                                    {JSON.stringify(o, null, 2)}
+                                  </pre>
+                                </details>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {observations.length < (result.job.observedGames || 0) && (
+                      <button
+                        className="text-button"
+                        onClick={async () => {
+                          try {
+                            const more = await api<Observation[]>(
+                              `/simulations/${result.job.id}/observations?limit=50&offset=${observations.length}`,
+                            );
+                            setObservations([...observations, ...more]);
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        Load more observations →
+                      </button>
+                    )}
+                  </section>
+                )}
                 <details className="panel methodology" open>
                   <summary>Understand this benchmark</summary>
                   <ul>
@@ -1636,7 +1979,7 @@ function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
       <div className="panel-body">
         <p>
           {detail.result?.gameSeed !== undefined
-            ? `Game seed ${detail.result.gameSeed}. Player entries identify each seat and its deck version.`
+            ? `${detail.result.unit === "match" ? "Match" : "Game"} seed ${detail.result.gameSeed}. Player entries identify each seat and its deck version.`
             : "The legacy seed applies to the opponent batch; the game index locates this game in that batch."}
         </p>
         <pre>{JSON.stringify(detail, null, 2)}</pre>

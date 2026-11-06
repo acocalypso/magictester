@@ -195,6 +195,7 @@ try {
   /* first bootstrap */
 }
 if (
+  bridgeCache?.version !== "2" ||
   bridgeCache?.sourceHash !== bridgeHash ||
   !existsSync(home + "/magictester-bridge/MagicTesterBridge.class") ||
   patches.some(
@@ -213,11 +214,15 @@ if (
     if (createHash("sha256").update(upstream).digest("hex") !== patch.sha256)
       throw new Error("Pinned Forge source hash mismatch: " + patch.path);
     const original = upstream.toString("utf8");
-    if (original.split(patch.find).length !== 2)
-      throw new Error("Forge patch must match exactly once: " + patch.path);
+    let patched = original;
+    for (const replacement of patch.replacements || [patch]) {
+      if (patched.split(replacement.find).length !== 2)
+        throw new Error("Forge patch must match exactly once: " + patch.path);
+      patched = patched.replace(replacement.find, replacement.replace);
+    }
     const destination = buildSource + "/" + patch.path;
     await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, original.replace(patch.find, patch.replace));
+    await writeFile(destination, patched);
     patchedSources.push(destination);
   }
   await rm(home + "/magictester-bridge", { recursive: true, force: true });
@@ -225,6 +230,7 @@ if (
   execFileSync(
     "java",
     [
+      "-Xmx1024m",
       "-m",
       "jdk.compiler/com.sun.tools.javac.Main",
       "-cp",
@@ -239,7 +245,7 @@ if (
   await writeFile(
     home + "/magictester-bridge.json",
     JSON.stringify({
-      version: "1",
+      version: "2",
       engineVersion: "2.0.15",
       sourceHash: bridgeHash,
       upstreamOverrides: patches.map((p) => ({

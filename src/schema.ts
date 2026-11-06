@@ -10,7 +10,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import type { Card, Opponent } from "./domain.js";
-import type { GameResult } from "./engine.js";
+import type { EngineResult } from "./engine.js";
 const time = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "string" });
 export const snapshots = pgTable("meta_snapshots", {
@@ -68,7 +68,7 @@ export const runs = pgTable(
     batchIndex: integer("batch_index").notNull(),
     seed: integer().notNull(),
     state: text().notNull().default("PENDING"),
-    result: jsonb().$type<GameResult>(),
+    result: jsonb().$type<EngineResult>(),
     error: text(),
     finishedAt: time("finished_at"),
   },

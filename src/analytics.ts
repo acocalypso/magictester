@@ -1,4 +1,4 @@
-import type { GameResult } from "./engine.js";
+import type { GameResult, EngineResult } from "./engine.js";
 export function wilson(wins: number, n: number): [number, number] | null {
   if (!n) return null;
   const z = 1.959963984540054;
@@ -89,6 +89,37 @@ export function summarize(
       [...new Set(turns)]
         .sort((a, b) => a - b)
         .map((t) => [t, turns.filter((x) => x === t).length]),
+    ),
+  };
+}
+
+export function summarizeMatches(results: EngineResult[], submittedSeat = 0) {
+  const matches = results.filter((r) => r.unit === "match");
+  if (!matches.length) return null;
+  const valid = matches.filter(
+    (r) => r.termination === "normal" || r.termination === "rule_draw",
+  );
+  const wins = valid.filter((r) => r.winner === submittedSeat).length,
+    draws = valid.filter((r) => r.winner === null).length;
+  return {
+    matches: valid.length,
+    attempted: matches.length,
+    wins,
+    losses: valid.length - wins - draws,
+    draws,
+    winRate: valid.length ? wins / valid.length : null,
+    confidence95: wilson(wins, valid.length),
+    timeouts: matches.filter((r) => r.termination === "timeout").length,
+    errors: matches.filter((r) => r.termination === "engine_error").length,
+    limited: matches.filter((r) => r.termination === "game_limit").length,
+    gamesPlayed: matches.reduce((n, r) => n + r.games.length, 0),
+    sideboardedGames: matches.reduce(
+      (n, r) =>
+        n +
+        r.games.filter((g) =>
+          g.sideboardChanges?.some((p) => p.added.length || p.removed.length),
+        ).length,
+      0,
     ),
   };
 }

@@ -31,7 +31,16 @@ const job = await request(
 assert.equal(job.config.players, 2);
 assert.equal(job.config.rules.engineMode, "duel");
 assert.equal(job.config.rules.startingLife, 20);
-assert.equal(job.config.bridge.upstreamOverrides.length, 2);
+assert.ok(
+  [
+    "forge/game/player/Player.java",
+    "forge/game/staticability/StaticAbilityCantBeCast.java",
+  ].every((path) =>
+    job.config.bridge.upstreamOverrides.some(
+      (override) => override.path === path,
+    ),
+  ),
+);
 console.log(JSON.stringify({ event: "duel_job_started", jobId: job.id }));
 let completed = false;
 for (let i = 0; i < 600; i++) {

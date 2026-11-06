@@ -24,6 +24,20 @@ Duel uses two AI players at 20 life, its own cached legality/commander-role ban 
 
 The two Duel-only source overrides are pinned and hash-checked; see `services/forge-runner/bridge/patches.json`. They remain disabled for normal Commander and constructed games. Deck declarations stay fixed for these BO1 benchmarks; no commander-swapping or sideboarding intelligence is implied.
 
+## BO3 and sideboarding
+
+Two-player constructed and Duel benchmarks can use BO3. The requested quantity counts **matches**, while BO1 counts games. Native Forge Match continues until one player has two wins; rule draws can extend it beyond three games. A saved per-match game limit (3–9, default 5) bounds attempts. Hitting it produces `game_limit`, with no match winner: it is not relabeled a rule draw. The total reserved attempts (`matches × per-match limit`) cannot exceed the job's game budget.
+
+Game win rates use actual valid child games; match rates use finalized normal/rule-draw match outcomes. Resource-limited, timed-out and errored matches are excluded from match rates and counted separately. Each actual child outcome, seed, starter, turns, duration, sideboard changes and companion selection is retained. The match score is checked against those outcomes. Root match turns/starter are null rather than inventing a single starter or turn count across several games.
+
+`forge` sideboarding enables Forge's real generic AI routine; `none` keeps submitted lists. Duel has no conventional sideboard and keeps declared commanders. The native routine uses type/color/mana-cost heuristics, random choices and sometimes a predefined deck hint; it is not human matchup-aware sideboarding. Observed additions/removals and resulting main/side sizes report what it actually did. Deterministic acceptance fixtures use native predefined hints; ordinary imported lists do not gain invented plans.
+
+A declared companion candidate is chosen exactly when eligible; another candidate is never silently substituted. Without a Companion declaration the engine declines optional companions, even if a sideboard card would qualify. After native sideboarding a previously eligible candidate may no longer be selected; the actual selection is recorded. If the validated initial candidate cannot be selected by pinned Forge, the attempt fails explicitly. The pinned optional-choice null guard and sideboarding-after-draw guard prevent native exceptions.
+
+Every BO3 child game is also stored as an observation with its attempt identity. Cancelling/retrying an unfinished match retains those observations, then restarts that match; only the finalized attempt enters benchmark summaries. Completed matches do not change. `GET /api/v1/simulations/:id/observations` exposes the audit data with pagination. The UI distinguishes planned match units, actual game counts, match scores and the two win rates.
+
+Bridge protocol 2 introduces these result units and observation events. Older results remain readable with their saved engine metadata; unfinished jobs from an older protocol require a new analysis rather than mixing contracts.
+
 ## Outcomes and statistics
 
 - Normal wins/losses and rule draws count as valid games.
@@ -45,4 +59,4 @@ Seeds are stored and passed to the engine; deterministic replay across versions 
 
 ## Unavailable / deferred
 
-The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligan counts, cards drawn/cast, BO3, intelligent sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.
+The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligan counts, cards drawn/cast, human-level matchup-aware sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.

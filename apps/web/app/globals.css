@@ -1971,3 +1971,12 @@ td strong,
 .stat-grid .stat:first-child {
   padding-left: 24px;
 }
+.observation-json {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 50rem;
+  font-size: 0.75rem;
+}
+.match-results {
+  margin-bottom: 28px;
+}

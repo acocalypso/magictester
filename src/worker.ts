@@ -7,7 +7,7 @@ import { jobs, runs, events } from "./schema.js";
 import { config, redisOptions } from "./config.js";
 import { getJob } from "./service.js";
 import { queue } from "./queue.js";
-import { serializeDeck, type GameResult } from "./engine.js";
+import { serializeDeck, type GameResult, type EngineResult } from "./engine.js";
 import { executionPlans } from "./planning.js";
 import { getFormat } from "./formats.js";
 const log = (event: string, data: Record<string, unknown> = {}) =>
@@ -86,9 +86,9 @@ const worker = new Worker(
             error: null,
           })
           .where(and(eq(jobs.id, id), eq(jobs.cancelRequested, false)));
-        if (job.config.bridgeVersion !== "1")
+        if (job.config.bridgeVersion !== "2")
           throw new Error(
-            "This queued job predates the structured engine bridge. Resubmit it to use the current result and seed contract.",
+            "This analysis uses an older engine version. Start a new analysis instead of mixing result contracts.",
           );
         for (const plan of executionPlans(job)) {
           if (controller.signal.aborted) throw new Error("Job interrupted");
@@ -138,6 +138,20 @@ const worker = new Worker(
                     ),
                   ],
                   mode: getFormat(job.format)!.engineGameType,
+                  bestOf: job.config.gameMode === "BO3" ? 3 : 1,
+                  maxMatchGames:
+                    job.config.gameMode === "BO3"
+                      ? Number(job.config.maxMatchGames)
+                      : 5,
+                  sideboarding: job.config.sideboardMode === "forge",
+                  companions: [
+                    job.deck.cards,
+                    ...plan.opponents.map((o) => o.cards),
+                  ].map(
+                    (cards) =>
+                      cards.find((c) => c.section === "COMPANION")?.name ??
+                      null,
+                  ),
                   games: plan.games,
                   seed: plan.seed,
                   clockSeconds: job.clockSeconds,
@@ -182,8 +196,43 @@ const worker = new Worker(
                 const message = JSON.parse(line);
                 if (message.type === "error") throw new Error(message.error);
                 if (message.type === "complete") complete = true;
+                if (message.type === "game") {
+                  const game = message.result as GameResult;
+                  const matchIndex = message.matchIndex;
+                  const expectedBridge = job.config.bridge as {
+                    sourceHash?: string;
+                  };
+                  if (
+                    job.config.gameMode !== "BO3" ||
+                    !Number.isInteger(matchIndex) ||
+                    matchIndex < 0 ||
+                    matchIndex >= plan.games ||
+                    game.seed !==
+                      (plan.seed + matchIndex * 1009) % 2147483647 ||
+                    game.bridgeSourceHash !== expectedBridge.sourceHash
+                  )
+                    throw new Error("Invalid match observation");
+                  game.players = game.players.map((p, i) => ({
+                    ...p,
+                    id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
+                    deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
+                    seat: i,
+                  }));
+                  await db.insert(events).values({
+                    id: randomUUID(),
+                    jobId: id,
+                    kind: "GAME_OBSERVED",
+                    data: {
+                      opponentId: plan.key,
+                      matchIndex,
+                      attemptId: game.logId,
+                      result: game,
+                    },
+                  });
+                  continue;
+                }
                 if (message.type !== "result") continue;
-                const result = message.result as GameResult;
+                const result = message.result as EngineResult;
                 if (
                   result.index < 0 ||
                   result.index >= plan.games ||
@@ -205,6 +254,16 @@ const worker = new Worker(
                   deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
                   seat: i,
                 }));
+                if (result.unit === "match")
+                  result.games = result.games.map((game) => ({
+                    ...game,
+                    players: game.players.map((p, i) => ({
+                      ...p,
+                      id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
+                      deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
+                      seat: i,
+                    })),
+                  }));
                 await db
                   .update(runs)
                   .set({

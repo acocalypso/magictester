@@ -35,14 +35,14 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 ## What is implemented
 
 - Dedicated deck parser, structured line errors, name normalization, format legality, deck/sideboard sizes, combined copy limits, card-defined copy exceptions, and Forge script availability.
-- Six constructed BO1 formats, an engine adapter, seeded real games, observed starting player, end round, durations, explicit draws/timeouts/errors, process groups and external deadlines.
+- Six constructed formats plus Duel support BO1 or real first-to-two BO3; Commander/cEDH use four-player BO1 pods. Seeded games, observed starters/player turns, durations, explicit draws/timeouts/errors, process groups and deadlines.
 - PostgreSQL/Drizzle schema and versioned migrations; immutable snapshot and deck records enforced by database triggers.
 - BullMQ/Redis queue, job creation limits, bounded JVM capacity, progress events, cancellation, explicit retry, durable planned run identities, restart recovery, and completed-result deduplication.
 - Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography.
-- Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and round distributions.
+- Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and player-turn distributions.
 - OpenAPI, structured logs, service health checks, graceful shutdown, Docker builds, CI and scheduled/manual real-engine smoke tests.
 
-Commander/cEDH/Duel deck validation and all companion restrictions are available. Commander and cEDH run real four-player pods with saved rosters, unique player identities, placements and commander-cast timing. Cancellation and retry preserve completed games. Duel runs at 20 life with tested commander-damage and partner-cast rules. BO3 and explicit companion/sideboard choices are the next milestone. Unsupported simulation modes stay disabled.
+Commander/cEDH/Duel deck validation and all companion restrictions are available. Commander and cEDH run real four-player pods with saved rosters, unique player identities, placements and commander-cast timing. Cancellation and retry preserve completed games. Duel runs at 20 life with tested commander-damage and partner-cast rules. BO3 reports game and match rates separately, native sideboard changes and actual companion selections. Interrupted match observations remain audit evidence. Sideboarding is a generic Forge heuristic, not a claim of human matchup intelligence.
 
 ## Development and verification
 

@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { z } from "zod";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { ForgeEngineAdapter } from "./engine.js";
 import { config } from "./config.js";
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
@@ -14,7 +14,12 @@ app.get("/health", async (_req, reply) => {
     );
     await access(engine.home + "/magictester-bridge.json");
     await access(engine.home + "/magictester-bridge/MagicTesterBridge.class");
+    const bridge = JSON.parse(
+      await readFile(engine.home + "/magictester-bridge.json", "utf8"),
+    );
+    if (bridge.version !== "2") throw new Error("Incompatible bridge");
     return {
+      bridgeSourceHash: bridge.sourceHash,
       status: "ok",
       active,
       max: config.MAX_FORGE_PROCESSES,
@@ -27,6 +32,10 @@ app.get("/health", async (_req, reply) => {
 app.post("/games", async (req, reply) => {
   const parsed = z
     .object({
+      bestOf: z.union([z.literal(1), z.literal(3)]).default(1),
+      maxMatchGames: z.number().int().min(3).max(9).default(5),
+      sideboarding: z.boolean().default(false),
+      companions: z.array(z.string().min(1).max(150).nullable()).optional(),
       decks: z.array(z.string().min(1).max(65536)).min(2).max(4),
       games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
       seed: z.number().int().min(0).max(2147483646),
@@ -40,6 +49,15 @@ app.post("/games", async (req, reply) => {
     .refine(
       (data) => data.mode === "commander" || data.decks.length === 2,
       "Constructed games require two players",
+    )
+    .refine(
+      (data) => data.bestOf !== 3 || data.decks.length === 2,
+      "BO3 requires two players",
+    )
+    .refine(
+      (data) =>
+        !data.companions || data.companions.length === data.decks.length,
+      "Companion roster mismatch",
     )
     .safeParse(req.body);
   if (!parsed.success)
@@ -67,6 +85,12 @@ app.post("/games", async (req, reply) => {
           reply.raw.write(JSON.stringify({ type: "result", result }) + "\n");
       },
       abort.signal,
+      async (observation) => {
+        if (!reply.raw.destroyed)
+          reply.raw.write(
+            JSON.stringify({ type: "game", ...observation }) + "\n",
+          );
+      },
     );
     if (!reply.raw.destroyed) reply.raw.write('{"type":"complete"}\n');
   } catch (error) {
