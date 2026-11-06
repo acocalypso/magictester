@@ -4,6 +4,8 @@ A private, Docker-hosted Magic: The Gathering deck benchmark lab. Paste a Pauper
 
 **No random or fabricated matchup results.** The bundled opponent pool is explicitly labeled as project-authored reference decks, not a current tournament metagame. Import your own sourced JSON/CSV snapshots for metagame testing.
 
+![MagicTester deck analysis](docs/screenshots/analysis.png)
+
 ## Run
 
 Requires Docker Engine with Compose v2, Internet access on first boot, and approximately 4 GB RAM and 8 GB free storage (more when Docker uses the VFS storage driver).

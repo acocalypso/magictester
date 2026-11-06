@@ -170,3 +170,18 @@ test("exact names survive token collisions and adventure-face aliases", async ()
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("snow basic lands are exempt from copy limits", () => {
+  const snow = meta("Snow-Covered Mountain", "Basic Snow Land — Mountain");
+  const p = {
+    ...provider,
+    find: (name: string) =>
+      name.toLowerCase() === "snow-covered mountain"
+        ? snow
+        : provider.find(name),
+  };
+  assert.equal(
+    validateDeck("60 Snow-Covered Mountain", "pauper", p).valid,
+    true,
+  );
+});

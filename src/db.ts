@@ -7,4 +7,12 @@ export const pool = new pg.Pool({
     "postgres://magictester:magictester@localhost:5432/magictester",
   max: 12,
 });
+pool.on("error", (error) => {
+  console.error(
+    JSON.stringify({
+      event: "database_idle_connection_error",
+      error: error.message,
+    }),
+  );
+});
 export const db = drizzle(pool, { schema });

@@ -241,7 +241,7 @@ export function validateDeck(
     );
   for (const [name, count] of totals) {
     const meta = provider.find(name);
-    if (!meta || meta.typeLine.includes("Basic Land")) continue;
+    if (!meta || /\bBasic\b.*\bLand\b/.test(meta.typeLine)) continue;
     const unlimited = /A deck can have any number of cards named/i.test(
       meta.oracleText,
     );

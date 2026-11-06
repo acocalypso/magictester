@@ -218,6 +218,9 @@ export default function Home() {
     setSelected(params.get("job") || "");
     return () => clearInterval(timer);
   }, [refresh]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view, selected]);
   const navigate = (v: View, id?: string) => {
     setView(v);
     setError("");
@@ -346,7 +349,7 @@ export default function Home() {
             <div>
               <strong>Forge engine</strong>
               <small>
-                {connected ? "2.0.15 · Connected" : "Connecting to API…"}
+                {connected ? "2.0.15 · API ready" : "Connecting to API…"}
               </small>
             </div>
             <span>↗</span>

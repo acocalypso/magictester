@@ -56,56 +56,48 @@ export async function createSimulation(
         429,
         "Active job limit reached. Wait for an existing job to finish.",
       );
-    await tx
-      .insert(deckVersions)
-      .values({
-        id: versionId,
-        name: input.name,
-        format: input.format,
-        decklist: input.decklist,
-        cards: validation.cards,
-        cardData: validation.cardData,
-      });
-    await tx
-      .insert(jobs)
-      .values({
-        id,
-        deckVersionId: versionId,
-        snapshotId: snapshot.id,
-        games: input.games,
-        seed: input.seed,
-        clockSeconds: input.clockSeconds,
-        clientKey,
-        config: {
-          benchmarkMode: snapshot.selectionMethod,
-          gameMode: "BO1",
-          distribution:
-            "equal games per selected deck; remainder assigned in snapshot order",
-          engine: "forge",
-          forgeRelease: "2.0.15",
-          submittedSeat: 0,
-        },
-      });
+    await tx.insert(deckVersions).values({
+      id: versionId,
+      name: input.name,
+      format: input.format,
+      decklist: input.decklist,
+      cards: validation.cards,
+      cardData: validation.cardData,
+    });
+    await tx.insert(jobs).values({
+      id,
+      deckVersionId: versionId,
+      snapshotId: snapshot.id,
+      games: input.games,
+      seed: input.seed,
+      clockSeconds: input.clockSeconds,
+      clientKey,
+      config: {
+        benchmarkMode: snapshot.selectionMethod,
+        gameMode: "BO1",
+        distribution:
+          "equal games per selected deck; remainder assigned in snapshot order",
+        engine: "forge",
+        forgeRelease: "2.0.15",
+        submittedSeat: 0,
+      },
+    });
     for (const plan of planGames(input.games, snapshot.decks, input.seed))
-      await tx
-        .insert(runs)
-        .values(
-          Array.from({ length: plan.games }, (_, batchIndex) => ({
-            id: randomUUID(),
-            jobId: id,
-            opponentId: plan.opponent.id,
-            batchIndex,
-            seed: plan.seed,
-          })),
-        );
-    await tx
-      .insert(events)
-      .values({
-        id: randomUUID(),
-        jobId: id,
-        kind: "QUEUED",
-        data: { games: input.games },
-      });
+      await tx.insert(runs).values(
+        Array.from({ length: plan.games }, (_, batchIndex) => ({
+          id: randomUUID(),
+          jobId: id,
+          opponentId: plan.opponent.id,
+          batchIndex,
+          seed: plan.seed,
+        })),
+      );
+    await tx.insert(events).values({
+      id: randomUUID(),
+      jobId: id,
+      kind: "QUEUED",
+      data: { games: input.games },
+    });
   });
   // The database row is the durable outbox. Reconciliation retries enqueue if Redis is unavailable.
   await enqueue(id).catch(() => {});
@@ -153,7 +145,10 @@ export async function resultsFor(id: string) {
   const results = rows.flatMap((r) => (r.result ? [r.result] : []));
   return {
     job,
-    summary: summarize(results),
+    summary: {
+      ...summarize(results),
+      errors: rows.filter((r) => r.state === "ERROR").length,
+    },
     matchups: job.snapshot.decks.map((opponent) => ({
       opponent,
       planned: rows.filter((r) => r.opponentId === opponent.id).length,
@@ -162,6 +157,9 @@ export async function resultsFor(id: string) {
           .filter((r) => r.opponentId === opponent.id)
           .flatMap((r) => (r.result ? [r.result] : [])),
       ),
+      errors: rows.filter(
+        (r) => r.opponentId === opponent.id && r.state === "ERROR",
+      ).length,
     })),
     limitations: [
       "Forge AI uses heuristics: strongest at aggro/midrange, weaker at control and combo. These results are not human tournament win rates.",

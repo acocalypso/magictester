@@ -37,3 +37,15 @@ Untrusted deck names never become paths or shell command text. Card input is par
 ## CI
 
 Push/PR CI runs lint, build, type checks, unit tests and backend/web Docker builds. Scheduled/manual real-engine CI boots Compose and runs the smoke script, including cancellation/resume. Benchmark scripts run larger real workloads on demand. CI definitions are present; workflow results must be checked after pushing rather than assumed from their existence.
+
+## Controlled exhausted-retry test
+
+On an idle lab (no queued or running benchmarks), `scripts/queue-failure-smoke.mjs` can verify the terminal failure path. Stop the ordinary worker, run the test inside the API container, then start the worker again:
+
+```sh
+docker compose stop worker
+docker compose exec -T api node scripts/queue-failure-smoke.mjs
+docker compose start worker
+```
+
+The script creates one benchmark, injects a bounded failing worker, verifies that reconciliation does not retry forever, and queues an explicit retry. The normal worker then completes its one real game. It requires compiled backend files and the Compose service environment; it is not a unit test.
