@@ -51,6 +51,8 @@ Commander/cEDH/Duel deck validation and all companion restrictions are available
 
 ## Development and verification
 
+See the [dependency audit](docs/DEPENDENCIES.md) for current versions, Context7 migration references, security fixes and intentional compatibility limits.
+
 Node 24 and Java 21 are used. Backend: structured Fastify/TypeScript modules (small enough to avoid a separate NestJS layer). Frontend: Next.js/React/TypeScript with plain CSS; no charting service or external state library is required. PostgreSQL access uses Drizzle.
 
 ```sh

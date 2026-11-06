@@ -91,7 +91,7 @@ export function validateCompanion(
   const every = (predicate: (m: CardMetadata) => boolean) =>
     entries.every((e) => predicate(e.meta));
   const knownMana = () => every((m) => Number.isFinite(m.manaValue));
-  let valid = false;
+  let valid: boolean;
   switch (companion.name) {
     case "Gyruda, Doom of Depths":
       valid = knownMana() && every((m) => m.manaValue! % 2 === 0);
