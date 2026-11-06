@@ -15,6 +15,18 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 const errors = [];
 const assetErrors = [];
+const fontRequests = new Set();
+const remoteFontRequests = [];
+page.on("request", (request) => {
+  const url = new URL(request.url());
+  if (request.resourceType() === "font") {
+    fontRequests.add(request.url());
+    if (url.origin !== new URL(base).origin)
+      remoteFontRequests.push(request.url());
+  }
+  if (["fonts.googleapis.com", "fonts.gstatic.com"].includes(url.hostname))
+    remoteFontRequests.push(request.url());
+});
 page.on("pageerror", (error) => errors.push(error.message));
 page.on("response", (response) => {
   if (response.url().includes("/fonts/") && response.status() >= 400)
@@ -22,7 +34,12 @@ page.on("response", (response) => {
 });
 await mkdir("data/browser", { recursive: true });
 try {
-  await page.goto(base, { waitUntil: "networkidle" });
+  const response = await page.goto(base, { waitUntil: "networkidle" });
+  assert.match(
+    response.headers()["content-security-policy"] || "",
+    /(?:^|;)\s*font-src 'self'(?:;|$)/,
+    "Browser policy permits fonts from this origin only",
+  );
   await page.getByRole("button", { name: "Load example" }).click();
   const pool = page.getByLabel("Benchmark pool", { exact: true });
   const options = await pool.locator("option").allTextContents();
@@ -33,6 +50,10 @@ try {
   await page.getByRole("button", { name: "Validate deck" }).click();
   await page.getByText("Deck validated", { exact: false }).waitFor();
   await page.evaluate(() => document.fonts.ready);
+  assert.ok(
+    await page.evaluate(() => document.fonts.check('14px "Public Sans"')),
+    "Bundled Public Sans loaded",
+  );
   await page.screenshot({
     path: "data/browser/analysis-desktop.png",
     fullPage: true,
@@ -124,6 +145,17 @@ try {
   }
   assert.deepEqual(errors, [], "No uncaught browser errors");
   assert.deepEqual(assetErrors, [], "All local fonts load");
+  assert.ok(
+    [...fontRequests].some(
+      (url) => new URL(url).pathname === "/fonts/public-sans.woff2",
+    ),
+    "Public Sans is requested from the bundled file",
+  );
+  assert.deepEqual(
+    remoteFontRequests,
+    [],
+    "No remote font or Google Fonts stylesheet requests",
+  );
   const report = {
     verifiedAt: new Date().toISOString(),
     jobId,
@@ -131,6 +163,7 @@ try {
     viewports: [1440, 768, 390],
     uncaughtErrors: errors.length,
     fontErrors: assetErrors.length,
+    localFontsOnly: true,
     keyboardDialog: true,
     navigationViews: 4,
   };

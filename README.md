@@ -40,7 +40,7 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 - Six constructed formats plus Duel support BO1 or real first-to-two BO3; Commander/cEDH use four-player BO1 pods. Seeded games, observed starters/player turns, durations, explicit draws/timeouts/errors, process groups and deadlines.
 - PostgreSQL/Drizzle schema and versioned migrations; immutable snapshot and deck records enforced by database triggers.
 - BullMQ/Redis queue, job creation limits, bounded JVM capacity, progress events, cancellation, explicit retry, durable planned run identities, restart recovery, and completed-result deduplication.
-- Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography.
+- Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography. Public Sans is bundled under `apps/web/public/fonts`; system fallbacks stay on the device, and `font-src 'self'` blocks remote font downloads. No Google Fonts requests.
 - Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and player-turn distributions.
 - Authorized scheduled JSON feeds with immutable content versions, source hashes, dates, freshness and admin controls; manual JSON/CSV import remains available.
 - Equal, source-share and custom weighted opponents; seeded weighted multiplayer rosters or explicit ordered pods. Exact plans and allocation methods are saved.
