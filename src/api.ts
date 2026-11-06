@@ -1,5 +1,14 @@
+import { stopSourceImports } from "./source-http.js";
 import { selectionSchema } from "./planning.js";
-import { createFeed, listFeeds, syncFeed, syncDueFeeds } from "./feeds.js";
+import {
+  createFeed,
+  listFeeds,
+  syncFeed,
+  syncDueFeeds,
+  ensureDailySources,
+  currentMetagame,
+  invalidateDailyPools,
+} from "./feeds.js";
 import { referencePool } from "./reference-pools.js";
 import { enabledFormatIds, validationFormatIds, getFormat } from "./formats.js";
 import Fastify from "fastify";
@@ -51,6 +60,8 @@ const cacheTimer = setInterval(() => {
     ).join(":");
     if (fingerprint !== cacheFingerprint) {
       const next = await new CachedCardDataProvider().load();
+      if (JSON.stringify(cards.provenance) !== JSON.stringify(next.provenance))
+        await invalidateDailyPools(next);
       cards = next;
       cacheFingerprint = fingerprint;
       cacheReloadError = null;
@@ -158,11 +169,16 @@ app.post(
       tags: ["Simulations"],
       body: {
         ...bodySchema,
-        required: ["decklist", "format", "snapshotId", "games", "name"],
+        required: ["decklist", "format", "games", "name"],
         properties: {
           ...bodySchema.properties,
           format: { type: "string", enum: enabledFormatIds() },
           name: { type: "string", minLength: 1, maxLength: 150 },
+          poolMode: {
+            type: "string",
+            enum: ["fixed", "latest"],
+            default: "fixed",
+          },
           snapshotId: { type: "string", format: "uuid" },
           games: {
             type: "integer",
@@ -183,7 +199,8 @@ app.post(
     const input = deckBody
       .extend({
         name: z.string().trim().min(1).max(150),
-        snapshotId: z.uuid(),
+        snapshotId: z.uuid().optional(),
+        poolMode: z.enum(["fixed", "latest"]).default("fixed"),
         games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
         seed: z.number().int().min(0).max(2147483646).default(12345),
         gameMode: z.enum(["BO1", "BO3"]).default("BO1"),
@@ -432,6 +449,10 @@ const requireAdmin = async (req: { headers: { authorization?: string } }) => {
   if (token.length !== expected.length || !timingSafeEqual(token, expected))
     throw new RequestError(401, "Admin token required");
 };
+app.get<{ Params: { format: string } }>(
+  "/api/v1/meta/:format/current",
+  async (req) => currentMetagame(req.params.format),
+);
 app.get("/api/v1/meta/feeds", async () => listFeeds());
 app.post(
   "/api/v1/meta/feeds",
@@ -447,8 +468,14 @@ app.post(
 app.post<{ Params: { id: string } }>(
   "/api/v1/meta/feeds/:id/sync",
   { preHandler: requireAdmin, schema: { params: idSchema } },
-  async (req) => {
+  async (req, reply) => {
     try {
+      const feed = (await listFeeds()).find((f) => f.id === req.params.id);
+      if (!feed) throw new RequestError(404, "Feed not found");
+      if (feed.provider !== "json") {
+        void syncFeed(req.params.id, cards).catch((e) => app.log.error(e));
+        return reply.code(202).send({ status: "accepted" });
+      }
       return await syncFeed(req.params.id, cards);
     } catch (e) {
       throw new RequestError(422, (e as Error).message);
@@ -535,12 +562,15 @@ const reconcileTimer = setInterval(() => {
   void reconcile().catch((e) => app.log.error(e));
 }, 10000);
 reconcileTimer.unref();
+await ensureDailySources();
+await invalidateDailyPools(cards);
 await reconcile();
 for (const signal of ["SIGTERM", "SIGINT"])
   process.once(
     signal,
     () =>
       void (async () => {
+        stopSourceImports();
         clearInterval(reconcileTimer);
         clearInterval(feedTimer);
         clearInterval(cacheTimer);

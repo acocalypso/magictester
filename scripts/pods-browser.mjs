@@ -26,6 +26,10 @@ try {
         o.textContent.includes("Local reference pool"),
       ),
     );
+    const label = (
+      await page.locator("#snapshot option").allTextContents()
+    ).find((name) => name.includes("Local reference pool"));
+    await page.locator("#snapshot").selectOption({ label });
     await page.getByRole("button", { name: "Load example" }).click();
     await page.getByRole("button", { name: "Validate deck" }).click();
     await page.getByText("Deck validated", { exact: false }).waitFor();

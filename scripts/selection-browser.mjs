@@ -28,6 +28,9 @@ try {
   await page.locator("#format").selectOption("commander");
   await page.locator("#snapshot option").first().waitFor({ state: "attached" });
   await page
+    .locator("#snapshot")
+    .selectOption({ label: "Commander · Local reference pool" });
+  await page
     .getByText("Choose opponents & allocation", { exact: true })
     .click();
   await page

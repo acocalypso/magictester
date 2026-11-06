@@ -28,6 +28,9 @@ try {
       (o) => o.textContent === "Modern · Local reference pool",
     ),
   );
+  await page
+    .locator("#snapshot")
+    .selectOption({ label: "Modern · Local reference pool" });
   await page.getByRole("button", { name: "Load example" }).click();
   await page.locator("#game-mode").selectOption("BO3");
   await page.locator("#games").fill("1");

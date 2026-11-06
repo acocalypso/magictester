@@ -133,6 +133,8 @@ services:
     environment:
       <<: *env
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      DAILY_META_ENABLED: ${DAILY_META_ENABLED:-true}
+      DAILY_META_DECKS: ${DAILY_META_DECKS:-10}
       META_FEED_HOSTS: ${META_FEED_HOSTS:-raw.githubusercontent.com}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     depends_on:

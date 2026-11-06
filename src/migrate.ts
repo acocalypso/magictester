@@ -12,6 +12,7 @@ try {
     "0002_immutable_job_plan.sql",
     "0003_observation_index.sql",
     "0004_meta_feeds.sql",
+    "0005_daily_meta.sql",
   ]) {
     if (
       !(

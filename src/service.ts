@@ -1,3 +1,4 @@
+import { currentMetagame } from "./meta-current.js";
 import { getFormat } from "./formats.js";
 import { randomUUID, createHash } from "node:crypto";
 import { and, eq, inArray, sql, desc } from "drizzle-orm";
@@ -28,7 +29,8 @@ export async function createSimulation(
     name: string;
     decklist: string;
     format: string;
-    snapshotId: string;
+    snapshotId?: string;
+    poolMode?: "fixed" | "latest";
     games: number;
     seed: number;
     clockSeconds: number;
@@ -72,10 +74,48 @@ export async function createSimulation(
   const validation = validateDeck(input.decklist, input.format, provider);
   if (!validation.valid)
     throw new RequestError(422, "Deck validation failed", validation.errors);
+  let resolvedSnapshotId = input.snapshotId;
+  if (input.poolMode === "latest") {
+    const current = await currentMetagame(input.format);
+    if (
+      !current.snapshot ||
+      current.error ||
+      ["paused", "stale", "error", "pending", "unconfigured"].includes(
+        current.status,
+      )
+    )
+      throw new RequestError(
+        503,
+        "The current daily metagame is not ready. Check source status or explicitly choose a saved pool.",
+      );
+    if (input.snapshotId && input.snapshotId !== current.snapshot.id)
+      throw new RequestError(
+        409,
+        "The daily metagame changed. Review the refreshed opponent pool and submit again.",
+      );
+    const sourceData = current.snapshot.metadata.cardData as
+      { sha256?: string; engineBridge?: { sourceHash?: string } } | undefined;
+    const engine = provider.provenance.engineBridge as
+      { sourceHash?: string } | undefined;
+    if (
+      sourceData?.sha256 !== provider.provenance.sha256 ||
+      sourceData?.engineBridge?.sourceHash !== engine?.sourceHash
+    )
+      throw new RequestError(
+        503,
+        "Daily opponents are being revalidated against the current card data and engine. Choose a saved pool or retry after refresh.",
+      );
+    resolvedSnapshotId = current.snapshot.id;
+  }
+  if (!resolvedSnapshotId)
+    throw new RequestError(
+      422,
+      "Choose a saved snapshot or the latest daily metagame",
+    );
   const [snapshot] = await db
     .select()
     .from(snapshots)
-    .where(eq(snapshots.id, input.snapshotId));
+    .where(eq(snapshots.id, resolvedSnapshotId));
   if (!snapshot || snapshot.format !== input.format)
     throw new RequestError(422, "Snapshot missing or format mismatch");
   let plans;
@@ -127,6 +167,7 @@ export async function createSimulation(
       clientKey,
       config: {
         benchmarkMode: snapshot.selectionMethod,
+        poolMode: input.poolMode || "fixed",
         gameMode: bestOf ? "BO3" : "BO1",
         unit: bestOf ? "matches" : "games",
         maxMatchGames,

@@ -1,3 +1,5 @@
+import { dailySources, downloadMetagame } from "./meta-sources.js";
+import { sourceImportsStopping, sourceUrl } from "./source-http.js";
 import { validationFormatIds } from "./formats.js";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -11,6 +13,8 @@ export const feedInput = z.object({
   format: z.enum(validationFormatIds()),
   intervalHours: z.number().int().min(1).max(720).default(24),
   permission: z.string().trim().min(10).max(1000),
+  provider: z.enum(["json", "mtgtop8", "mtgdecks"]).default("json"),
+  maxDecks: z.number().int().min(1).max(50).default(10),
 });
 export function feedUrl(
   value: string,
@@ -70,17 +74,27 @@ export async function readFeed(url: string, etag: string | null) {
 export async function listFeeds() {
   return (
     await pool.query(
-      `SELECT id,name,url,format,interval_hours AS "intervalHours",permission,enabled,last_checked_at AS "lastCheckedAt",last_success_at AS "lastSuccessAt",next_check_at AS "nextCheckAt",last_error AS "lastError",snapshot_id AS "snapshotId",digest, CASE WHEN last_success_at IS NULL THEN 'never' WHEN last_success_at < now() - interval_hours * interval '2 hours' THEN 'stale' ELSE 'current' END AS freshness FROM meta_feeds ORDER BY created_at DESC`,
+      `SELECT id,name,url,format,provider,max_decks AS "maxDecks",interval_hours AS "intervalHours",permission,enabled,last_checked_at AS "lastCheckedAt",last_success_at AS "lastSuccessAt",next_check_at AS "nextCheckAt",last_error AS "lastError",snapshot_id AS "snapshotId",digest, CASE WHEN last_success_at IS NULL THEN 'never' WHEN last_success_at < now() - interval_hours * interval '2 hours' THEN 'stale' ELSE 'current' END AS freshness FROM meta_feeds ORDER BY created_at DESC`,
     )
   ).rows;
 }
 export async function createFeed(input: unknown) {
   const data = feedInput.parse(input);
-  feedUrl(data.url);
+  if (data.provider === "json") feedUrl(data.url);
+  else sourceUrl(data.url);
   const id = randomUUID();
   await pool.query(
-    `INSERT INTO meta_feeds(id,name,url,format,interval_hours,permission) VALUES($1,$2,$3,$4,$5,$6)`,
-    [id, data.name, data.url, data.format, data.intervalHours, data.permission],
+    `INSERT INTO meta_feeds(id,name,url,format,interval_hours,permission,provider,max_decks) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [
+      id,
+      data.name,
+      data.url,
+      data.format,
+      data.intervalHours,
+      data.permission,
+      data.provider,
+      data.maxDecks,
+    ],
   );
   return (await listFeeds()).find((f) => f.id === id);
 }
@@ -109,8 +123,20 @@ export async function syncFeed(
       (!feed.enabled || new Date(feed.next_check_at).getTime() > Date.now())
     )
       return { skipped: true };
+    await client.query(
+      "UPDATE meta_feeds SET last_checked_at=now(),last_error=NULL WHERE id=$1",
+      [id],
+    );
     try {
-      const downloaded = await readFeed(feed.url, feed.etag);
+      const downloaded =
+        feed.provider === "json"
+          ? await readFeed(feed.url, feed.etag)
+          : await downloadMetagame(feed, cards, scheduled);
+      if (downloaded && feed.provider !== "json")
+        downloaded.digest = createHash("sha256")
+          .update(downloaded.digest)
+          .update(JSON.stringify(cards.provenance))
+          .digest("hex");
       let snapshotId = feed.snapshot_id;
       let normalized;
       if (downloaded && downloaded.digest !== feed.digest) {
@@ -118,6 +144,8 @@ export async function syncFeed(
         if (normalized.format !== feed.format)
           throw new Error("Feed format does not match registration");
       }
+      if (sourceImportsStopping() && feed.provider !== "json")
+        throw new Error("Source import interrupted by server shutdown");
       await client.query("BEGIN");
       if (normalized) {
         snapshotId = randomUUID();
@@ -132,6 +160,9 @@ export async function syncFeed(
             normalized.selectionMethod,
             JSON.stringify(normalized.decks),
             JSON.stringify({
+              ...(downloaded && "metadata" in downloaded
+                ? (downloaded.metadata as Record<string, unknown>)
+                : {}),
               cardData: cards.provenance,
               feedId: id,
               url: feed.url,
@@ -145,17 +176,24 @@ export async function syncFeed(
         );
       }
       await client.query(
-        `UPDATE meta_feeds SET last_checked_at=now(),last_success_at=now(),next_check_at=now()+interval_hours * interval '1 hour',last_error=NULL,snapshot_id=$2,digest=coalesce($3,digest),etag=coalesce($4,etag) WHERE id=$1`,
+        `UPDATE meta_feeds SET last_checked_at=now(),last_success_at=now(),next_check_at=CASE WHEN provider!='json' AND interval_hours=24 THEN (date_trunc('day',now() AT TIME ZONE 'UTC')+interval '1 day') AT TIME ZONE 'UTC' ELSE now()+interval_hours * interval '1 hour' END,last_error=NULL,snapshot_id=$2,digest=coalesce($3,digest),etag=coalesce($4,etag) WHERE id=$1`,
         [id, snapshotId, downloaded?.digest || null, downloaded?.etag || null],
       );
+      if (sourceImportsStopping() && feed.provider !== "json")
+        throw new Error("Source import interrupted by server shutdown");
       await client.query("COMMIT");
       return { changed: !!normalized, snapshotId };
     } catch (error) {
       await client.query("ROLLBACK");
       const message = (error as Error).message.slice(0, 1000);
       await client.query(
-        `UPDATE meta_feeds SET last_checked_at=now(),next_check_at=now()+interval_hours * interval '1 hour',last_error=$2 WHERE id=$1`,
-        [id, message],
+        `UPDATE meta_feeds SET last_checked_at=now(),next_check_at=CASE WHEN $4 THEN now() ELSE greatest(now()+least(interval_hours,1) * interval '1 hour',coalesce($3::timestamptz,now())) END,last_error=$2 WHERE id=$1`,
+        [
+          id,
+          message,
+          (error as { retryAt?: string }).retryAt || null,
+          sourceImportsStopping(),
+        ],
       );
       throw error;
     }
@@ -175,4 +213,40 @@ export async function syncDueFeeds(cards: CardDataProvider) {
     )
   ).rows;
   for (const feed of due) await syncFeed(feed.id, cards, true).catch(() => {});
+  await pool.query(
+    "DELETE FROM source_http_cache WHERE checked_at < now() - interval '7 days'",
+  );
+}
+
+export async function ensureDailySources() {
+  if (process.env.DAILY_META_ENABLED === "false") return;
+  const maxDecks = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .parse(process.env.DAILY_META_DECKS || 10);
+  for (const source of dailySources)
+    await pool.query(
+      `INSERT INTO meta_feeds(id,name,url,format,interval_hours,permission,provider,max_decks) VALUES($1,$2,$3,$4,24,$5,$6,$7) ON CONFLICT(provider,url,format) DO UPDATE SET max_decks=excluded.max_decks,next_check_at=CASE WHEN meta_feeds.max_decks!=excluded.max_decks THEN now() ELSE meta_feeds.next_check_at END`,
+      [
+        randomUUID(),
+        source.name,
+        source.url,
+        source.format,
+        "Public source pages for personal/private analysis; respect robots, source attribution and request delays",
+        source.provider,
+        maxDecks,
+      ],
+    );
+}
+export { currentMetagame } from "./meta-current.js";
+
+export async function invalidateDailyPools(cards: CardDataProvider) {
+  const bridge = cards.provenance.engineBridge as
+    { sourceHash?: string } | undefined;
+  await pool.query(
+    `UPDATE meta_feeds f SET next_check_at=least(next_check_at,now()) FROM meta_snapshots s WHERE f.snapshot_id=s.id AND f.provider!='json' AND f.enabled AND ((s.metadata->'cardData'->>'sha256') IS DISTINCT FROM $1 OR (s.metadata->'cardData'->'engineBridge'->>'sourceHash') IS DISTINCT FROM $2)`,
+    [cards.provenance.sha256, bridge?.sourceHash || null],
+  );
 }

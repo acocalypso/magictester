@@ -28,13 +28,30 @@ type Feed = {
   lastSuccessAt: string | null;
   lastError: string | null;
 };
+type DailyMeta = {
+  status: string;
+  snapshot: Snapshot | null;
+  lastSuccessAt?: string | null;
+  nextCheckAt?: string | null;
+  error?: string | null;
+};
 type Snapshot = {
   id: string;
   name: string;
   format: string;
   source: string;
   sourceDate: string | null;
-  metadata?: { feedId?: string; sha256?: string; fetchedAt?: string };
+  metadata?: {
+    feedId?: string;
+    sha256?: string;
+    fetchedAt?: string;
+    provider?: string;
+    window?: string;
+    selectedMetaShare?: number;
+    acceptedDecks?: number;
+    requestedDecks?: number;
+    exclusions?: { archetype: string; reason: string }[];
+  };
   createdAt: string;
   decks: Deck[];
   selectionMethod: string;
@@ -277,6 +294,8 @@ export default function Home() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [feedUrl, setFeedUrl] = useState("");
   const [feedPermission, setFeedPermission] = useState("");
+  const [dailyMeta, setDailyMeta] = useState<DailyMeta | null>(null);
+  const [useLatestMeta, setUseLatestMeta] = useState(true);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState("");
@@ -316,13 +335,15 @@ export default function Home() {
   >("name");
   const refresh = useCallback(async () => {
     try {
-      const [s, j, f, feeds] = await Promise.all([
+      const [s, j, f, feeds, current] = await Promise.all([
         api<Snapshot[]>(`/meta/${format}/snapshots`),
         api<Job[]>("/simulations"),
         api<FormatInfo[]>("/formats"),
         api<Feed[]>("/meta/feeds"),
+        api<DailyMeta>(`/meta/${format}/current`),
       ]);
       if (formatRef.current !== format) return;
+      setDailyMeta(current);
       setFormats(f);
       setFeeds(feeds);
       setSnapshots(s);
@@ -339,8 +360,16 @@ export default function Home() {
   }, [format]);
   useEffect(() => {
     void refresh();
-    const timer = setInterval(() => void refresh(), 10000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => {
+      void api<Job[]>("/simulations")
+        .then(setJobs)
+        .catch(() => setConnected(false));
+    }, 10000);
+    const metadataTimer = setInterval(() => void refresh(), 60000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(metadataTimer);
+    };
   }, [refresh]);
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -406,8 +435,12 @@ export default function Home() {
     setExcludedDecks([]);
     setOpponentWeights({});
     setCustomPods([]);
-    setAllocationMode("equal");
-  }, [snapshotId]);
+    setAllocationMode(useLatestMeta ? "meta" : "equal");
+  }, [
+    snapshotId,
+    useLatestMeta,
+    useLatestMeta ? dailyMeta?.snapshot?.id : null,
+  ]);
   const [sideboardMode, setSideboardMode] = useState<"none" | "forge">("forge");
   const submit = async () => {
     setBusy(true);
@@ -423,7 +456,8 @@ export default function Home() {
           name: deckName,
           decklist,
           format,
-          snapshotId,
+          snapshotId: useLatestMeta ? dailyMeta?.snapshot?.id : snapshotId,
+          poolMode: useLatestMeta ? "latest" : "fixed",
           games,
           selection: {
             mode: allocationMode,
@@ -486,7 +520,9 @@ export default function Home() {
   const resultIsPod = result?.job.config?.players === 4;
   const resultIsCommander = !!formats.find((f) => f.id === result?.job.format)
     ?.commander;
-  const pool = snapshots.find((s) => s.id === snapshotId);
+  const pool = useLatestMeta
+    ? dailyMeta?.snapshot || undefined
+    : snapshots.find((s) => s.id === snapshotId);
   const selectedOpponents =
     pool?.decks.filter((d) => !excludedDecks.includes(d.id)) || [];
   const podPreview =
@@ -753,6 +789,7 @@ export default function Home() {
                               : 30,
                           );
                           setSnapshots([]);
+                          setDailyMeta(null);
                           setSnapshotId("");
                           setValidation(null);
                         }}
@@ -841,9 +878,17 @@ export default function Home() {
                       <label htmlFor="snapshot">Benchmark pool</label>
                       <select
                         id="snapshot"
-                        value={snapshotId}
-                        onChange={(e) => setSnapshotId(e.target.value)}
+                        value={useLatestMeta ? "latest" : snapshotId}
+                        onChange={(e) => {
+                          setUseLatestMeta(e.target.value === "latest");
+                          if (e.target.value !== "latest")
+                            setSnapshotId(e.target.value);
+                        }}
                       >
+                        <option value="latest">
+                          Latest daily metagame ·{" "}
+                          {dailyMeta?.status || "loading"}
+                        </option>
                         {snapshots.length === 0 && (
                           <option value="">Waiting for benchmark pools…</option>
                         )}
@@ -853,6 +898,35 @@ export default function Home() {
                           </option>
                         ))}
                       </select>
+                      {useLatestMeta && (
+                        <div className="info-banner" role="status">
+                          <strong>
+                            Daily metagame · {dailyMeta?.status || "loading"}
+                          </strong>
+                          <p>
+                            {dailyMeta?.snapshot
+                              ? `${dailyMeta.snapshot.decks.length} validated representatives · ${dailyMeta.snapshot.metadata?.window || "source reporting window"}`
+                              : "The first source import is in progress. A saved reference pool can be selected while it completes."}
+                          </p>
+                          {dailyMeta?.snapshot?.metadata?.selectedMetaShare !==
+                            undefined && (
+                            <p>
+                              Selected shares total{" "}
+                              {pct(
+                                dailyMeta.snapshot.metadata.selectedMetaShare,
+                              )}{" "}
+                              as reported by the source.
+                            </p>
+                          )}
+                          {dailyMeta?.error && <p>{dailyMeta.error}</p>}
+                          {dailyMeta?.lastSuccessAt && (
+                            <small>
+                              Last successful import{" "}
+                              {date(dailyMeta.lastSuccessAt)}
+                            </small>
+                          )}
+                        </div>
+                      )}
                       {pool && (
                         <div className="pool-note">
                           <span>◈</span>
@@ -1156,7 +1230,11 @@ export default function Home() {
                         disabled={
                           busy ||
                           !decklist.trim() ||
-                          !snapshotId ||
+                          !pool ||
+                          (useLatestMeta &&
+                            !["current", "refreshing"].includes(
+                              dailyMeta?.status || "",
+                            )) ||
                           games < 1 ||
                           games > maxUnits ||
                           (gameMode === "BO3" &&
@@ -1986,6 +2064,7 @@ export default function Home() {
                   onChange={(event) => {
                     setFormat(event.target.value);
                     setSnapshots([]);
+                    setDailyMeta(null);
                     setSnapshotId("");
                     setValidation(null);
                   }}
@@ -2000,9 +2079,9 @@ export default function Home() {
                 </select>
               </div>
               <div className="info-banner">
-                The bundled pool contains project-authored reference lists.
-                Import sourced tournament decks to benchmark a current metagame.
-                No tournament statistics are invented.
+                Daily pools use source-reported archetype shares and recent
+                validated decklists. Saved reference pools remain available for
+                controlled comparisons. No tournament statistics are invented.
               </div>
               <div className="pool-grid">
                 {snapshots.map((s) => (
@@ -2020,6 +2099,18 @@ export default function Home() {
                       {s.sourceDate || "unavailable"} ·{" "}
                       {s.selectionMethod.replaceAll("_", " ")}
                     </div>
+                    {!!s.metadata?.exclusions?.length && (
+                      <details>
+                        <summary>
+                          Source exclusions ({s.metadata.exclusions.length})
+                        </summary>
+                        {s.metadata.exclusions.map((item, i) => (
+                          <p key={i}>
+                            {item.archetype}: {item.reason}
+                          </p>
+                        ))}
+                      </details>
+                    )}
                     <div className="pool-decks">
                       {s.decks.map((d) => (
                         <details key={d.id}>
@@ -2041,6 +2132,7 @@ export default function Home() {
                       className="secondary"
                       onClick={() => {
                         setSnapshotId(s.id);
+                        setUseLatestMeta(false);
                         navigate("analysis");
                       }}
                     >
