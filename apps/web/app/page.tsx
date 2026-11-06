@@ -339,7 +339,7 @@ export default function Home() {
   }, [format]);
   useEffect(() => {
     void refresh();
-    const timer = setInterval(() => void refresh(), 5000);
+    const timer = setInterval(() => void refresh(), 10000);
     return () => clearInterval(timer);
   }, [refresh]);
   useEffect(() => {

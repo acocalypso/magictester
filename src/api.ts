@@ -341,7 +341,7 @@ app.get<{ Params: { id: string } }>(
         busy = false;
       }
     };
-    const timer = setInterval(() => void tick(), 1500);
+    const timer = setInterval(() => void tick(), 2500);
     req.raw.once("close", () => clearInterval(timer));
     void tick();
   },
