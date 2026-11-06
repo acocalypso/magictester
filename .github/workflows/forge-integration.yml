@@ -16,6 +16,9 @@ jobs:
           node-version: 24
       - run: docker compose up --build -d --wait
       - run: node scripts/smoke.mjs
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: always()
@@ -25,5 +28,6 @@ jobs:
           path: |
             compose.log
             data/smoke-report.json
+            data/browser/
       - if: always()
         run: docker compose down

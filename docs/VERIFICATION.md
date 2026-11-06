@@ -56,3 +56,7 @@ Container-wide `docker stats` in this executor reports shared parent-cgroup tota
 ## Performance qualification
 
 Observed Java process RSS samples inside the runner ranged approximately 369–887 MiB during the workload, with a configured 1024 MB Java heap. These are samples, not a measured peak. API RSS after loading the full Oracle metadata cache was about 415 MiB; an idle worker sample was about 99 MiB. The executor has two CPUs. Per-service CPU utilization, isolated JVM startup cost and peak memory remain **NOT VERIFIED**; no unsupported values are reported.
+
+## Interface redesign acceptance
+
+The user-selected charcoal/white interface was researched against Archidekt, Untapped, MTGDecks and 17Lands; see [design research](design/RESEARCH.md). Browser acceptance on 6 November 2026 created and completed two actual Forge games (job `a3a1aebb-034a-4fc2-99d6-be369162b971`), traversed all four screens at desktop/768/390 px, verified no horizontal overflow, local font availability, native evidence-dialog Tab containment/Escape and zero uncaught JavaScript errors. Production build, lint and type checks passed. The real-engine CI workflow now includes this browser acceptance.

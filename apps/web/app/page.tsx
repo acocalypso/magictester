@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 type View = "analysis" | "queue" | "results" | "meta";
 type Deck = {
@@ -224,6 +224,7 @@ export default function Home() {
   const navigate = (v: View, id?: string) => {
     setView(v);
     setError("");
+    if (!id && v === "results") setSelected("");
     if (id) {
       setSelected(id);
       setRunPage(0);
@@ -300,93 +301,73 @@ export default function Home() {
   const running = jobs.filter((j) => active.includes(j.state));
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="/">
-          <span className="brand-mark">
-            M<span>✦</span>
-          </span>
+      <header className="masthead">
+        <a className="brand" href="/" aria-label="MagicTester home">
+          <svg className="brand-mark" viewBox="0 0 42 44" aria-hidden="true">
+            <path
+              d="M6 3h25v33H6zM11 8h25v33H11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M17 16v12m5-12v12m5-12v12m-13-2 18-8"
+              stroke="currentColor"
+              strokeWidth="1.7"
+            />
+          </svg>
           <span>
-            magic<span className="brand-light">tester</span>
-            <small>THE SIMULATION LAB</small>
+            MagicTester<small>MAGIC: THE GATHERING · DECK TESTING</small>
           </span>
         </a>
-        <div className="workspace-label">
-          WORKSPACE <span>01</span>
-        </div>
         <nav aria-label="Main navigation">
-          {(["analysis", "queue", "results", "meta"] as View[]).map((v) => (
-            <button
-              key={v}
-              aria-label={
-                v === "analysis"
-                  ? "New analysis"
-                  : v === "meta"
-                    ? "Benchmark pools"
-                    : v === "queue"
-                      ? "Simulation queue"
-                      : "Results library"
-              }
-              className={view === v ? "nav-item selected" : "nav-item"}
-              onClick={() => navigate(v)}
-            >
-              <Icon name={v} />
-              <span>
-                {v === "analysis"
-                  ? "New analysis"
-                  : v === "meta"
-                    ? "Benchmark pools"
-                    : v === "queue"
-                      ? "Simulation queue"
-                      : "Results library"}
-              </span>
-              {v === "queue" && running.length > 0 && <b>{running.length}</b>}
-            </button>
-          ))}
+          {(["analysis", "queue", "results", "meta"] as View[]).map(
+            (v, index) => (
+              <button
+                key={v}
+                aria-current={view === v ? "page" : undefined}
+                aria-label={
+                  v === "analysis"
+                    ? "New analysis"
+                    : v === "meta"
+                      ? "Benchmark pools"
+                      : v === "queue"
+                        ? "Simulation queue"
+                        : "Results library"
+                }
+                className={view === v ? "nav-item selected" : "nav-item"}
+                onClick={() => navigate(v)}
+              >
+                <span className="nav-index">0{index + 1}</span>
+                <span>
+                  {v === "analysis"
+                    ? "Test a deck"
+                    : v === "meta"
+                      ? "Opponent pools"
+                      : v === "queue"
+                        ? "Queue"
+                        : "Results"}
+                </span>
+                {v === "queue" && running.length > 0 && <b>{running.length}</b>}
+              </button>
+            ),
+          )}
         </nav>
-        <div className="sidebar-bottom">
-          <div className="engine-state">
-            <span className={connected ? "status-dot" : "status-dot off"} />
-            <div>
-              <strong>Forge engine</strong>
-              <small>
-                {connected ? "2.0.15 · API ready" : "Connecting to API…"}
-              </small>
-            </div>
-            <span>↗</span>
-          </div>
-          <p>
-            Independent MTG research tool.
-            <br />
-            Not affiliated with Wizards of the Coast.
-          </p>
-          <a
-            href="https://github.com/acocalypso/magictester"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Source & documentation ↗
-          </a>
-        </div>
-      </aside>
-      <div className="main-shell">
-        <header className="topbar">
+        <div className="engine-state">
+          <span className={connected ? "status-dot" : "status-dot off"} />
           <span>
-            Workspace <span className="slash">/</span>{" "}
-            <strong>
-              {view === "analysis"
-                ? "New analysis"
-                : view === "meta"
-                  ? "Benchmark pools"
-                  : view === "queue"
-                    ? "Simulation queue"
-                    : "Results"}
-            </strong>
+            {connected ? "Workspace connected" : "Reconnecting…"}
+            <small>Forge 2.0.15</small>
           </span>
-          <div className="topbar-right">
-            <span className="version">PRIVATE LAB · v0.1</span>
-            <span className="avatar">MT</span>
-          </div>
-        </header>
+        </div>
+      </header>
+      <div className="main-shell">
+        <div className="context-bar">
+          <span>THE TESTING DESK</span>
+          <span>
+            Rules engine simulations <i>/</i> Private workspace
+          </span>
+        </div>
         <main>
           {error && (
             <div className="error-banner" role="alert">
@@ -400,23 +381,19 @@ export default function Home() {
             <>
               <div className="page-heading">
                 <div>
-                  <span className="eyebrow">LESS GUESSWORK. MORE GAMES.</span>
-                  <h1>
-                    Put your deck to the test<span>.</span>
-                  </h1>
+                  <span className="eyebrow">DECK TESTING</span>
+                  <h1>Test a deck.</h1>
                   <p>
-                    Run real AI games. Understand your matchups. Refine your
-                    next list.
+                    Register a list, choose your opponents, and run the matchup.
                   </p>
                 </div>
-                <span className="pill">✦ Powered by Forge</span>
               </div>
               <div className="analysis-grid">
                 <section className="panel deck-panel">
                   <div className="panel-heading">
                     <div>
                       <span className="step">01</span>
-                      <h2>Your deck</h2>
+                      <h2>Decklist</h2>
                     </div>
                     <button
                       className="text-button"
@@ -426,7 +403,7 @@ export default function Home() {
                         setValidation(null);
                       }}
                     >
-                      Load example ↗
+                      Load example →
                     </button>
                   </div>
                   <div className="panel-body">
@@ -436,16 +413,16 @@ export default function Home() {
                       value={deckName}
                       onChange={(e) => setDeckName(e.target.value)}
                       maxLength={150}
-                      placeholder="Give your list a name"
+                      placeholder="e.g. Mono-red Burn"
                     />
                     <div className="label-row">
                       <label htmlFor="decklist">Decklist</label>
-                      <span>Plain text · 4 Card Name</span>
+                      <span>Quantity + card name</span>
                     </div>
                     <div className="deck-editor">
                       <div className="editor-toolbar">
                         <span className="tiny-dot" />
-                        <span>decklist.txt</span>
+                        <span>MAINBOARD / SIDEBOARD</span>
                         <span className="editor-count">
                           {decklist ? decklist.split("\n").length : 0} lines
                         </span>
@@ -465,8 +442,8 @@ export default function Home() {
                       />
                     </div>
                     <div className="editor-note">
-                      <span>⌘</span> Mainboard and sideboard supported. Your
-                      exact list is saved with each analysis.
+                      Mainboard and sideboard supported. Your exact list is
+                      saved with each analysis.
                     </div>
                     {validation && (
                       <div
@@ -526,7 +503,7 @@ export default function Home() {
                     <div className="panel-heading">
                       <div>
                         <span className="step">02</span>
-                        <h2>Configure benchmark</h2>
+                        <h2>Test settings</h2>
                       </div>
                     </div>
                     <div className="panel-body">
@@ -566,7 +543,7 @@ export default function Home() {
                           </div>
                         </div>
                       )}
-                      <label>Simulation depth</label>
+                      <label>How many games?</label>
                       <div className="presets">
                         {[
                           [50, "Quick"],
@@ -623,19 +600,18 @@ export default function Home() {
                         }
                         onClick={() => void submit()}
                       >
-                        <span>✦</span>
                         {busy ? "Preparing analysis…" : "Analyze deck"}
-                        <span>→</span>
+                        <span aria-hidden="true">→</span>
                       </button>
                       <p className="below-button">
-                        Real Forge games · Persistent results · Cancel anytime
+                        AI vs AI · Every result saved · Cancel anytime
                       </p>
                     </div>
                   </section>
                   <div className="model-note">
-                    <span className="note-icon">i</span>
+                    <span className="note-icon">*</span>
                     <div>
-                      <strong>A benchmark, with context.</strong>
+                      <strong>Simulation limits</strong>
                       <p>
                         Forge AI is strongest with aggro and midrange. Control
                         and combo results need extra care. Simulated performance
@@ -645,19 +621,18 @@ export default function Home() {
                         className="text-button"
                         onClick={() => navigate("meta")}
                       >
-                        Explore benchmark methodology ↗
+                        Review the benchmark pools →
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="how-it-works">
-                <span>BUILT ON REAL GAMES</span>
-                <div>
-                  <b>01</b> Validate your list <i>→</i>
-                  <b>02</b> Queue AI matchups <i>→</i>
-                  <b>03</b> Explore the evidence
-                </div>
+              <div className="desk-note">
+                <span>WHAT GETS RECORDED</span>
+                <p>
+                  Wins, losses, draws, game length, and the exact opponents you
+                  played. Failed games stay separate.
+                </p>
               </div>
             </>
           )}
@@ -665,13 +640,11 @@ export default function Home() {
             <>
               <div className="page-heading">
                 <div>
-                  <span className="eyebrow">YOUR LAB, IN MOTION</span>
-                  <h1>
-                    Simulation queue<span>.</span>
-                  </h1>
+                  <span className="eyebrow">WORK IN PROGRESS</span>
+                  <h1>Simulation queue.</h1>
                   <p>
-                    Follow every benchmark from the first game to the final
-                    result.
+                    Running and finished benchmarks, in the order they were
+                    submitted.
                   </p>
                 </div>
                 <button
@@ -715,10 +688,8 @@ export default function Home() {
             <>
               <div className="page-heading">
                 <div>
-                  <span className="eyebrow">EVIDENCE OVER INTUITION</span>
-                  <h1>
-                    Your results library<span>.</span>
-                  </h1>
+                  <span className="eyebrow">TEST RECORDS</span>
+                  <h1>Test records.</h1>
                   <p>
                     Every list. Every opponent. A reproducible record of your
                     testing.
@@ -1048,7 +1019,7 @@ export default function Home() {
                                 className="text-button"
                                 onClick={() => setDetail(r)}
                               >
-                                Details ↗
+                                Details →
                               </button>
                             </td>
                           </tr>
@@ -1097,10 +1068,8 @@ export default function Home() {
             <>
               <div className="page-heading">
                 <div>
-                  <span className="eyebrow">KNOW YOUR OPPONENTS</span>
-                  <h1>
-                    Benchmark pools<span>.</span>
-                  </h1>
+                  <span className="eyebrow">THE FIELD</span>
+                  <h1>Opponent pools.</h1>
                   <p>
                     Immutable snapshots keep your testing grounded in a specific
                     set of decks.
@@ -1260,42 +1229,21 @@ export default function Home() {
           )}
           <footer>
             <span>
-              MAGICTESTER <span className="footer-dot">/</span> Make every game
-              count.
+              <strong>MagicTester</strong> · Independent Magic: The Gathering
+              software
             </span>
-            <span>Real engine. Transparent methodology.</span>
+            <a
+              href="https://github.com/acocalypso/magictester/blob/main/docs/SIMULATION_MODEL.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Source & methodology →
+            </a>
+            <span>Not affiliated with Wizards of the Coast.</span>
           </footer>
         </main>
       </div>
-      {detail && (
-        <div className="modal-backdrop" onClick={() => setDetail(null)}>
-          <section
-            className="modal panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="run-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="panel-heading">
-              <h2 id="run-title">Run details</h2>
-              <button
-                className="text-button"
-                onClick={() => setDetail(null)}
-                aria-label="Close run details"
-              >
-                Close ×
-              </button>
-            </div>
-            <div className="panel-body">
-              <p>
-                Seed applies to the whole opponent batch. Game index identifies
-                this game within that batch.
-              </p>
-              <pre>{JSON.stringify(detail, null, 2)}</pre>
-            </div>
-          </section>
-        </div>
-      )}
+      {detail && <RunDialog detail={detail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
@@ -1338,7 +1286,7 @@ function JobTable({
       {!jobs.length ? (
         <div className="empty">
           <Icon name="queue" />
-          <h3>A fresh testing ground.</h3>
+          <h3>No tests recorded yet.</h3>
           <p>Your benchmarks will appear here after you start an analysis.</p>
         </div>
       ) : (
@@ -1388,7 +1336,7 @@ function JobTable({
                       </button>
                     ) : null}
                     <button className="text-button" onClick={() => open(j.id)}>
-                      Open ↗
+                      Open →
                     </button>
                   </td>
                 </tr>
@@ -1398,5 +1346,61 @@ function JobTable({
         </div>
       )}
     </section>
+  );
+}
+
+function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.showModal();
+    return () => previous?.focus();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal panel"
+      aria-labelledby="run-title"
+      onCancel={onClose}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const items = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]',
+          ),
+        );
+        const first = items[0],
+          last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="panel-heading">
+        <h2 id="run-title">Run details</h2>
+        <button
+          autoFocus
+          className="text-button"
+          onClick={onClose}
+          aria-label="Close run details"
+        >
+          Close ×
+        </button>
+      </div>
+      <div className="panel-body">
+        <p>
+          The seed applies to the opponent batch. The game index locates this
+          game in that batch.
+        </p>
+        <pre>{JSON.stringify(detail, null, 2)}</pre>
+      </div>
+    </dialog>
   );
 }

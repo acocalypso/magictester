@@ -23,7 +23,7 @@ FROM node:24-alpine AS web-build
 WORKDIR /app
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN --mount=type=secret,id=proxy_ca NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca npm ci --strict-ssl=true && npm run build -w apps/web && mkdir -p /out/apps/web/.next && cp -a apps/web/.next/standalone/. /out/ && cp -a apps/web/.next/static /out/apps/web/.next/static && node -e "require('fs').rmSync('node_modules',{recursive:true,force:true});require('fs').rmSync('apps/web/.next',{recursive:true,force:true})"
+RUN --mount=type=secret,id=proxy_ca NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca npm ci --strict-ssl=true && npm run build -w apps/web && mkdir -p /out/apps/web/.next && cp -a apps/web/.next/standalone/. /out/ && cp -a apps/web/.next/static /out/apps/web/.next/static && cp -a apps/web/public /out/apps/web/public && node -e "require('fs').rmSync('node_modules',{recursive:true,force:true});require('fs').rmSync('apps/web/.next',{recursive:true,force:true})"
 FROM node:24-alpine AS web
 WORKDIR /app
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000

@@ -20,7 +20,8 @@
     "seed": "tsx scripts/seed.ts",
     "spike": "tsx scripts/spike.ts",
     "test:integration": "node scripts/smoke.mjs",
-    "benchmark": "node scripts/benchmark.mjs"
+    "benchmark": "node scripts/benchmark.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
@@ -40,6 +41,7 @@
     "@types/node": "^22.19.0",
     "@types/pg": "^8.15.6",
     "eslint": "^9.39.0",
+    "playwright": "^1.65.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0"

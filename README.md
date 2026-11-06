@@ -38,7 +38,7 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 - Pauper BO1, an engine adapter, seeded real games, observed starting player, end round, durations, explicit draws/timeouts/errors, process groups and external deadlines.
 - PostgreSQL/Drizzle schema and versioned migrations; immutable snapshot and deck records enforced by database triggers.
 - BullMQ/Redis queue, job creation limits, bounded JVM capacity, progress events, cancellation, explicit retry, durable planned run identities, restart recovery, and completed-result deduplication.
-- Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; responsive dark interface.
+- Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography.
 - Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and round distributions.
 - OpenAPI, structured logs, service health checks, graceful shutdown, Docker builds, CI and scheduled/manual real-engine smoke tests.
 
@@ -56,6 +56,8 @@ npm run lint
 npm test
 # With Compose running:
 node scripts/smoke.mjs
+# After npx playwright install chromium:
+npm run test:browser
 node scripts/benchmark.mjs 50
 node scripts/benchmark.mjs 250
 ```
