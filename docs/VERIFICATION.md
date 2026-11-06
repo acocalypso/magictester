@@ -88,3 +88,7 @@ The database rejected a transactional attempt to edit the job's execution plan/c
 All 36 local tests passed with the real cached card data. `node scripts/pods-browser.mjs` passed Commander/cEDH example loading, validation, explicit repeated-list roster previews, default clocks, pod/Commander results, and 1440/390-pixel overflow/error checks. The stats-row spacing leak from the generic adjacent-panel rule was corrected. `docs/screenshots/commander.png` shows real results in the requested charcoal-and-white palette. Duel simulation remains gated for its separate rules milestone.
 
 A clean GitHub Compose run for `e8c07fc` built/bootstrapped the source and passed the real bridge acceptance; its next report-copy step failed because the checkout had no `data` directory. Separate fix `12afa3c` creates that directory. The full current integration workflow will be rerun after the pod changes are pushed.
+
+## Companion metadata edge cases
+
+Follow-up checks reproduced two false rejections: Mistform Ultimus with Kaheera and Arcanum Wings with Zirda. The pinned Forge scripts explicitly define Mistform's outside-battlefield all-creature-types characteristic and Aura swap's activated keyword. Bootstrap now exports that characteristic, recognizes Aura swap/Specialize, and combines both faces' activated abilities for split cards while preserving front-face behavior for transforming/adventure cards. All 37 local tests and 14 live validation cases passed after regenerating the real facts cache. The Forge bridge/source hash did not change.

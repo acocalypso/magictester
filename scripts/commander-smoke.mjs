@@ -49,6 +49,16 @@ const cases = [
     "80 Island\nCompanion\n1 Yorion, Sky Nomad\nSideboard\n1 Yorion, Sky Nomad\n14 Island",
     true,
   ],
+  [
+    "commander",
+    "98 Island\n1 Mistform Ultimus\nCommander\n1 Morophon, the Boundless\nCompanion\n1 Kaheera, the Orphanguard",
+    true,
+  ],
+  [
+    "commander",
+    "98 Mountain\n1 Arcanum Wings\nCommander\n1 Kenrith, the Returned King\nCompanion\n1 Zirda, the Dawnwaker",
+    true,
+  ],
 ];
 for (const [format, decklist, valid, errorCode] of cases) {
   const response = await fetch(base + "/api/v1/decks/validate", {

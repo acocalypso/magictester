@@ -123,6 +123,7 @@ export interface ForgeCardFacts {
   soloCommander: boolean;
   background: boolean;
   startingCreature: boolean;
+  allCreatureTypes?: boolean;
   wildColor: boolean;
   hasActivatedAbility: boolean;
   keywords: string[];

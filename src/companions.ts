@@ -108,6 +108,7 @@ export function validateCompanion(
         (m) =>
           !types(m).has("Creature") ||
           (m.keywords || []).includes("Changeling") ||
+          provider.engineFacts?.(m.name)?.allCreatureTypes === true ||
           /\b(Cat|Elemental|Nightmare|Dinosaur|Beast)\b/.test(m.typeLine),
       );
       break;

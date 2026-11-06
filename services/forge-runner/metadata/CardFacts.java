@@ -15,7 +15,7 @@ public class CardFacts {
         "Equip", "Fortify", "Cycling", "TypeCycling", "Transmute", "Transfigure",
         "Ninjutsu", "Commander ninjutsu", "Forecast", "Reinforce", "Level up",
         "Outlast", "Scavenge", "Unearth", "Embalm", "Eternalize", "Encore",
-        "Reconfigure", "Crew", "Saddle", "Station", "Craft");
+        "Reconfigure", "Crew", "Saddle", "Station", "Craft", "Aura swap", "Specialize");
     public static void main(String[] args) throws Exception {
         forge.util.Lang.createInstance("en-US");
         var types = java.nio.file.Files.readAllLines(java.nio.file.Path.of("res/lists/TypeLists.txt"), StandardCharsets.UTF_8);
@@ -37,20 +37,31 @@ public class CardFacts {
                     ICardFace face = rules.getMainPart();
                     if (face == null) throw new IllegalArgumentException("CopyFaceFrom-only script needs the full engine database");
                     boolean activated = false;
-                    for (String ability : face.getAbilities()) if (ability.trim().startsWith("AB$")) activated = true;
+                    List<ICardFace> startingFaces = rules.getSplitType() == forge.card.CardSplitType.Split ? rules.getAllFaces() : List.of(face);
+                    for (ICardFace startingFace : startingFaces) {
+                        for (String ability : startingFace.getAbilities()) if (ability.trim().startsWith("AB$")) activated = true;
+                        for (String keyword : startingFace.getKeywords()) {
+                            String name = keyword.split(":",2)[0];
+                            for (String known : ACTIVATED_KEYWORDS) if (name.equalsIgnoreCase(known)) activated = true;
+                        }
+                        for (String type : List.of("Plains","Island","Swamp","Mountain","Forest")) if (startingFace.getType().hasSubtype(type)) activated = true;
+                    }
                     List<String> keywords = new ArrayList<>();
+                    boolean allCreatureTypes = face.getType().hasAllCreatureTypes();
                     for (String keyword : face.getKeywords()) {
                         keywords.add(keyword);
-                        String name = keyword.split(":",2)[0];
-                        for (String known : ACTIVATED_KEYWORDS) if (name.equalsIgnoreCase(known)) activated = true;
+                        if (keyword.equalsIgnoreCase("Changeling")) allCreatureTypes = true;
                     }
-                    for (String type : List.of("Plains","Island","Swamp","Mountain","Forest")) if (face.getType().hasSubtype(type)) activated = true;
+                    for (String ability : face.getStaticAbilities()) {
+                        if (ability.contains("CharacteristicDefining$ True") && ability.contains("AddAllCreatureTypes$ True")) allCreatureTypes = true;
+                    }
                     Map<String,Object> item = new LinkedHashMap<>();
                     item.put("name",rules.getName());
                     item.put("canBeCommander",rules.canBeCommander());
                     item.put("soloCommander",rules.canBeCommander() && (!rules.canBeBackground() || rules.canBeCreature() || face.getOracleText().contains("can be your commander")));
                     item.put("background",rules.canBeBackground());
                     item.put("startingCreature",rules.canBeCreature());
+                    item.put("allCreatureTypes",allCreatureTypes);
                     item.put("wildColor",rules.getAddsWildCardColor());
                     item.put("hasActivatedAbility",activated);
                     item.put("keywords",keywords);

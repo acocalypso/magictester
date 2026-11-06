@@ -403,3 +403,35 @@ test("Commander rules and companion deduplication do not depend on external meta
     ).includes("COMPANION_REQUIREMENT"),
   );
 });
+
+test(
+  "Kaheera uses all creature types outside the battlefield; Zirda recognizes Aura swap",
+  enabled,
+  async () => {
+    const p = await load();
+    assert.equal(p.engineFacts("Mistform Ultimus")!.allCreatureTypes, true);
+    good(
+      validateDeck(
+        deck(
+          "1 Morophon, the Boundless",
+          "98 Island\n1 Mistform Ultimus",
+          "Kaheera, the Orphanguard",
+        ),
+        "commander",
+        p,
+      ),
+    );
+    assert.equal(p.engineFacts("Arcanum Wings")!.hasActivatedAbility, true);
+    good(
+      validateDeck(
+        deck(
+          "1 Kenrith, the Returned King",
+          "98 Mountain\n1 Arcanum Wings",
+          "Zirda, the Dawnwaker",
+        ),
+        "commander",
+        p,
+      ),
+    );
+  },
+);
