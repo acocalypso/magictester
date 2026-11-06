@@ -16,6 +16,8 @@ export const config = z
   })
   .parse(process.env);
 export const redisOptions = {
+  // ioredis 6 defaults to RESP3; preserve the existing queue wire protocol.
+  protocol: 2 as const,
   host: process.env.REDIS_HOST || "localhost",
   port: Number(process.env.REDIS_PORT || 6379),
   maxRetriesPerRequest: null,
