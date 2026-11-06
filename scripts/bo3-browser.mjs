@@ -73,7 +73,9 @@ try {
       observedBox.y + observedBox.height <= 1100,
     "Opening observed games must bring them into the viewport",
   );
-  assert.ok((await page.locator("#observed-match-games tbody tr").count()) > 0);
+  assert.ok(
+    (await page.locator("#observed-match-games .observed-game").count()) > 0,
+  );
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1100 });
     await page.getByRole("button", { name: /View observed games/ }).click();

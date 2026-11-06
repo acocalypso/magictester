@@ -60,3 +60,11 @@ Seeds are stored and passed to the engine; deterministic replay across versions 
 ## Unavailable / deferred
 
 The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligan counts, cards drawn/cast, human-level matchup-aware sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.
+
+## Reading game history
+
+Each recorded game opens a readable summary: its outcome, who played first, turn count, playing time, sideboard moves and any companion or commander decisions that were recorded. Missing measurements are labelled as unavailable; a game summary is not a turn-by-turn replay.
+
+A restarted match can leave more than one attempt in its history. The history gives attempts a readable number and explains whether each game contributes to the results. Earlier attempts remain visible and never count toward win rates. Games from a match still in progress wait for its final result. Normal games and rule draws in the finalized attempt enter game statistics; timed-out or failed games do not. A completed game can count even when the overall match reaches its game limit and is excluded from match statistics. Refresh the history to update the status of a running match.
+
+The observation API adds a derived `review` field based on the complete attempt history and saved final result. Attempt numbering stays consistent across pages. Original recorded events remain unchanged; the review status can change as a match finishes or restarts. JSON exports remain available separately for diagnostics.

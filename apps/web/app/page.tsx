@@ -1,5 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from "react";
+import {
+  GameDetails,
+  gameOutcome,
+  reviewLabel,
+  type RecordedGame,
+  type ObservationReview,
+} from "./game-details";
 
 type FormatInfo = {
   id: string;
@@ -145,27 +152,11 @@ type Run = {
   seed: number;
   state: string;
   error: string | null;
-  result: {
-    index: number;
-    unit?: "game" | "match";
-    games?: {
-      turns: number | null;
-      winner: number | null;
-      termination: string;
-    }[];
-    gameWins?: number[];
-    engineVersion: string;
-    gameSeed?: number;
-    winner: number | null;
-    turns: number | null;
-    startingPlayer: number | null;
-    durationMs: number;
-    termination: string;
-    players: { id: string; placement: number | null }[];
-  } | null;
+  result: RecordedGame | null;
 };
 type Observation = {
   id: string;
+  review?: ObservationReview;
   createdAt: string;
   data: {
     matchIndex: number;
@@ -1796,9 +1787,10 @@ export default function Home() {
                         </p>
                       )}
                       <p className="muted">
-                        Observations include restarted match attempts.
-                        Unfinished attempts remain audit evidence and do not
-                        enter benchmark summaries.
+                        A restarted match can have earlier games in its history.
+                        Each game explains whether it counts toward the results.
+                        Refresh observed games to update a match that is still
+                        running.
                       </p>
                     </div>
                   </section>
@@ -2024,7 +2016,12 @@ export default function Home() {
                     aria-label={
                       turnLabel +
                       " distribution: " +
-                      JSON.stringify(result.summary.turnDistribution)
+                      Object.entries(result.summary.turnDistribution)
+                        .map(
+                          ([turn, count]) =>
+                            `${count} games at ${turn} ${turnLabel.toLowerCase()}`,
+                        )
+                        .join("; ")
                     }
                   >
                     {Object.entries(result.summary.turnDistribution).length ? (
@@ -2060,7 +2057,7 @@ export default function Home() {
                 </section>
                 <section className="panel">
                   <div className="panel-heading">
-                    <h2>Run evidence</h2>
+                    <h2>{resultIsMatch ? "Match results" : "Game results"}</h2>
                     <button
                       className="text-button"
                       onClick={() => {
@@ -2110,12 +2107,14 @@ export default function Home() {
                             <td>{r.batchIndex + 1}</td>
                             <td>
                               {r.result
-                                ? r.result.termination === "normal"
-                                  ? r.result.winner === 0
-                                    ? "Win"
-                                    : "Loss"
-                                  : r.result.termination
-                                : r.state.toLowerCase()}
+                                ? gameOutcome(r.result)
+                                : (
+                                    {
+                                      PENDING: "Waiting for a result",
+                                      ERROR: "Could not finish",
+                                      DONE: "Completed",
+                                    } as Record<string, string>
+                                  )[r.state] || "Not finished"}
                               {r.result?.unit === "match" && (
                                 <small>{r.result.gameWins?.join("–")}</small>
                               )}
@@ -2186,7 +2185,7 @@ export default function Home() {
                         Observed match games
                       </h2>
                       <span className="muted">
-                        Includes interrupted/restarted attempts
+                        Results and sideboard decisions
                       </span>
                     </div>
                     <p className="muted observation-count" role="status">
@@ -2201,51 +2200,41 @@ export default function Home() {
                     >
                       Refresh observed games →
                     </button>
-                    <div className="table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Opponent</th>
-                            <th>Match</th>
-                            <th>Game</th>
-                            <th>Outcome</th>
-                            <th>Attempt / evidence</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {observations.map((o) => (
-                            <tr key={o.id}>
-                              <td>
-                                {result.matchups.find(
-                                  (m) => m.opponent.id === o.data.opponentId,
-                                )?.opponent.name || "—"}
-                              </td>
-                              <td>{o.data.matchIndex + 1}</td>
-                              <td>
-                                {(o.data.result as unknown as { index: number })
-                                  .index + 1}
-                              </td>
-                              <td>
-                                {o.data.result.termination === "normal"
-                                  ? o.data.result.winner === 0
-                                    ? "Win"
-                                    : "Loss"
-                                  : o.data.result.termination}
-                              </td>
-                              <td>
-                                <details>
-                                  <summary>
-                                    {o.data.attemptId.slice(-22)}
-                                  </summary>
-                                  <pre className="observation-json">
-                                    {JSON.stringify(o, null, 2)}
-                                  </pre>
-                                </details>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="observed-game-list">
+                      {observations.map((o) => {
+                        const opponent =
+                          result.matchups.find(
+                            (m) => m.opponent.id === o.data.opponentId,
+                          )?.opponent.name || "Opponent";
+                        return (
+                          <details key={o.id} className="observed-game">
+                            <summary>
+                              <span className="observed-game-context">
+                                <strong>{opponent}</strong>
+                                <span>
+                                  Match {o.data.matchIndex + 1} · Game{" "}
+                                  {o.data.result.index + 1}
+                                  {o.review &&
+                                    ` · Attempt ${o.review.number} of ${o.review.total}`}
+                                </span>
+                                <span>{reviewLabel(o.review)}</span>
+                              </span>
+                              <span className="game-result-label">
+                                {gameOutcome(o.data.result)}
+                              </span>
+                              <span className="game-detail-link">
+                                View game details
+                              </span>
+                            </summary>
+                            <GameDetails
+                              game={o.data.result}
+                              review={o.review}
+                              recordedAt={o.createdAt}
+                              opponentNames={[opponent]}
+                            />
+                          </details>
+                        );
+                      })}
                     </div>
                     {observationsError && (
                       <p role="alert" className="observation-count">
@@ -2609,7 +2598,20 @@ export default function Home() {
           </footer>
         </main>
       </div>
-      {detail && <RunDialog detail={detail} onClose={() => setDetail(null)} />}
+      {detail && (
+        <RunDialog
+          detail={detail}
+          opponentNames={
+            result?.matchups
+              .find((m) => m.opponent.id === detail.opponentId)
+              ?.participants?.map((p) => p.name) || [
+              result?.matchups.find((m) => m.opponent.id === detail.opponentId)
+                ?.opponent.name || "Opponent",
+            ]
+          }
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2717,7 +2719,15 @@ function JobTable({
   );
 }
 
-function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
+function RunDialog({
+  detail,
+  opponentNames,
+  onClose,
+}: {
+  detail: Run;
+  opponentNames: string[];
+  onClose: () => void;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -2752,7 +2762,9 @@ function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
       }}
     >
       <div className="panel-heading">
-        <h2 id="run-title">Run details</h2>
+        <h2 id="run-title">
+          {detail.result?.unit === "match" ? "Match details" : "Game details"}
+        </h2>
         <button
           autoFocus
           className="text-button"
@@ -2763,12 +2775,41 @@ function RunDialog({ detail, onClose }: { detail: Run; onClose: () => void }) {
         </button>
       </div>
       <div className="panel-body">
-        <p>
-          {detail.result?.gameSeed !== undefined
-            ? `${detail.result.unit === "match" ? "Match" : "Game"} seed ${detail.result.gameSeed}. Player entries identify each seat and its deck version.`
-            : "The legacy seed applies to the opponent batch; the game index locates this game in that batch."}
-        </p>
-        <pre>{JSON.stringify(detail, null, 2)}</pre>
+        {!detail.result ? (
+          <p>
+            {detail.error
+              ? "This run could not be completed. Review the job error for the next step."
+              : "This run has not finished yet. Its game details will appear when they are recorded."}
+          </p>
+        ) : detail.result.unit === "match" ? (
+          <>
+            <p className="game-outcome">
+              {gameOutcome(detail.result)} · Your deck{" "}
+              {detail.result.gameWins?.[0] ?? "—"} –{" "}
+              {detail.result.gameWins?.[1] ?? "—"}{" "}
+              {opponentNames[0] || "Opponent"}
+            </p>
+            {["normal", "rule_draw"].includes(detail.result.termination) ? (
+              <p>This completed match counts toward the match results.</p>
+            ) : (
+              <p>
+                This match did not finish normally and is excluded from the
+                match win rate. Completed games can still contribute to game
+                results.
+              </p>
+            )}
+            {detail.result.games?.map((game, index) => (
+              <section className="match-game-summary" key={index}>
+                <h3>
+                  Game {index + 1} · {gameOutcome(game)}
+                </h3>
+                <GameDetails game={game} opponentNames={opponentNames} />
+              </section>
+            ))}
+          </>
+        ) : (
+          <GameDetails game={detail.result} opponentNames={opponentNames} />
+        )}
       </div>
     </dialog>
   );

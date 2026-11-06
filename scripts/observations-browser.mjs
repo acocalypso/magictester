@@ -37,17 +37,32 @@ try {
     await page.getByRole("button", { name: /View observed games/ }).click();
     await inView();
     assert.ok(
-      (await page.locator("#observed-match-games tbody tr").count()) > 0,
+      (await page.locator("#observed-match-games .observed-game").count()) > 0,
     );
     await page
       .locator("#observed-match-games details")
       .first()
       .locator("summary")
       .click();
+    const details = page.locator("#observed-match-games details").first();
+    await details.getByText("First to play", { exact: true }).waitFor();
+    await details
+      .getByRole("heading", { name: "Sideboard decisions", exact: true })
+      .waitFor();
+    assert.equal(
+      await details.locator("pre").count(),
+      0,
+      "Normal game details must not expose raw JSON",
+    );
     assert.ok(
-      (
-        await page.locator("#observed-match-games pre").first().innerText()
-      ).includes("gameSeed"),
+      (await details.locator("summary").innerText()).includes(
+        "View game details",
+      ),
+    );
+    assert.ok((await details.innerText()).includes("Attempt "));
+    assert.ok(
+      !(await details.innerText()).includes(".log"),
+      "Engine filenames must not be presented as game explanations",
     );
   }
   await open();
@@ -93,7 +108,9 @@ try {
   await page.unroute(endpoint);
   await page.getByRole("button", { name: /View observed games/ }).click();
   await inView();
-  assert.ok((await page.locator("#observed-match-games tbody tr").count()) > 0);
+  assert.ok(
+    (await page.locator("#observed-match-games .observed-game").count()) > 0,
+  );
   // Pagination uses copied row fixtures; these are UI states, not played games.
   const recorded = await fetch(
     base + "/api/v1/simulations/" + job.id + "/observations?limit=1",
@@ -125,7 +142,7 @@ try {
   await page.getByRole("button", { name: /View observed games/ }).click();
   await inView();
   assert.equal(
-    await page.locator("#observed-match-games tbody tr").count(),
+    await page.locator("#observed-match-games .observed-game").count(),
     50,
   );
   await page
@@ -133,7 +150,7 @@ try {
     .click();
   await page.locator("#observed-match-games").getByRole("alert").waitFor();
   assert.equal(
-    await page.locator("#observed-match-games tbody tr").count(),
+    await page.locator("#observed-match-games .observed-game").count(),
     50,
     "A failed page must retain loaded games",
   );
@@ -142,7 +159,8 @@ try {
     .click();
   await page.waitForFunction(
     () =>
-      document.querySelectorAll("#observed-match-games tbody tr").length === 52,
+      document.querySelectorAll("#observed-match-games .observed-game")
+        .length === 52,
   );
   assert.equal(
     await page

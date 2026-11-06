@@ -116,12 +116,33 @@ const after = await request(
     `/simulations/${interrupted.id}/observations?limit=200`,
   ),
   resumedRuns = await request(`/simulations/${interrupted.id}/runs`);
-for (const observation of before)
+for (const observation of before) {
+  // Review status changes when a match resumes; the recorded event stays immutable.
+  const { review: _beforeReview, ...recordedBefore } = observation;
+  const { review: _afterReview, ...recordedAfter } =
+    after.find((o) => o.id === observation.id) || {};
   assert.deepEqual(
-    after.find((o) => o.id === observation.id),
-    observation,
+    recordedAfter,
+    recordedBefore,
     "Actual observations must survive interrupted matches",
   );
+}
+const validGames = resumedRuns
+  .flatMap((run) => run.result?.games || [])
+  .filter((game) => ["normal", "rule_draw"].includes(game.termination));
+assert.equal(
+  after.filter((game) => game.review?.status === "included").length,
+  validGames.length,
+  "Only finalized valid games count toward game results",
+);
+assert.ok(
+  after.every(
+    (game) =>
+      game.review &&
+      game.review.number >= 1 &&
+      game.review.number <= game.review.total,
+  ),
+);
 for (const run of completedBefore)
   assert.deepEqual(resumedRuns.find((r) => r.id === run.id).result, run.result);
 assert.equal(finished.completed, 4);

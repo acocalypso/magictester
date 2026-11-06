@@ -1,3 +1,4 @@
+import { reviewedObservations } from "./observation-review.js";
 import { importDeckLink, DeckLinkError } from "./deck-links.js";
 import { resolveRuntime, updateStatus } from "./runtime.mjs";
 import { stopSourceImports } from "./source-http.js";
@@ -20,11 +21,11 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { CachedCardDataProvider, FORMATS, validateDeck } from "./domain.js";
 import { config } from "./config.js";
 import { db, pool } from "./db.js";
-import { snapshots, runs, events } from "./schema.js";
+import { snapshots, runs } from "./schema.js";
 import { queue } from "./queue.js";
 import { JsonImportProvider, CsvImportProvider } from "./meta.js";
 import {
@@ -329,16 +330,12 @@ app.get<{
     },
   },
   async (req) => {
-    await getJob(req.params.id);
-    return db
-      .select()
-      .from(events)
-      .where(
-        and(eq(events.jobId, req.params.id), eq(events.kind, "GAME_OBSERVED")),
-      )
-      .orderBy(events.createdAt, events.id)
-      .limit(Number(req.query.limit || 50))
-      .offset(Number(req.query.offset || 0));
+    const job = await getJob(req.params.id);
+    return reviewedObservations(
+      job,
+      Number(req.query.limit || 50),
+      Number(req.query.offset || 0),
+    );
   },
 );
 app.get<{
