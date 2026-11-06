@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { FORMATS } from "./formats.js";
+import { validateCommanders } from "./commander.js";
+import { validateCompanion } from "./companions.js";
 export { FORMATS } from "./formats.js";
 export const SECTIONS = [
   "MAINBOARD",
@@ -99,16 +101,42 @@ export interface CardMetadata {
   typeLine: string;
   colorIdentity: string[];
   oracleText: string;
-  faces: { name: string; typeLine: string; oracleText: string }[];
+  manaCost?: string;
+  manaValue?: number;
+  layout?: string;
+  keywords?: string[];
+  power?: string | null;
+  toughness?: string | null;
+  faces: {
+    name: string;
+    typeLine: string;
+    oracleText: string;
+    manaCost?: string;
+    power?: string | null;
+    toughness?: string | null;
+  }[];
   scryfallId: string;
 }
+export interface ForgeCardFacts {
+  name: string;
+  canBeCommander: boolean;
+  soloCommander: boolean;
+  background: boolean;
+  startingCreature: boolean;
+  wildColor: boolean;
+  hasActivatedAbility: boolean;
+  keywords: string[];
+  allowedPartners: string[];
+}
 export interface CardDataProvider {
+  engineFacts?(name: string): ForgeCardFacts | undefined;
   find(name: string): CardMetadata | undefined;
   supports(name: string): boolean;
   provenance: Record<string, unknown>;
 }
 export class CachedCardDataProvider implements CardDataProvider {
   private cards = new Map<string, CardMetadata>();
+  private facts = new Map<string, ForgeCardFacts>();
   private supported = new Set<string>();
   provenance: Record<string, unknown> = {};
   async load(dir = process.env.DATA_DIR || "/data") {
@@ -134,13 +162,40 @@ export class CachedCardDataProvider implements CardDataProvider {
         ) as string[]
       ).map(normalize),
     );
+    try {
+      const factsRaw = await readFile(dir + "/forge-facts.json", "utf8");
+      const factsData = JSON.parse(factsRaw);
+      if (factsData.schemaVersion !== 1 || factsData.engineVersion !== "2.0.15")
+        throw new Error("Incompatible Forge facts cache");
+      this.facts = new Map(
+        Object.entries(factsData.cards as Record<string, ForgeCardFacts>).map(
+          ([name, f]) => [normalize(name), f],
+        ),
+      );
+      this.provenance.engineFacts = {
+        sha256: createHash("sha256").update(factsRaw).digest("hex"),
+        engineVersion: factsData.engineVersion,
+        sourceHash: factsData.sourceHash,
+        failures: factsData.failures,
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      this.provenance.engineFacts = { available: false };
+    }
     return this;
+  }
+  engineFacts(name: string) {
+    return (
+      this.facts.get(normalize(name)) ||
+      this.facts.get(normalize(this.find(name)?.faces[0]?.name || ""))
+    );
   }
   find(name: string) {
     return this.cards.get(normalize(name));
   }
   supports(name: string) {
     return (
+      this.facts.has(normalize(name)) ||
       this.supported.has(normalize(name)) ||
       name.split(" // ").every((n) => this.supported.has(normalize(n)))
     );
@@ -187,21 +242,43 @@ export function validateDeck(
         card: card.name,
         message: "Card script is absent from the pinned Forge release.",
       });
-    if (["COMMANDER", "COMPANION"].includes(card.section))
+    if (card.section === "COMMANDER" && !definition?.commander)
       errors.push({
         code: "SECTION_UNAVAILABLE",
         card: card.name,
-        message:
-          "Commander and companion configurations are not yet enabled for this format.",
+        message: "Commanders are available only in Commander formats.",
       });
   }
+  // Arena exports repeat the companion designation in Sideboard. It is one
+  // physical card, and remains in Sideboard for the engine's companion choice.
+  const companions = cards.filter((c) => c.section === "COMPANION");
+  const sideCards = cards.filter((c) => c.section === "SIDEBOARD");
+  const companionExtras = companions.reduce(
+    (n, c) =>
+      n +
+      Math.max(
+        0,
+        c.quantity -
+          (sideCards.find((s) => s.normalizedName === c.normalizedName)
+            ?.quantity || 0),
+      ),
+    0,
+  );
+  errors.push(...validateCompanion(cards, !!definition?.commander, provider));
+  if (definition?.commander)
+    errors.push(...validateCommanders(cards, format, provider));
+
   const main = cards
     .filter((c) => c.section === "MAINBOARD")
     .reduce((a, c) => a + c.quantity, 0);
-  const side = cards
-    .filter((c) => c.section === "SIDEBOARD")
-    .reduce((a, c) => a + c.quantity, 0);
-  if (main < (definition?.min ?? 60))
+  const side =
+    cards
+      .filter((c) => c.section === "SIDEBOARD")
+      .reduce((a, c) => a + c.quantity, 0) + companionExtras;
+  const allowedSide = definition?.commander
+    ? companions.reduce((n, c) => n + c.quantity, 0)
+    : (definition?.sideboard ?? 15);
+  if (!definition?.commander && main < (definition?.min ?? 60))
     errors.push({
       code: "DECK_TOO_SMALL",
       message: `Mainboard needs at least ${definition?.min ?? 60} cards; found ${main}.`,
@@ -211,10 +288,10 @@ export function validateDeck(
       code: "DECK_TOO_LARGE",
       message: "This service limits mainboards to 250 cards.",
     });
-  if (side > (definition?.sideboard ?? 15))
+  if (side > allowedSide)
     errors.push({
       code: "SIDEBOARD_TOO_LARGE",
-      message: `Sideboard may contain at most ${definition?.sideboard ?? 15} cards; found ${side}.`,
+      message: `Sideboard may contain at most ${allowedSide} cards; found ${side}.`,
     });
   const totals = new Map<string, number>();
   for (const c of cards.filter((c) => c.section !== "MAYBEBOARD"))
@@ -222,6 +299,17 @@ export function validateDeck(
       c.normalizedName,
       (totals.get(c.normalizedName) || 0) + c.quantity,
     );
+  for (const c of companions) {
+    const duplicate = sideCards.find(
+      (s) => s.normalizedName === c.normalizedName,
+    );
+    if (duplicate)
+      totals.set(
+        c.normalizedName,
+        totals.get(c.normalizedName)! -
+          Math.min(c.quantity, duplicate.quantity),
+      );
+  }
   for (const [name, count] of totals) {
     const meta = provider.find(name);
     if (!meta || /\bBasic\b.*\bLand\b/.test(meta.typeLine)) continue;
@@ -247,6 +335,7 @@ export function validateDeck(
       ? (numberWords[written.toLowerCase()] ?? Number(written))
       : null;
     const restricted =
+      format !== "duel" &&
       meta.legalities[definition?.legalityKey || format] === "restricted";
     const limit = restricted
       ? 1

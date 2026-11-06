@@ -64,3 +64,9 @@ The user-selected charcoal/white interface was researched against Archidekt, Unt
 ## Six-format acceptance
 
 Standard, Pioneer, Modern, Pauper, Legacy and Vintage each passed two actual Forge games via a format-matched imported reference snapshot: 12 valid games and zero engine failures. Modern CSV import and Vintage single-copy restricted-card validation were also verified through the live API. Browser checks verified all six selectors, validated examples, banned-card feedback and format-filtered pools. All 23 local tests, lint, type checks and the production build passed. See [format rules](FORMAT_RULES.md) for primary sources and precise boundaries.
+
+## Commander-family validation (continuation task 3)
+
+The metadata cache now carries mana costs/values, keywords, front-face characteristics and a versioned Forge rules-facts cache. The helper parsed 34,160 named/Universes Within entries from the pinned release; two CopyFaceFrom-only split scripts are recorded as unavailable rather than guessed. It initializes Forge language and type tables, including the multiword Time Lord subtype needed for Doctor's companion.
+
+`DATA_DIR=/dev/shm/magictester-data npm test` passed all 30 tests with the real cache. Coverage includes exact size, singleton/card exceptions, color identity/wild-color choices, generic/named/grouped partners, Backgrounds, Doctors, Vehicles, Grist, Duel role bans and all ten companion restrictions. `node scripts/commander-smoke.mjs` passed 12 live API cases, including Universes Within pairs, a legal restricted-in-library Duel card, an illegal restricted commander, companion role bans and Arena companion/sideboard deduplication. Lint and typechecking passed. Simulation capability remains disabled for the three Commander formats pending structured engine acceptance.

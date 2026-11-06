@@ -16,7 +16,24 @@ Each enabled format has two explicitly project-authored reference decks selected
 - [Wizards: Vintage](https://magic.wizards.com/en/formats/vintage), [Banned and restricted lists](https://magic.wizards.com/en/banned-restricted-list) — one-copy restriction across the complete deck and sideboard.
 - [Scryfall Card objects](https://scryfall.com/docs/api/cards) — per-format legality metadata. The application caches bulk data instead of making card-by-card requests.
 
-Commander-family validation, starting-life overrides and four-player execution are the next distinct milestones. Unsupported simulation modes stay disabled until their engine path is verified.
+## Commander-family validation
+
+Commander, cEDH and Duel Commander decks can be validated and imported. Simulations remain disabled until the structured engine and multiplayer path pass acceptance. Validation requires exactly 100 cards including one eligible commander or two compatible commanders, singleton with card-text/basic exceptions, legal color identity and no sideboard other than a designated companion. cEDH uses the Commander card pool and rules; it is a benchmark selection distinction.
+
+Bootstrap reads the pinned Forge scripts through `CardRules.Reader` in `services/forge-runner/metadata/CardFacts.java`. It caches commander eligibility, actual partner-pair compatibility, outside-battlefield creature characteristics and activated-ability facts. This handles legendary Vehicles/Spacecraft, Grist, generic/named/grouped partners, Choose a Background and Doctor's companion using the engine's own interpretation. Universes Within flavor aliases resolve to their shared engine script. Unknown/missing role facts fail validation; the cache includes its source hash, engine version and extraction failures. Two CopyFaceFrom-only split scripts (`Bind // Liberate`, `Start // Fire`) require the full engine database and have no standalone role facts; they are not eligible commanders. No oracle-statistics guesses substitute for unavailable facts.
+
+The cached Scryfall `duel: restricted` status means banned **as commander**, not banned from the library. Globally banned cards are rejected separately. Lutri is legal in a Commander deck/as commander under the current list but banned as a companion; the role-specific prohibition is explicit. The Prismatic Piper and Faceless One may each add one chosen color; decks requiring more additional colors are rejected.
+
+All ten companion restrictions are checked against the starting deck **including commanders**. Mana-cost symbols, front-face characteristics, creature subtypes, shared card types and Forge activated-ability facts are used as appropriate. A companion is outside the 100-card Commander deck but shares its color-identity/singleton restrictions. Yorion cannot expand a fixed 100-card deck. Arena's Companion designation plus the same Sideboard entry describes one physical card, not two; a companion-only designation still consumes one constructed sideboard slot. Forge receives the card in its real Sideboard section, since its native player code selects companions there. Selection among multiple eligible companions is an engine concern and is not claimed to be explicitly controlled yet.
+
+Rules references checked for this implementation:
+
+- [Current Comprehensive Rules, November 6, 2026](https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt), rules 903.3–903.5, 702.124 and 702.139.
+- [Wizards banned/restricted lists](https://magic.wizards.com/en/banned-restricted-list), including Lutri's companion-only status.
+- [Official Duel Commander banlist](https://www.duelcommander.org/banlist/) and [Duel rules](https://www.duelcommander.org/rules/duelcommander_comprehensiverules/). The historical `.com` domain redirects to `.org`; the archived MTGDC/AeonShift list is not the current authority.
+- [Pinned Forge CardRules](https://github.com/Card-Forge/forge/blob/forge-2.0.15/forge-core/src/main/java/forge/card/CardRules.java) and [companion selection](https://github.com/Card-Forge/forge/blob/forge-2.0.15/forge-game/src/main/java/forge/game/player/Player.java).
+
+Duel execution must additionally honor 20 life, no commander-damage win condition and its first-cast paired-commander restriction. Validation support alone does not claim those engine behaviors are implemented.
 
 ## Acceptance
 

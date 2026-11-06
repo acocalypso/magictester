@@ -6,11 +6,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 
 export type Termination =
-  | "normal"
-  | "rule_draw"
-  | "timeout"
-  | "engine_error"
-  | "cancelled";
+  "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
   logId?: string;
   index: number;
@@ -49,8 +45,18 @@ export function serializeDeck(
     MAINBOARD: "Main",
     SIDEBOARD: "Sideboard",
     COMMANDER: "Commander",
-    COMPANION: "Companion",
   };
+  const physical = cards
+    .filter((c) => c.section !== "COMPANION")
+    .map((c) => ({ ...c }));
+  for (const companion of cards.filter((c) => c.section === "COMPANION")) {
+    const existing = physical.find(
+      (c) => c.section === "SIDEBOARD" && c.name === companion.name,
+    );
+    if (existing)
+      existing.quantity = Math.max(existing.quantity, companion.quantity);
+    else physical.push({ ...companion, section: "SIDEBOARD" });
+  }
   return (
     "[metadata]\nName=" +
     name +
@@ -61,7 +67,7 @@ export function serializeDeck(
           "[" +
           section +
           "]\n" +
-          cards
+          physical
             .filter((c) => c.section === key)
             .map((c) => `${c.quantity} ${c.name}`)
             .join("\n"),

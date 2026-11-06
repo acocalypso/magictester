@@ -19,6 +19,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - run: node scripts/commander-smoke.mjs
       - run: node scripts/formats-smoke.mjs
       - run: node scripts/formats-browser.mjs
       - if: always()

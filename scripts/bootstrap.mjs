@@ -40,10 +40,10 @@ if (!existsSync(home + "/build.txt")) {
   execFileSync("tar", ["-xjf", archive, "-C", home]);
   await rm(archive);
 }
-if (
-  !existsSync(root + "/cards.json") ||
-  process.argv.includes("--refresh-cards")
-) {
+const cachedSchema = existsSync(root + "/cards.json")
+  ? JSON.parse(await readFile(root + "/cards.json", "utf8")).schemaVersion
+  : 0;
+if (cachedSchema !== 2 || process.argv.includes("--refresh-cards")) {
   const bulk = (
     await (await get("https://api.scryfall.com/bulk-data")).json()
   ).data.find((x) => x.type === "oracle_cards");
@@ -61,6 +61,12 @@ if (
     )
       cards.push({
         name: c.name,
+        manaCost: c.mana_cost || "",
+        manaValue: c.cmc,
+        layout: c.layout,
+        keywords: c.keywords || [],
+        power: c.power ?? null,
+        toughness: c.toughness ?? null,
         legalities: c.legalities,
         typeLine: c.type_line || "",
         colorIdentity: c.color_identity || [],
@@ -69,6 +75,9 @@ if (
           name: f.name,
           typeLine: f.type_line,
           oracleText: f.oracle_text,
+          manaCost: f.mana_cost || "",
+          power: f.power ?? null,
+          toughness: f.toughness ?? null,
         })),
         scryfallId: c.id,
       });
@@ -84,6 +93,7 @@ if (
   await writeFile(
     root + "/cards.json.tmp",
     JSON.stringify({
+      schemaVersion: 2,
       source: "Scryfall oracle_cards",
       sourceUpdatedAt: bulk.updated_at,
       fetchedAt: new Date().toISOString(),
@@ -109,6 +119,50 @@ if (!existsSync(root + "/forge-cards.json")) {
     .filter(Boolean);
   await writeFile(root + "/forge-cards.json", JSON.stringify(names));
   await rm(root + "/CardNames.java");
+}
+const factsSource = new URL(
+  "../services/forge-runner/metadata/CardFacts.java",
+  import.meta.url,
+);
+const factsSourceHash = createHash("sha256")
+  .update(await readFile(factsSource))
+  .digest("hex");
+let factsCache;
+try {
+  factsCache = JSON.parse(await readFile(root + "/forge-facts.json", "utf8"));
+} catch {
+  /* first bootstrap */
+}
+if (factsCache?.sourceHash !== factsSourceHash) {
+  const sourceFile = root + "/CardFacts.java";
+  await writeFile(sourceFile, await readFile(factsSource));
+  execFileSync(
+    "java",
+    [
+      "-cp",
+      home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+      sourceFile,
+      home + "/res/cardsfolder/cardsfolder.zip",
+      root + "/forge-facts.json.tmp",
+    ],
+    { cwd: home, maxBuffer: 16 * 1024 * 1024 },
+  );
+  const facts = JSON.parse(
+    await readFile(root + "/forge-facts.json.tmp", "utf8"),
+  );
+  facts.sourceHash = factsSourceHash;
+  facts.engineVersion = "2.0.15";
+  facts.fetchedAt = new Date().toISOString();
+  await writeFile(root + "/forge-facts.json.tmp", JSON.stringify(facts));
+  await rename(root + "/forge-facts.json.tmp", root + "/forge-facts.json");
+  await rm(sourceFile);
+  console.log(
+    JSON.stringify({
+      event: "forge_metadata_cached",
+      cards: Object.keys(facts.cards).length,
+      failures: facts.failures.length,
+    }),
+  );
 }
 console.log(
   JSON.stringify({

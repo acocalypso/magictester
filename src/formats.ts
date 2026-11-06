@@ -48,7 +48,7 @@ const commander = (
   id,
   name,
   enabled: false,
-  validationSupported: false,
+  validationSupported: true,
   legalityKey: id === "cedh" ? "commander" : id,
   min: 100,
   max: 100,
