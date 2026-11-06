@@ -1,3 +1,4 @@
+import { createFeed, listFeeds, syncFeed, syncDueFeeds } from "./feeds.js";
 import { referencePool } from "./reference-pools.js";
 import { enabledFormatIds, validationFormatIds, getFormat } from "./formats.js";
 import Fastify from "fastify";
@@ -385,6 +386,64 @@ app.post(
     return reply.code(201).send(snapshot);
   },
 );
+const requireAdmin = async (req: { headers: { authorization?: string } }) => {
+  const secret = process.env.ADMIN_TOKEN;
+  if (!secret)
+    throw new RequestError(503, "Admin operations disabled; set ADMIN_TOKEN");
+  const token = Buffer.from(
+    (req.headers.authorization || "").replace(/^Bearer /, ""),
+  );
+  const expected = Buffer.from(secret);
+  if (token.length !== expected.length || !timingSafeEqual(token, expected))
+    throw new RequestError(401, "Admin token required");
+};
+app.get("/api/v1/meta/feeds", async () => listFeeds());
+app.post(
+  "/api/v1/meta/feeds",
+  { preHandler: requireAdmin },
+  async (req, reply) => {
+    try {
+      return reply.code(201).send(await createFeed(req.body));
+    } catch (e) {
+      throw new RequestError(422, (e as Error).message);
+    }
+  },
+);
+app.post<{ Params: { id: string } }>(
+  "/api/v1/meta/feeds/:id/sync",
+  { preHandler: requireAdmin, schema: { params: idSchema } },
+  async (req) => {
+    try {
+      return await syncFeed(req.params.id, cards);
+    } catch (e) {
+      throw new RequestError(422, (e as Error).message);
+    }
+  },
+);
+app.patch<{ Params: { id: string } }>(
+  "/api/v1/meta/feeds/:id",
+  { preHandler: requireAdmin, schema: { params: idSchema } },
+  async (req) => {
+    const input = z.object({ enabled: z.boolean() }).parse(req.body);
+    const updated = await pool.query(
+      "UPDATE meta_feeds SET enabled=$2 WHERE id=$1 RETURNING id",
+      [req.params.id, input.enabled],
+    );
+    if (!updated.rowCount) throw new RequestError(404, "Feed not found");
+    return { id: req.params.id, enabled: input.enabled };
+  },
+);
+let feedBusy = false;
+const feedTimer = setInterval(() => {
+  if (feedBusy) return;
+  feedBusy = true;
+  void syncDueFeeds(cards)
+    .catch((e) => app.log.error(e))
+    .finally(() => {
+      feedBusy = false;
+    });
+}, 60000);
+feedTimer.unref();
 app.get("/api/v1/status", { schema: { tags: ["Operations"] } }, async () => ({
   queue: await queue.getJobCounts("waiting", "active", "failed"),
   limits: config,
@@ -404,6 +463,7 @@ for (const signal of ["SIGTERM", "SIGINT"])
     () =>
       void (async () => {
         clearInterval(reconcileTimer);
+        clearInterval(feedTimer);
         await app.close();
         await closeServices();
       })(),

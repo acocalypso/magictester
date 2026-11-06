@@ -10,8 +10,8 @@ User instruction: finish the remaining core work, push each completed change ind
 | 4     | Add a minimal maintained Forge bridge using real structured game events; verify four-player execution, placements and commander timing                                    | PUSHED `e8c07fc` |
 | 5     | Connect multiplayer pod planning, stable run identities, queue execution, API results and Commander/cEDH UI                                                               | PUSHED `acd813b` |
 | 5b    | Enable Duel execution with 20 life, no commander-damage win and first-cast partner lock; verify against current rules                                                     | PUSHED `711cb87` |
-| 6     | Verify and implement real BO3 match execution and actual Forge sideboarding behavior; distinguish game and match rates                                                    | VERIFIED; pushing |
-| 7     | Research permitted metagame sources; implement versioned remote feed ingestion, source-backed pools, scheduling and freshness reporting without bypassing access controls | PENDING          |
+| 6     | Verify and implement real BO3 match execution and actual Forge sideboarding behavior; distinguish game and match rates                                                    | PUSHED `5e11d49` |
+| 7     | Research permitted metagame sources; implement versioned remote feed ingestion, source-backed pools, scheduling and freshness reporting without bypassing access controls | VERIFIED          |
 | 8     | Finish custom/weighted benchmark selection and opponent/pod controls with transparent methodology                                                                         | PENDING          |
 | 9     | Complete operations: metadata refresh, bounded log retention, per-game watchdogs, observability and restart/cancellation acceptance                                       | PENDING          |
 | 10    | Run all-format acceptance, real 1000-game benchmark where appropriate, final CI and documentation                                                                         | PENDING          |

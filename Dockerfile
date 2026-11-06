@@ -5,7 +5,7 @@ COPY . .
 RUN --mount=type=secret,id=proxy_ca NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca npm ci --workspaces=false --strict-ssl=true && npx tsc && npm prune --omit=dev --workspaces=false && mkdir -p logs && chown node:node logs
 FROM node:24-alpine AS backend
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production NODE_USE_ENV_PROXY=1
 COPY --from=backend-build --chown=node:node /app /app
 USER node
 CMD ["node","dist/api.js"]

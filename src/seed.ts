@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { db, pool } from "./db.js";
 import { snapshots } from "./schema.js";
 import { CachedCardDataProvider } from "./domain.js";
@@ -11,21 +11,27 @@ try {
   const cards = await new CachedCardDataProvider().load();
   for (const format of FORMATS.filter((f) => f.enabled)) {
     const name = `${format.name} · Local reference pool`;
-    if (
-      (
-        await db
-          .select({ id: snapshots.id })
-          .from(snapshots)
-          .where(eq(snapshots.name, name))
-      ).length
-    )
-      continue;
     const data = normalizeSnapshot(
       format.id === "pauper"
         ? JSON.parse(await readFile("examples/pauper-reference.json", "utf8"))
         : referencePool(format.id, cards),
       cards,
     );
+    const recipeHash = createHash("sha256")
+      .update(
+        JSON.stringify({
+          format: data.format,
+          source: data.source,
+          decks: data.decks.map(({ id: _id, ...deck }) => deck),
+          version: 2,
+        }),
+      )
+      .digest("hex");
+    const existing = await db
+      .select()
+      .from(snapshots)
+      .where(eq(snapshots.name, name));
+    if (existing.some((s) => s.metadata.recipeHash === recipeHash)) continue;
     await db.insert(snapshots).values({
       id: randomUUID(),
       format: data.format,
@@ -34,6 +40,7 @@ try {
       selectionMethod: data.selectionMethod,
       decks: data.decks,
       metadata: {
+        recipeHash,
         purpose:
           "Project-authored reference lists, not a current tournament metagame.",
         cardData: cards.provenance,

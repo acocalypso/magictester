@@ -101,6 +101,7 @@ services:
     environment:
       <<: *env
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      META_FEED_HOSTS: ${META_FEED_HOSTS:-raw.githubusercontent.com}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     depends_on:
       bootstrap: { condition: service_completed_successfully }

@@ -86,3 +86,5 @@ Forge AI uses heuristics and is generally strongest with aggro/midrange, weaker 
 See [simulation methodology](docs/SIMULATION_MODEL.md), [Forge integration](docs/FORGE_INTEGRATION.md), [statistics](docs/STATISTICS.md), [deployment](docs/DEPLOYMENT.md), [licensing](docs/LICENSING.md), and [verification evidence](docs/VERIFICATION.md).
 
 This independent application is not affiliated with or endorsed by Wizards of the Coast. Magic: The Gathering is a trademark of Wizards of the Coast. No card artwork is bundled.
+
+Scheduled authorized JSON feeds, provenance, polling and freshness: [source contract](docs/sources/METAGAME.md). Configure `META_FEED_HOSTS` for trusted public sources; registration and refresh require `ADMIN_TOKEN`. Bundled reference lists do not claim to be current tournament decks.

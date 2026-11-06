@@ -18,12 +18,23 @@ type Deck = {
   decklist: string;
   metaShare: number | null;
 };
+type Feed = {
+  id: string;
+  name: string;
+  format: string;
+  url: string;
+  enabled: boolean;
+  freshness: string;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+};
 type Snapshot = {
   id: string;
   name: string;
   format: string;
   source: string;
   sourceDate: string | null;
+  metadata?: { feedId?: string; sha256?: string; fetchedAt?: string };
   createdAt: string;
   decks: Deck[];
   selectionMethod: string;
@@ -166,9 +177,10 @@ async function api<T>(
   path: string,
   body?: unknown,
   token?: string,
+  method?: "POST" | "PATCH",
 ): Promise<T> {
   const r = await fetch("/api/v1" + path, {
-    method: body ? "POST" : "GET",
+    method: method || (body ? "POST" : "GET"),
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: "Bearer " + token } : {}),
@@ -247,6 +259,9 @@ export default function Home() {
   const formatRef = useRef(format);
   formatRef.current = format;
   const [view, setView] = useState<View>("analysis");
+  const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [feedUrl, setFeedUrl] = useState("");
+  const [feedPermission, setFeedPermission] = useState("");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState("");
@@ -284,13 +299,15 @@ export default function Home() {
   const [sort, setSort] = useState<"name" | "rate">("name");
   const refresh = useCallback(async () => {
     try {
-      const [s, j, f] = await Promise.all([
+      const [s, j, f, feeds] = await Promise.all([
         api<Snapshot[]>(`/meta/${format}/snapshots`),
         api<Job[]>("/simulations"),
         api<FormatInfo[]>("/formats"),
+        api<Feed[]>("/meta/feeds"),
       ]);
       if (formatRef.current !== format) return;
       setFormats(f);
+      setFeeds(feeds);
       setSnapshots(s);
       setJobs(j);
       setConnected(true);
@@ -1671,7 +1688,8 @@ export default function Home() {
                     <h2>{s.name}</h2>
                     <p>{s.source}</p>
                     <div className="pool-date">
-                      {date(s.createdAt)} ·{" "}
+                      Imported {date(s.createdAt)} · Source date{" "}
+                      {s.sourceDate || "unavailable"} ·{" "}
                       {s.selectionMethod.replaceAll("_", " ")}
                     </div>
                     <div className="pool-decks">
@@ -1703,6 +1721,107 @@ export default function Home() {
                   </section>
                 ))}
               </div>
+              <section className="panel import-panel">
+                <div className="panel-heading">
+                  <h2>Scheduled feeds</h2>
+                  <span className="muted">Admin access</span>
+                </div>
+                <p>
+                  Poll JSON snapshots from a source you own or have permission
+                  to use. Changed content creates a new immutable pool. Feeds
+                  run hourly or less often.
+                </p>
+                {feeds
+                  .filter((f) => f.format === format)
+                  .map((f) => (
+                    <div className="info-banner" key={f.id}>
+                      <strong>{f.name}</strong> ·{" "}
+                      {f.enabled ? f.freshness : "paused"} · Last success{" "}
+                      {f.lastSuccessAt ? date(f.lastSuccessAt) : "never"}
+                      {f.lastError && <p role="status">{f.lastError}</p>}
+                      <button
+                        className="secondary"
+                        onClick={async () => {
+                          try {
+                            await api(`/meta/feeds/${f.id}/sync`, {}, token);
+                            await refresh();
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        Refresh now
+                      </button>{" "}
+                      <button
+                        className="secondary"
+                        onClick={async () => {
+                          try {
+                            await api(
+                              `/meta/feeds/${f.id}`,
+                              { enabled: !f.enabled },
+                              token,
+                              "PATCH",
+                            );
+                            await refresh();
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        {f.enabled ? "Pause" : "Enable"}
+                      </button>
+                    </div>
+                  ))}
+                <div className="field">
+                  <label htmlFor="feed-url">Authorized HTTPS JSON feed</label>
+                  <input
+                    id="feed-url"
+                    type="url"
+                    value={feedUrl}
+                    onChange={(e) => setFeedUrl(e.target.value)}
+                    placeholder="https://raw.githubusercontent.com/…/pool.json"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="feed-permission">
+                    Source permission or license
+                  </label>
+                  <input
+                    id="feed-permission"
+                    value={feedPermission}
+                    onChange={(e) => setFeedPermission(e.target.value)}
+                    placeholder="I own this feed, or its license permits polling…"
+                  />
+                </div>
+                <p className="muted">
+                  Uses the admin token entered below. Allowed hosts are
+                  configured by the server operator.
+                </p>
+                <button
+                  className="secondary"
+                  disabled={!token || !feedUrl || feedPermission.length < 10}
+                  onClick={async () => {
+                    try {
+                      await api(
+                        "/meta/feeds",
+                        {
+                          name: `${displayFormat(format)} feed`,
+                          format,
+                          url: feedUrl,
+                          permission: feedPermission,
+                        },
+                        token,
+                      );
+                      setFeedUrl("");
+                      await refresh();
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Register daily feed →
+                </button>
+              </section>
               <section className="panel import-panel">
                 <div className="panel-heading">
                   <h2>Import a sourced snapshot</h2>

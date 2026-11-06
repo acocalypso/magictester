@@ -14,6 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - run: node -e 'require("fs").appendFileSync(process.env.GITHUB_ENV, "ADMIN_TOKEN="+require("crypto").randomBytes(32).toString("hex")+"\n")'
       - run: docker compose up --build -d --wait
       - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
       - run: mkdir -p data
@@ -36,6 +37,8 @@ jobs:
       - run: node scripts/formats-browser.mjs
       - run: node scripts/bo3-smoke.mjs
       - run: node scripts/bo3-browser.mjs
+      - run: node scripts/feeds-smoke.mjs
+      - run: node scripts/feeds-browser.mjs
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: always()
@@ -53,5 +56,6 @@ jobs:
             data/bo3-engine-smoke.json
             data/companion-smoke.json
             data/bo3-smoke.json
+            data/feeds-smoke.json
       - if: always()
         run: docker compose down
