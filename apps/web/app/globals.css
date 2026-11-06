@@ -1908,3 +1908,17 @@ td strong,
     font-size: 25px;
   }
 }
+.pool-format-filter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 360px;
+  margin: 0 0 24px;
+}
+.pool-format-filter label {
+  margin: 0;
+  white-space: nowrap;
+}
+.pool-format-filter select {
+  flex: 1;
+}

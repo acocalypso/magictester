@@ -1,3 +1,4 @@
+import { getFormat } from "./formats.js";
 import { randomUUID, createHash } from "node:crypto";
 import { and, eq, inArray, sql, desc } from "drizzle-orm";
 import { db, pool } from "./db.js";
@@ -28,6 +29,8 @@ export async function createSimulation(
   client: string,
   provider: CardDataProvider,
 ) {
+  if (!getFormat(input.format)?.enabled)
+    throw new RequestError(422, "Simulation is not enabled for this format");
   const validation = validateDeck(input.decklist, input.format, provider);
   if (!validation.valid)
     throw new RequestError(422, "Deck validation failed", validation.errors);

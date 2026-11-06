@@ -1,28 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-export const FORMATS = [
-  { id: "pauper", name: "Pauper", enabled: true, min: 60, sideboard: 15 },
-  { id: "modern", name: "Modern", enabled: false, min: 60, sideboard: 15 },
-  { id: "standard", name: "Standard", enabled: false, min: 60, sideboard: 15 },
-  { id: "pioneer", name: "Pioneer", enabled: false, min: 60, sideboard: 15 },
-  { id: "legacy", name: "Legacy", enabled: false, min: 60, sideboard: 15 },
-  { id: "vintage", name: "Vintage", enabled: false, min: 60, sideboard: 15 },
-  {
-    id: "commander",
-    name: "Commander",
-    enabled: false,
-    min: 100,
-    sideboard: 0,
-  },
-  { id: "cedh", name: "cEDH", enabled: false, min: 100, sideboard: 0 },
-  {
-    id: "duel",
-    name: "Duel Commander",
-    enabled: false,
-    min: 100,
-    sideboard: 0,
-  },
-] as const;
+import { FORMATS } from "./formats.js";
+export { FORMATS } from "./formats.js";
 export const SECTIONS = [
   "MAINBOARD",
   "SIDEBOARD",
@@ -174,10 +153,10 @@ export function validateDeck(
 ) {
   const { cards, errors } = parseDeck(text);
   const definition = FORMATS.find((f) => f.id === format);
-  if (!definition?.enabled)
+  if (!definition?.validationSupported)
     errors.push({
       code: "FORMAT_UNAVAILABLE",
-      message: "Only Pauper BO1 is enabled in this release.",
+      message: `Deck validation is not available for ${format}.`,
     });
   for (const card of cards) {
     const meta = provider.find(card.name);
@@ -192,11 +171,15 @@ export function validateDeck(
     card.name = meta.name;
     card.normalizedName = normalize(meta.name);
     if (card.section === "MAYBEBOARD") continue;
-    if (meta.legalities[format] !== "legal")
+    if (
+      !["legal", "restricted"].includes(
+        meta.legalities[definition?.legalityKey || format],
+      )
+    )
       errors.push({
         code: "CARD_NOT_LEGAL",
         card: card.name,
-        message: `${card.name} is ${meta.legalities[format] || "not legal"} in ${format}.`,
+        message: `${card.name} is ${meta.legalities[definition?.legalityKey || format] || "not legal"} in ${format}.`,
       });
     if (!provider.supports(card.name))
       errors.push({
@@ -209,7 +192,7 @@ export function validateDeck(
         code: "SECTION_UNAVAILABLE",
         card: card.name,
         message:
-          "Commander and companion configurations are not enabled in Pauper MVP.",
+          "Commander and companion configurations are not yet enabled for this format.",
       });
   }
   const main = cards
@@ -218,20 +201,20 @@ export function validateDeck(
   const side = cards
     .filter((c) => c.section === "SIDEBOARD")
     .reduce((a, c) => a + c.quantity, 0);
-  if (main < 60)
+  if (main < (definition?.min ?? 60))
     errors.push({
       code: "DECK_TOO_SMALL",
-      message: `Mainboard needs at least 60 cards; found ${main}.`,
+      message: `Mainboard needs at least ${definition?.min ?? 60} cards; found ${main}.`,
     });
   if (main > 250)
     errors.push({
       code: "DECK_TOO_LARGE",
       message: "This service limits mainboards to 250 cards.",
     });
-  if (side > 15)
+  if (side > (definition?.sideboard ?? 15))
     errors.push({
       code: "SIDEBOARD_TOO_LARGE",
-      message: `Sideboard may contain at most 15 cards; found ${side}.`,
+      message: `Sideboard may contain at most ${definition?.sideboard ?? 15} cards; found ${side}.`,
     });
   const totals = new Map<string, number>();
   for (const c of cards.filter((c) => c.section !== "MAYBEBOARD"))
@@ -245,14 +228,40 @@ export function validateDeck(
     const unlimited = /A deck can have any number of cards named/i.test(
       meta.oracleText,
     );
-    const seven = /A deck can have up to seven cards named/i.test(
-      meta.oracleText,
-    );
-    if (!unlimited && count > (seven ? 7 : 4))
+    const written = meta.oracleText.match(
+      /A deck can have up to (\w+|\d+) cards named/i,
+    )?.[1];
+    const numberWords: Record<string, number> = {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    };
+    const specialLimit = written
+      ? (numberWords[written.toLowerCase()] ?? Number(written))
+      : null;
+    const restricted =
+      meta.legalities[definition?.legalityKey || format] === "restricted";
+    const limit = restricted
+      ? 1
+      : unlimited
+        ? Infinity
+        : specialLimit && Number.isFinite(specialLimit)
+          ? specialLimit
+          : (definition?.copyLimit ?? 4);
+    if (count > limit)
       errors.push({
-        code: "COPY_LIMIT",
+        code: restricted ? "RESTRICTED_CARD_LIMIT" : "COPY_LIMIT",
         card: meta.name,
-        message: `Too many copies of ${meta.name} across mainboard and sideboard.`,
+        message: restricted
+          ? `${meta.name} is restricted to one copy across mainboard and sideboard in ${definition?.name || format}.`
+          : `Too many copies of ${meta.name} across mainboard and sideboard (maximum ${limit}).`,
       });
   }
   return {

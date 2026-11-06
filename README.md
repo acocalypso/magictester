@@ -1,6 +1,6 @@
 # MagicTester
 
-A private, Docker-hosted Magic: The Gathering deck benchmark lab. Paste a Pauper deck, validate it against cached Scryfall metadata and pinned Forge card scripts, queue real AI-vs-AI BO1 games, and inspect persistent per-opponent results.
+A private, Docker-hosted Magic: The Gathering deck benchmark lab. Paste a Standard, Pioneer, Modern, Pauper, Legacy or Vintage deck, validate it against cached Scryfall metadata and pinned Forge card scripts, queue real AI-vs-AI BO1 games, and inspect persistent per-opponent results.
 
 **No random or fabricated matchup results.** The bundled opponent pool is explicitly labeled as project-authored reference decks, not a current tournament metagame. Import your own sourced JSON/CSV snapshots for metagame testing.
 
@@ -35,14 +35,14 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 ## What is implemented
 
 - Dedicated deck parser, structured line errors, name normalization, format legality, deck/sideboard sizes, combined copy limits, card-defined copy exceptions, and Forge script availability.
-- Pauper BO1, an engine adapter, seeded real games, observed starting player, end round, durations, explicit draws/timeouts/errors, process groups and external deadlines.
+- Six constructed BO1 formats, an engine adapter, seeded real games, observed starting player, end round, durations, explicit draws/timeouts/errors, process groups and external deadlines.
 - PostgreSQL/Drizzle schema and versioned migrations; immutable snapshot and deck records enforced by database triggers.
 - BullMQ/Redis queue, job creation limits, bounded JVM capacity, progress events, cancellation, explicit retry, durable planned run identities, restart recovery, and completed-result deduplication.
 - Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography.
 - Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and round distributions.
 - OpenAPI, structured logs, service health checks, graceful shutdown, Docker builds, CI and scheduled/manual real-engine smoke tests.
 
-Commander, cEDH, BO3, sideboarding AI, commander cast timing and additional enabled formats are deferred. Format definitions and multiplayer-capable engine result models leave room for them. Unsupported features are not exposed as working.
+Commander, cEDH, Duel Commander, BO3, sideboarding AI and commander cast timing are deferred. Format definitions and multiplayer-capable engine result models leave room for them. Unsupported features are not exposed as working.
 
 ## Development and verification
 

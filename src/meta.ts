@@ -1,3 +1,4 @@
+import { validationFormatIds } from "./formats.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { parse } from "csv-parse/sync";
@@ -8,7 +9,7 @@ import {
 } from "./domain.js";
 export const snapshotInput = z.object({
   name: z.string().trim().min(1).max(150),
-  format: z.literal("pauper"),
+  format: z.enum(validationFormatIds()),
   source: z.string().trim().min(1).max(500),
   sourceDate: z.iso.date().nullable().optional(),
   selectionMethod: z.enum([
@@ -75,7 +76,7 @@ export class CsvImportProvider implements MetaDeckProvider {
       .object({
         name: z.string(),
         source: z.string(),
-        format: z.literal("pauper"),
+        format: z.enum(validationFormatIds()),
         csv: z.string().max(1800000),
       })
       .parse(input);

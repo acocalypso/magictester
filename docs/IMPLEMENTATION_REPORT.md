@@ -9,7 +9,7 @@
 | Database                | IMPLEMENTED; RUNTIME VERIFIED — PostgreSQL, Drizzle, versioned transactional migration, immutable records                                                                   |
 | Forge version           | RUNTIME VERIFIED — release 2.0.15, tag commit 4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676, build 2026-09-28 22:22:04                                                           |
 | Forge integration       | RUNTIME VERIFIED — unmodified headless Java CLI in a separate process/runner, stdout parser, NDJSON stream, raw logs                                                        |
-| Formats                 | RUNTIME VERIFIED — Pauper BO1; other format definitions are prepared but disabled                                                                                           |
+| Formats                 | RUNTIME VERIFIED — Standard, Pioneer, Modern, Pauper, Legacy and Vintage BO1; two real games per format; matching JSON imports and UI examples                              |
 | Deck validation         | UNIT TESTED; RUNTIME VERIFIED — syntax, names, quantities, deck/sideboard sizes, legality/bans, copy exceptions including snow basics, script availability                  |
 | Meta providers          | RUNTIME VERIFIED — authorized manual JSON and CSV import; automatic website ingestion DEFERRED                                                                              |
 | Meta snapshots          | RUNTIME VERIFIED — immutable, provenance/date/methodology, up to 50 decks; bundled pool is explicitly reference data                                                        |
@@ -23,7 +23,7 @@
 | Cancellation            | RUNTIME VERIFIED — durable flag, request abort, Java process-group termination; completed results retained                                                                  |
 | Recovery                | RUNTIME VERIFIED — abrupt worker kill after six saves, all retained exactly, 50 unique completions; bounded exhausted retries and explicit resume                           |
 | Persistence             | RUNTIME VERIFIED — database/Redis/API/worker restart preserved 250 completed games and exact aggregates                                                                     |
-| Automated tests         | UNIT TESTED — 19 local tests passed; separate HTTP/Docker smoke verifies API and queue behavior                                                                             |
+| Automated tests         | UNIT TESTED — 23 local tests passed; separate HTTP/Docker smoke verifies API and queue behavior                                                                             |
 | Forge integration tests | RUNTIME VERIFIED — actual Linux Docker game, native clock test, six-game cancel/resume smoke, 50/250-game workloads                                                         |
 | Docker smoke            | RUNTIME VERIFIED — clean Compose build/start and real-game smoke passed on GitHub Actions; local executor used equivalent flattened runtime images due VFS disk constraints |
 | 50-game benchmark       | RUNTIME VERIFIED — 50 valid, zero timeout/error, 204.5 s including deliberate recovery/queue wait; 14.7 games/min is not clean throughput                                   |

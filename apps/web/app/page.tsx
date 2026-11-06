@@ -1,6 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from "react";
 
+type FormatInfo = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  validationSupported: boolean;
+};
 type View = "analysis" | "queue" | "results" | "meta";
 type Deck = {
   id: string;
@@ -21,6 +27,7 @@ type Snapshot = {
   selectionMethod: string;
 };
 type Job = {
+  format: string;
   id: string;
   name: string;
   state: string;
@@ -78,8 +85,12 @@ type Run = {
     players: { id: string; placement: number | null }[];
   } | null;
 };
-const starter =
-  "20 Mountain\n4 Lightning Bolt\n4 Chain Lightning\n4 Lava Spike\n4 Rift Bolt\n4 Shock\n4 Incinerate\n4 Lightning Strike\n4 Searing Blaze\n4 Thermo-Alchemist\n4 Kessig Flamebreather";
+const displayFormat = (id: string) =>
+  id === "cedh"
+    ? "cEDH"
+    : id === "duel"
+      ? "Duel Commander"
+      : id.charAt(0).toUpperCase() + id.slice(1);
 const active = ["QUEUED", "PREPARING", "RUNNING", "AGGREGATING"];
 const pct = (n: number | null | undefined) =>
   n == null ? "—" : (n * 100).toFixed(1) + "%";
@@ -166,6 +177,10 @@ function Progress({ job }: { job: Job }) {
   );
 }
 export default function Home() {
+  const [format, setFormat] = useState("pauper");
+  const [formats, setFormats] = useState<FormatInfo[]>([]);
+  const formatRef = useRef(format);
+  formatRef.current = format;
   const [view, setView] = useState<View>("analysis");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -177,7 +192,7 @@ export default function Home() {
   const [runPage, setRunPage] = useState(0);
   const [detail, setDetail] = useState<Run | null>(null);
   const [busy, setBusy] = useState(false);
-  const [deckName, setDeckName] = useState("My Pauper deck");
+  const [deckName, setDeckName] = useState("My test deck");
   const [decklist, setDecklist] = useState("");
   const [snapshotId, setSnapshotId] = useState("");
   const [games, setGames] = useState(50);
@@ -195,29 +210,37 @@ export default function Home() {
   const [sort, setSort] = useState<"name" | "rate">("name");
   const refresh = useCallback(async () => {
     try {
-      const [s, j] = await Promise.all([
-        api<Snapshot[]>("/meta/pauper/snapshots"),
+      const [s, j, f] = await Promise.all([
+        api<Snapshot[]>(`/meta/${format}/snapshots`),
         api<Job[]>("/simulations"),
+        api<FormatInfo[]>("/formats"),
       ]);
+      if (formatRef.current !== format) return;
+      setFormats(f);
       setSnapshots(s);
       setJobs(j);
       setConnected(true);
-      setSnapshotId((old) => old || s[0]?.id || "");
+      setSnapshotId((old) =>
+        s.some((snapshot) => snapshot.id === old) ? old : s[0]?.id || "",
+      );
     } catch (e) {
+      if (formatRef.current !== format) return;
       setConnected(false);
       setError((e as Error).message);
     }
-  }, []);
+  }, [format]);
   useEffect(() => {
     void refresh();
     const timer = setInterval(() => void refresh(), 5000);
+    return () => clearInterval(timer);
+  }, [refresh]);
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initial = params.get("view");
     if (["analysis", "queue", "results", "meta"].includes(initial || ""))
       setView(initial as View);
     setSelected(params.get("job") || "");
-    return () => clearInterval(timer);
-  }, [refresh]);
+  }, []);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [view, selected]);
@@ -263,14 +286,14 @@ export default function Home() {
     try {
       const validated = await api<NonNullable<typeof validation>>(
         "/decks/validate",
-        { decklist, format: "pauper" },
+        { decklist, format },
       );
       setValidation(validated);
       if (validated.valid) {
         const job = await api<Job>("/simulations", {
           name: deckName,
           decklist,
-          format: "pauper",
+          format,
           snapshotId,
           games,
           seed,
@@ -397,10 +420,22 @@ export default function Home() {
                     </div>
                     <button
                       className="text-button"
-                      onClick={() => {
-                        setDecklist(starter);
-                        setDeckName("Mono-red Burn");
-                        setValidation(null);
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          const sample = await api<{
+                            name: string;
+                            decklist: string;
+                          }>(`/formats/${format}/example`);
+                          setDecklist(sample.decklist);
+                          setDeckName(sample.name);
+                          setValidation(null);
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
                       }}
                     >
                       Load example →
@@ -484,7 +519,7 @@ export default function Home() {
                           setValidation(
                             await api("/decks/validate", {
                               decklist,
-                              format: "pauper",
+                              format,
                             }),
                           );
                         } catch (e) {
@@ -510,10 +545,22 @@ export default function Home() {
                       <label htmlFor="format">
                         Format <span className="muted">/ BO1</span>
                       </label>
-                      <select id="format" defaultValue="pauper">
-                        <option value="pauper">Pauper</option>
-                        <option disabled>Modern · coming later</option>
-                        <option disabled>Commander · coming later</option>
+                      <select
+                        id="format"
+                        value={format}
+                        onChange={(event) => {
+                          setFormat(event.target.value);
+                          setSnapshots([]);
+                          setSnapshotId("");
+                          setValidation(null);
+                        }}
+                      >
+                        {formats.map((f) => (
+                          <option key={f.id} value={f.id} disabled={!f.enabled}>
+                            {f.name}
+                            {!f.enabled ? " · not enabled yet" : ""}
+                          </option>
+                        ))}
                       </select>
                       <label htmlFor="snapshot">Benchmark pool</label>
                       <select
@@ -726,7 +773,8 @@ export default function Home() {
                       <span>.</span>
                     </h1>
                     <p>
-                      Pauper BO1 <span className="slash">/</span>{" "}
+                      {displayFormat(result.job.format)} BO1{" "}
+                      <span className="slash">/</span>{" "}
                       {result.job.snapshot.name}{" "}
                       <span className="slash">/</span>{" "}
                       {date(result.job.createdAt)}
@@ -1076,6 +1124,27 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+              <div className="pool-format-filter">
+                <label htmlFor="pool-format-filter">Format</label>
+                <select
+                  id="pool-format-filter"
+                  value={format}
+                  onChange={(event) => {
+                    setFormat(event.target.value);
+                    setSnapshots([]);
+                    setSnapshotId("");
+                    setValidation(null);
+                  }}
+                >
+                  {formats
+                    .filter((f) => f.enabled)
+                    .map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
               <div className="info-banner">
                 The bundled pool contains project-authored reference lists.
                 Import sourced tournament decks to benchmark a current metagame.
@@ -1085,7 +1154,9 @@ export default function Home() {
                 {snapshots.map((s) => (
                   <section className="panel pool-card" key={s.id}>
                     <div className="pool-card-top">
-                      <span className="format-tag">PAUPER</span>
+                      <span className="format-tag">
+                        {displayFormat(s.format).toUpperCase()}
+                      </span>
                       <span className="muted">{s.decks.length} decks</span>
                     </div>
                     <h2>{s.name}</h2>
@@ -1205,7 +1276,7 @@ export default function Home() {
                             ? {
                                 name: importName,
                                 source: importSource,
-                                format: "pauper",
+                                format,
                                 csv: importText,
                               }
                             : JSON.parse(importText),
@@ -1308,7 +1379,9 @@ function JobTable({
                     <button className="deck-link" onClick={() => open(j.id)}>
                       {j.name}
                     </button>
-                    <small>Pauper · {j.snapshot.name}</small>
+                    <small>
+                      {displayFormat(j.format)} · {j.snapshot.name}
+                    </small>
                   </td>
                   <td>
                     <Badge state={j.state} />

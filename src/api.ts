@@ -1,3 +1,5 @@
+import { referencePool } from "./reference-pools.js";
+import { enabledFormatIds, validationFormatIds } from "./formats.js";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
@@ -50,14 +52,12 @@ app.setErrorHandler((error, _req, reply) => {
       .code(error.statusCode)
       .send({ error: error.message, details: error.details });
   app.log.error(error);
-  return reply
-    .code((error as { statusCode?: number }).statusCode || 500)
-    .send({
-      error:
-        (error as { statusCode?: number }).statusCode === 429
-          ? "Rate limit exceeded"
-          : "Request could not be completed",
-    });
+  return reply.code((error as { statusCode?: number }).statusCode || 500).send({
+    error:
+      (error as { statusCode?: number }).statusCode === 429
+        ? "Rate limit exceeded"
+        : "Request could not be completed",
+  });
 });
 const idSchema = {
   type: "object",
@@ -73,7 +73,7 @@ const bodySchema = {
   required: ["decklist", "format"],
   properties: {
     decklist: { type: "string", maxLength: config.MAX_DECKLIST_BYTES },
-    format: { type: "string", enum: ["pauper"] },
+    format: { type: "string", enum: validationFormatIds() },
   },
 } as const;
 app.get(
@@ -94,6 +94,20 @@ app.get(
   { schema: { tags: ["Decks"] } },
   async () => FORMATS,
 );
+app.get<{ Params: { format: string } }>(
+  "/api/v1/formats/:format/example",
+  {
+    schema: {
+      tags: ["Decks"],
+      params: {
+        type: "object",
+        properties: { format: { type: "string", enum: enabledFormatIds() } },
+        required: ["format"],
+      },
+    },
+  },
+  async (req) => referencePool(req.params.format, cards).decks[0],
+);
 app.post(
   "/api/v1/decks/validate",
   { schema: { tags: ["Decks"], body: bodySchema } },
@@ -113,6 +127,7 @@ app.post(
         required: ["decklist", "format", "snapshotId", "games", "name"],
         properties: {
           ...bodySchema.properties,
+          format: { type: "string", enum: enabledFormatIds() },
           name: { type: "string", minLength: 1, maxLength: 150 },
           snapshotId: { type: "string", format: "uuid" },
           games: {
@@ -320,7 +335,7 @@ app.get("/api/v1/status", { schema: { tags: ["Operations"] } }, async () => ({
   queue: await queue.getJobCounts("waiting", "active", "failed"),
   limits: config,
   engine: "Forge 2.0.15",
-  formats: ["pauper"],
+  formats: enabledFormatIds(),
   model: "AI-vs-AI BO1",
   authentication: "local/private deployment only",
 }));

@@ -60,3 +60,7 @@ Observed Java process RSS samples inside the runner ranged approximately 369–8
 ## Interface redesign acceptance
 
 The user-selected charcoal/white interface was researched against Archidekt, Untapped, MTGDecks and 17Lands; see [design research](design/RESEARCH.md). Browser acceptance on 6 November 2026 created and completed two actual Forge games (job `a3a1aebb-034a-4fc2-99d6-be369162b971`), traversed all four screens at desktop/768/390 px, verified no horizontal overflow, local font availability, native evidence-dialog Tab containment/Escape and zero uncaught JavaScript errors. Production build, lint and type checks passed. The real-engine CI workflow now includes this browser acceptance.
+
+## Six-format acceptance
+
+Standard, Pioneer, Modern, Pauper, Legacy and Vintage each passed two actual Forge games via a format-matched imported reference snapshot: 12 valid games and zero engine failures. Modern CSV import and Vintage single-copy restricted-card validation were also verified through the live API. Browser checks verified all six selectors, validated examples, banned-card feedback and format-filtered pools. All 23 local tests, lint, type checks and the production build passed. See [format rules](FORMAT_RULES.md) for primary sources and precise boundaries.

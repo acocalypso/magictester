@@ -4,7 +4,7 @@
 
 ## Available model
 
-Pauper, two AI players, best of one. The submitted deck occupies seat zero. Each selected opponent receives an equal integer allocation; the first opponents in immutable snapshot order receive remainder games. If games are fewer than opponents, only the first requested number are scheduled. The interface shows this allocation. Equal archetype snapshots require one representative list per archetype; individual-list/custom pools use equal per-list allocation. Meta-share weighting is deferred rather than implied by stored metadata.
+Standard, Pioneer, Modern, Pauper, Legacy and Vintage; two AI players, best of one. The submitted deck occupies seat zero. Each selected opponent receives an equal integer allocation; the first opponents in immutable snapshot order receive remainder games. If games are fewer than opponents, only the first requested number are scheduled. The interface shows this allocation. Equal archetype snapshots require one representative list per archetype; individual-list/custom pools use equal per-list allocation. Meta-share weighting is deferred rather than implied by stored metadata.
 
 The reference pool contains project-authored lists solely for a functioning local benchmark and integration checks. It is not presented as a current competitive meta. Import authorized tournament/curated data with its provenance and date for meaningful comparisons. At most 50 normalized opponents are accepted per import.
 

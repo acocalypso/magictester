@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - run: node scripts/formats-smoke.mjs
+      - run: node scripts/formats-browser.mjs
       - if: always()
         run: docker compose logs --no-color > compose.log
       - if: always()
@@ -29,5 +31,6 @@ jobs:
             compose.log
             data/smoke-report.json
             data/browser/
+            data/formats-smoke.json
       - if: always()
         run: docker compose down

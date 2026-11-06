@@ -2,17 +2,28 @@ import { randomUUID } from "node:crypto";
 import { db, pool } from "./db.js";
 import { snapshots } from "./schema.js";
 import { CachedCardDataProvider } from "./domain.js";
+import { FORMATS } from "./formats.js";
 import { normalizeSnapshot } from "./meta.js";
+import { referencePool } from "./reference-pools.js";
 import { readFile } from "node:fs/promises";
 import { eq } from "drizzle-orm";
-const name = "Pauper · Local reference pool";
 try {
-  if (
-    !(await db.select().from(snapshots).where(eq(snapshots.name, name))).length
-  ) {
-    const cards = await new CachedCardDataProvider().load();
+  const cards = await new CachedCardDataProvider().load();
+  for (const format of FORMATS.filter((f) => f.enabled && !f.commander)) {
+    const name = `${format.name} · Local reference pool`;
+    if (
+      (
+        await db
+          .select({ id: snapshots.id })
+          .from(snapshots)
+          .where(eq(snapshots.name, name))
+      ).length
+    )
+      continue;
     const data = normalizeSnapshot(
-      JSON.parse(await readFile("examples/pauper-reference.json", "utf8")),
+      format.id === "pauper"
+        ? JSON.parse(await readFile("examples/pauper-reference.json", "utf8"))
+        : referencePool(format.id, cards),
       cards,
     );
     await db
@@ -26,12 +37,14 @@ try {
         decks: data.decks,
         metadata: {
           purpose:
-            "Project-authored integration reference lists, not a current tournament metagame.",
+            "Project-authored reference lists, not a current tournament metagame.",
           cardData: cards.provenance,
           weighting: "equal games per deck",
         },
       });
-    console.log(JSON.stringify({ event: "reference_pool_seeded" }));
+    console.log(
+      JSON.stringify({ event: "reference_pool_seeded", format: format.id }),
+    );
   }
 } finally {
   await pool.end();
