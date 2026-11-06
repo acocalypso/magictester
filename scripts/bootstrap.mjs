@@ -1,6 +1,14 @@
 // Download immutable Forge release and cache Scryfall bulk metadata. No card artwork.
 import { existsSync, createReadStream } from "node:fs";
-import { mkdir, readFile, writeFile, rename, rm } from "node:fs/promises";
+import {
+  mkdir,
+  readFile,
+  writeFile,
+  rename,
+  rm,
+  mkdtemp,
+} from "node:fs/promises";
+import { dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createGunzip } from "node:zlib";
@@ -170,7 +178,14 @@ const bridgeSource = new URL(
   import.meta.url,
 );
 const bridgeBytes = await readFile(bridgeSource);
-const bridgeHash = createHash("sha256").update(bridgeBytes).digest("hex");
+const patchBytes = await readFile(
+  new URL("../services/forge-runner/bridge/patches.json", import.meta.url),
+);
+const patches = JSON.parse(patchBytes);
+const bridgeHash = createHash("sha256")
+  .update(bridgeBytes)
+  .update(patchBytes)
+  .digest("hex");
 let bridgeCache;
 try {
   bridgeCache = JSON.parse(
@@ -181,10 +196,30 @@ try {
 }
 if (
   bridgeCache?.sourceHash !== bridgeHash ||
-  !existsSync(home + "/magictester-bridge/MagicTesterBridge.class")
+  !existsSync(home + "/magictester-bridge/MagicTesterBridge.class") ||
+  patches.some(
+    (p) =>
+      !existsSync(
+        home + "/magictester-bridge/" + p.path.replace(/\.java$/, ".class"),
+      ),
+  )
 ) {
-  const sourceFile = root + "/MagicTesterBridge.java";
+  const buildSource = await mkdtemp(root + "/bridge-source-");
+  const sourceFile = buildSource + "/MagicTesterBridge.java";
   await writeFile(sourceFile, bridgeBytes);
+  const patchedSources = [];
+  for (const patch of patches) {
+    const upstream = Buffer.from(await (await get(patch.url)).arrayBuffer());
+    if (createHash("sha256").update(upstream).digest("hex") !== patch.sha256)
+      throw new Error("Pinned Forge source hash mismatch: " + patch.path);
+    const original = upstream.toString("utf8");
+    if (original.split(patch.find).length !== 2)
+      throw new Error("Forge patch must match exactly once: " + patch.path);
+    const destination = buildSource + "/" + patch.path;
+    await mkdir(dirname(destination), { recursive: true });
+    await writeFile(destination, original.replace(patch.find, patch.replace));
+    patchedSources.push(destination);
+  }
   await rm(home + "/magictester-bridge", { recursive: true, force: true });
   await mkdir(home + "/magictester-bridge", { recursive: true });
   execFileSync(
@@ -197,6 +232,7 @@ if (
       "-d",
       home + "/magictester-bridge",
       sourceFile,
+      ...patchedSources,
     ],
     { cwd: home, stdio: "inherit" },
   );
@@ -206,9 +242,14 @@ if (
       version: "1",
       engineVersion: "2.0.15",
       sourceHash: bridgeHash,
+      upstreamOverrides: patches.map((p) => ({
+        path: p.path,
+        sha256: p.sha256,
+        purpose: p.purpose,
+      })),
     }),
   );
-  await rm(sourceFile);
+  await rm(buildSource, { recursive: true, force: true });
   console.log(
     JSON.stringify({ event: "forge_bridge_compiled", sourceHash: bridgeHash }),
   );

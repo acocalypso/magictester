@@ -14,7 +14,7 @@ The archive name and runtime snapshot banner differ; results preserve both the r
 
 ## Structured bridge
 
-Production now invokes the maintained `services/forge-runner/bridge/MagicTesterBridge.java` through the pinned release's public engine API. Bootstrap compiles it with the full JDK against the exact release JAR; runtime uses a JRE. The JAR is unchanged. This avoids copying or patching Forge's card-resolution code.
+Production now invokes the maintained `services/forge-runner/bridge/MagicTesterBridge.java` through the pinned release's public engine API. Bootstrap compiles it with the full JDK against the exact release JAR; runtime uses a JRE. The JAR is unchanged. Two separately compiled, opt-in Duel overrides are documented in `services/forge-runner/bridge/README.md` and pinned by source URL/SHA-256 plus exact replacements in `patches.json`. They disable only the commander-damage loss check and lock other designated commanders after the first command-zone cast. All normal Commander zone-return/tax behavior remains enabled; other modes execute the original branches. Bootstrap rejects changed upstream source or ambiguous patches and includes the manifest in the bridge source hash.
 
 ```sh
 java -Xmx1024m -Djava.awt.headless=true -Dfile.encoding=UTF-8 \
@@ -22,7 +22,7 @@ java -Xmx1024m -Djava.awt.headless=true -Dfile.encoding=UTF-8 \
   MagicTesterBridge /generated/private/directory/request.json
 ```
 
-The private JSON request gives deck filenames, mode, batch seed, first game index, game count and clock seconds. Constructed uses `GameType.Constructed`; Commander uses `RegisteredPlayer.forCommander` and 40 starting life. Each BO1 creates a fresh Match; no sideboarding across independent games is implied.
+The private JSON request gives deck filenames, mode, batch seed, first game index, game count and clock seconds. Constructed uses `GameType.Constructed`; Commander uses `RegisteredPlayer.forCommander` and 40 starting life. Duel retains native Commander rules with 20 life, the two opt-in overrides, and the normal two-player London mulligan (no free first mulligan). Each BO1 creates a fresh Match; no sideboarding across independent games is implied.
 
 Lines prefixed `@@MAGICTESTER ` carry schema-checked JSON. Native logs are retained for auditing, but their prose is not the production source of winners or measurements. Game results include the engine/bridge version, bridge source SHA-256, batch/game seeds, observed starter/life totals, actual individual player turns, duration, termination, commander casts and elimination groups. The original native-parser fixtures/tests remain for historical data and timeout-regression documentation.
 

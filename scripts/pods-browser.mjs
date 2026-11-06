@@ -19,7 +19,7 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base, { waitUntil: "networkidle" });
-  for (const format of ["commander", "cedh"]) {
+  for (const format of ["commander", "cedh", "duel"]) {
     await page.locator("#format").selectOption(format);
     await page.waitForFunction(() =>
       Array.from(document.querySelectorAll("#snapshot option")).some((o) =>
@@ -33,16 +33,18 @@ try {
     assert.ok(
       (await page.locator("#decklist").inputValue()).includes("Commander"),
     );
-    assert.ok(
-      (
-        await page.getByRole("list", { name: "Planned pods" }).innerText()
-      ).includes("Laquatus reference"),
-    );
-    await page
-      .getByText("Lists repeat to fill the three opponent seats.", {
-        exact: false,
-      })
-      .waitFor();
+    if (format !== "duel")
+      assert.ok(
+        (
+          await page.getByRole("list", { name: "Planned pods" }).innerText()
+        ).includes("Laquatus reference"),
+      );
+    if (format !== "duel")
+      await page
+        .getByText("Lists repeat to fill the three opponent seats.", {
+          exact: false,
+        })
+        .waitFor();
   }
   await page.goto(base + "/?view=results&job=" + jobId, {
     waitUntil: "networkidle",
@@ -65,11 +67,36 @@ try {
       fullPage: true,
     });
   }
+  const duel = JSON.parse(await readFile("data/duel-smoke.json", "utf8"));
+  await page.goto(base + "/?view=results&job=" + duel.jobId, {
+    waitUntil: "networkidle",
+  });
+  await page
+    .getByRole("heading", { name: "Commander results", exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "Matchup performance", exact: true })
+    .waitFor();
+  assert.ok(
+    (
+      await page
+        .getByRole("region", { name: "Commander results" })
+        .locator("dd")
+        .first()
+        .innerText()
+    ).includes("/ 2"),
+  );
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    ),
+    false,
+  );
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
       event: "pods_browser_passed",
-      formats: ["commander", "cedh"],
+      formats: ["commander", "cedh", "duel"],
       jobId,
       viewports: [1440, 390],
     }),

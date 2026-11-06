@@ -22,7 +22,7 @@ export interface FormatDefinition {
   commander: boolean;
   players: number;
   startingLife: number;
-  engineGameType: "constructed" | "commander";
+  engineGameType: "constructed" | "commander" | "duel";
 }
 const constructed = (id: FormatId, name: string): FormatDefinition => ({
   id,
@@ -47,7 +47,7 @@ const commander = (
 ): FormatDefinition => ({
   id,
   name,
-  enabled: id !== "duel",
+  enabled: true,
   validationSupported: true,
   legalityKey: id === "cedh" ? "commander" : id,
   min: 100,
@@ -58,7 +58,7 @@ const commander = (
   commander: true,
   players,
   startingLife: players === 2 ? 20 : 40,
-  engineGameType: "commander",
+  engineGameType: id === "duel" ? "duel" : "commander",
 });
 export const FORMATS: readonly FormatDefinition[] = [
   constructed("pauper", "Pauper"),

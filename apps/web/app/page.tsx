@@ -351,6 +351,8 @@ export default function Home() {
   const selectedFormat = formats.find((f) => f.id === format);
   const isPod = selectedFormat?.players === 4;
   const resultIsPod = result?.job.config?.players === 4;
+  const resultIsCommander = !!formats.find((f) => f.id === result?.job.format)
+    ?.commander;
   const pool = snapshots.find((s) => s.id === snapshotId);
   const podPreview =
     isPod && pool
@@ -1023,7 +1025,9 @@ export default function Home() {
                   </section>
                   <section className="panel">
                     <div className="panel-heading">
-                      <h2>Play / draw</h2>
+                      <h2>
+                        {resultIsPod ? "Starting position" : "Play / draw"}
+                      </h2>
                       <span className="muted">Observed</span>
                     </div>
                     <div className="panel-body">
@@ -1051,7 +1055,7 @@ export default function Home() {
                     </div>
                   </section>
                 </div>
-                {resultIsPod && (
+                {resultIsCommander && (
                   <section
                     className="panel pod-statistics"
                     aria-label="Commander results"
@@ -1066,7 +1070,7 @@ export default function Home() {
                           <dt>Average placement</dt>
                           <dd>
                             {result.summary.averagePlacement?.toFixed(2) ?? "—"}{" "}
-                            / 4{" "}
+                            / {result.job.config?.players || 2}{" "}
                             <small>
                               from {result.summary.placementGames} completed
                               placements

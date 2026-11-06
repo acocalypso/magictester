@@ -87,6 +87,12 @@ export async function createSimulation(
         gameMode: "BO1",
         executionPlan: storePlans(plans),
         players: getFormat(input.format)!.players,
+        rules: {
+          format: input.format,
+          engineMode: getFormat(input.format)!.engineGameType,
+          mulliganRule: "London",
+          startingLife: getFormat(input.format)!.startingLife,
+        },
         distribution:
           getFormat(input.format)!.players === 4
             ? "equal games per rotating pod; consecutive snapshot lists fill the three opponent seats; lists repeat when pool has fewer than three decks"

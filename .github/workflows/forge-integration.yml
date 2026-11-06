@@ -18,12 +18,14 @@ jobs:
       - run: docker compose exec -T forge-runner node scripts/bridge-smoke.mjs
       - run: mkdir -p data
       - run: docker compose exec -T forge-runner cat /tmp/bridge-report.json > data/bridge-smoke.json
+      - run: docker compose run --rm --no-deps -w /data/forge bootstrap java -Xmx1024m -Djava.awt.headless=true -cp /data/forge/magictester-bridge:/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar /app/services/forge-runner/tests/DuelContracts.java
       - run: node scripts/smoke.mjs
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: node scripts/commander-smoke.mjs
       - run: node scripts/pods-smoke.mjs
+      - run: node scripts/duel-smoke.mjs
       - run: node scripts/pods-browser.mjs
       - run: node scripts/formats-smoke.mjs
       - run: node scripts/formats-browser.mjs
@@ -40,5 +42,6 @@ jobs:
             data/formats-smoke.json
             data/bridge-smoke.json
             data/pods-smoke.json
+            data/duel-smoke.json
       - if: always()
         run: docker compose down

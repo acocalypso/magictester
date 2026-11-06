@@ -10,6 +10,8 @@ export type Termination =
   "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
   logId?: string;
+  mulliganRule?: "London";
+  mode?: "constructed" | "commander" | "duel";
   bridgeVersion?: string;
   bridgeSourceHash?: string;
   gameSeed?: number;
@@ -49,7 +51,7 @@ export interface EngineRequest {
   games: number;
   seed: number;
   clockSeconds: number;
-  mode?: "constructed" | "commander";
+  mode?: "constructed" | "commander" | "duel";
   traceId?: string;
 }
 export interface CardGameEngine {
@@ -170,6 +172,8 @@ export class ForgeResultParser {
 const structuredResult = z.object({
   index: z.number().int().nonnegative(),
   batchIndex: z.number().int().nonnegative(),
+  mode: z.enum(["constructed", "commander", "duel"]).optional(),
+  mulliganRule: z.literal("London").optional(),
   engine: z.literal("forge"),
   engineVersion: z.literal("2.0.15"),
   bridgeVersion: z.literal("1"),
@@ -255,6 +259,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
       bridgeVersion: "1",
       bo1: true,
       commander: true,
+      duel: true,
       seed: true,
       perGameSeed: true,
       startingPlayerObserved: true,

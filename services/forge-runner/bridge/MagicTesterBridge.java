@@ -37,9 +37,13 @@ public class MagicTesterBridge {
             System.setProperty("file.encoding","UTF-8");
             GuiBase.setInterface(new GuiDesktop());
             FModel.initialize(null,null);
+            forge.StaticData.instance().setMulliganRule(forge.MulliganDefs.MulliganRule.London);
             Request request = JSON.fromJson(Files.readString(Path.of(args[0])),Request.class);
             if (request.decks.length < 2 || request.decks.length > 4 || request.games < 1 || request.clockSeconds < 1) throw new IllegalArgumentException("Invalid bridge request");
-            boolean commander = "commander".equals(request.mode);
+            boolean duel = "duel".equals(request.mode);
+            boolean commander = duel || "commander".equals(request.mode);
+            System.setProperty("magictester.duel",Boolean.toString(duel));
+            if(duel && request.decks.length!=2) throw new IllegalArgumentException("Duel Commander requires two players");
             GameType type = commander ? GameType.Commander : GameType.Constructed;
             for (int index=request.startIndex; index<request.games; index++) {
                 int gameSeed = (int)(((long)request.seed + (long)index * 1009) % 2147483647L);
@@ -52,6 +56,7 @@ public class MagicTesterBridge {
                     Deck deck=DeckSerializer.fromFile(new File(request.decks[seat]));
                     if (deck==null || deck.getMain().isEmpty()) throw new IllegalArgumentException("Could not load deck "+seat);
                     RegisteredPlayer player=commander ? RegisteredPlayer.forCommander(deck) : new RegisteredPlayer(deck);
+                    if(duel) player.setStartingLife(20);
                     player.setPlayer(GamePlayerUtil.createAiPlayer("player-"+seat,seat,"Default"));
                     registered.add(player);
                 }
@@ -81,6 +86,8 @@ public class MagicTesterBridge {
                 // Read game state only after the engine thread has finished. A timed-out
                 // JVM exits immediately after its result; it is never reused for another game.
                 Map<String,Object> result=new LinkedHashMap<>();
+                result.put("mode",request.mode);
+                result.put("mulliganRule",forge.StaticData.instance().getMulliganRule().name());
                 result.put("index",index);result.put("batchIndex",index);
                 result.put("engine","forge");result.put("engineVersion","2.0.15");
                 result.put("bridgeVersion",VERSION);result.put("seed",request.seed);result.put("gameSeed",gameSeed);

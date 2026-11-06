@@ -92,3 +92,13 @@ A clean GitHub Compose run for `e8c07fc` built/bootstrapped the source and passe
 ## Companion metadata edge cases
 
 Follow-up checks reproduced two false rejections: Mistform Ultimus with Kaheera and Arcanum Wings with Zirda. The pinned Forge scripts explicitly define Mistform's outside-battlefield all-creature-types characteristic and Aura swap's activated keyword. Bootstrap now exports that characteristic, recognizes Aura swap/Specialize, and combines both faces' activated abilities for split cards while preserving front-face behavior for transforming/adventure cards. All 37 local tests and 14 live validation cases passed after regenerating the real facts cache. The Forge bridge/source hash did not change.
+
+## Duel execution (continuation task 5b)
+
+Two narrowly scoped source overrides are pinned by exact upstream commit/URL/SHA-256 and exact replacement strings. The original JAR stays unchanged. Bootstrap compiled both overrides successfully and fingerprints the complete patch manifest with the bridge. Normal Commander rules/zone-return flags remain active.
+
+`DuelContracts.java` passed 14 direct engine assertions: 20 life, retained Commander variants, pinned London/no free first mulligan, either initial partner, other-partner lock after the first command-zone cast, selected-commander recasts with native +2 tax, casting the other commander from hand, no 21-damage loss in Duel, ordinary zero-life loss, and unchanged normal Commander partner/21-damage rules. These are rule contract checks, not claimed played games.
+
+Two direct real Duel games completed normally at `[20,20]` starting life, observed command-zone casts and actual decking losses; durations were 8.9/4.2 seconds and 17/15 player turns. The API/queue path also completed two games; after explicitly pinning London the final acceptance job was `dfba45b3-354e-432e-b13e-1728e41fd122`, with observed `mode: duel`, `mulliganRule: London`, the exact override source hash, two-player identities and Commander timing. The UI tests cover all three Commander-family examples, clocks, pod previews where applicable, and Duel results with `/ 2` placements at desktop/mobile sizes. All 38 local tests passed; build, lint and typecheck passed.
+
+The prior clean GitHub engine acceptance passed again; Docker's report-copy API could not read the mounted `/tmp` artifact. Separate fix `d362d97` reads it through `docker compose exec ... cat`, verified locally against the mounted tmpfs. The report directory fix remains in place.

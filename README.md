@@ -42,7 +42,7 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 - Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and round distributions.
 - OpenAPI, structured logs, service health checks, graceful shutdown, Docker builds, CI and scheduled/manual real-engine smoke tests.
 
-Commander/cEDH/Duel deck validation and all companion restrictions are available. Commander and cEDH run real four-player pods with saved rosters, unique player identities, placements and commander-cast timing. Cancellation and retry preserve completed games. Duel engine overrides, BO3 and explicit companion/sideboard choices remain pending. Unsupported simulation modes stay disabled.
+Commander/cEDH/Duel deck validation and all companion restrictions are available. Commander and cEDH run real four-player pods with saved rosters, unique player identities, placements and commander-cast timing. Cancellation and retry preserve completed games. Duel runs at 20 life with tested commander-damage and partner-cast rules. BO3 and explicit companion/sideboard choices are the next milestone. Unsupported simulation modes stay disabled.
 
 ## Development and verification
 

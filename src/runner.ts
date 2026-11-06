@@ -31,7 +31,7 @@ app.post("/games", async (req, reply) => {
       games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
       seed: z.number().int().min(0).max(2147483646),
       clockSeconds: z.number().int().min(1).max(120),
-      mode: z.enum(["constructed", "commander"]).optional(),
+      mode: z.enum(["constructed", "commander", "duel"]).optional(),
       traceId: z
         .string()
         .regex(/^[a-f0-9_-]{1,80}$/)

@@ -18,6 +18,12 @@ Average placement and placement distributions use only actual completed placemen
 
 The default game clock is 120 seconds for Commander-family API jobs, 30 for constructed, configurable from 5–120 seconds. Commander AI can exceed the clock on complex or stalled boards. Reference Commander/cEDH lists are explicitly integration fixtures and are not a competitive cEDH field.
 
+## Duel Commander
+
+Duel uses two AI players at 20 life, its own cached legality/commander-role ban list, no commander-damage victory, and native Commander zone returns/tax. After the first command-zone commander cast, a different designated commander cannot be cast from that zone in the same game; the selected commander may be recast, and either can be cast from another zone. Two-player London mulligans have no free first mulligan. The bridge explicitly pins London for every format and records the rule rather than inheriting a user's Forge GUI preference.
+
+The two Duel-only source overrides are pinned and hash-checked; see `services/forge-runner/bridge/patches.json`. They remain disabled for normal Commander and constructed games. Deck declarations stay fixed for these BO1 benchmarks; no commander-swapping or sideboarding intelligence is implied.
+
 ## Outcomes and statistics
 
 - Normal wins/losses and rule draws count as valid games.
@@ -39,4 +45,4 @@ Seeds are stored and passed to the engine; deterministic replay across versions 
 
 ## Unavailable / deferred
 
-The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligans, cards drawn/cast, BO3, intelligent sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.
+The internal bridge supports four-player games, tied elimination placements and actual commander cast/recast timing. Commander and cEDH pod planning, queue execution and these measurements are exposed in the UI/API. Commander damage totals, mulligan counts, cards drawn/cast, BO3, intelligent sideboarding and forced play/draw remain unavailable. Commander support in upstream documentation is not sufficient verification of the product. No guessed or simulated substitutes are returned for unavailable fields.

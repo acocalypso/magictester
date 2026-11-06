@@ -18,7 +18,7 @@ Each enabled format has two explicitly project-authored reference decks selected
 
 ## Commander-family validation
 
-Commander, cEDH and Duel Commander decks can be validated and imported. Commander and cEDH simulations use four-player pods at 40 life; Duel simulation remains disabled until its distinct engine rules pass acceptance. Validation requires exactly 100 cards including one eligible commander or two compatible commanders, singleton with card-text/basic exceptions, legal color identity and no sideboard other than a designated companion. cEDH uses the Commander card pool and rules; it is a benchmark selection distinction.
+Commander, cEDH and Duel Commander decks can be validated and imported. Commander and cEDH simulations use four-player pods at 40 life; Duel uses two-player 20-life execution with its distinct engine overrides. Validation requires exactly 100 cards including one eligible commander or two compatible commanders, singleton with card-text/basic exceptions, legal color identity and no sideboard other than a designated companion. cEDH uses the Commander card pool and rules; it is a benchmark selection distinction.
 
 Bootstrap reads the pinned Forge scripts through `CardRules.Reader` in `services/forge-runner/metadata/CardFacts.java`. It caches commander eligibility, actual partner-pair compatibility, outside-battlefield creature characteristics and activated-ability facts. This handles legendary Vehicles/Spacecraft, Grist, generic/named/grouped partners, Choose a Background and Doctor's companion using the engine's own interpretation. Universes Within flavor aliases resolve to their shared engine script. Unknown/missing role facts fail validation; the cache includes its source hash, engine version and extraction failures. Two CopyFaceFrom-only split scripts (`Bind // Liberate`, `Start // Fire`) require the full engine database and have no standalone role facts; they are not eligible commanders. No oracle-statistics guesses substitute for unavailable facts.
 
@@ -33,7 +33,7 @@ Rules references checked for this implementation:
 - [Official Duel Commander banlist](https://www.duelcommander.org/banlist/) and [Duel rules](https://www.duelcommander.org/rules/duelcommander_comprehensiverules/). The historical `.com` domain redirects to `.org`; the archived MTGDC/AeonShift list is not the current authority.
 - [Pinned Forge CardRules](https://github.com/Card-Forge/forge/blob/forge-2.0.15/forge-core/src/main/java/forge/card/CardRules.java) and [companion selection](https://github.com/Card-Forge/forge/blob/forge-2.0.15/forge-game/src/main/java/forge/game/player/Player.java).
 
-Duel execution must additionally honor 20 life, no commander-damage win condition and its first-cast paired-commander restriction. Validation support alone does not claim those engine behaviors are implemented.
+Duel execution honors 20 life, no commander-damage win condition and its first-cast paired-commander restriction. The selected commander retains tax/recasts, and the other can still be cast from another zone. BO1 is a benchmark choice; full BO3 execution is the next milestone.
 
 ## Acceptance
 

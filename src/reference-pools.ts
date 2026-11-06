@@ -98,8 +98,7 @@ export function referencePool(format: string, provider: CardDataProvider) {
     return {
       name: `${definition.name} · Local reference pool`,
       format: definition.id,
-      source:
-        "Project-authored Commander integration lists, not tournament data or a competitive cEDH metagame. Small pools repeat lists across opponent seats.",
+      source: `Project-authored ${definition.name} integration lists, not tournament data or a current competitive field. ${definition.players === 4 ? "Small pools repeat lists across opponent seats." : ""}`,
       selectionMethod: "custom_pool" as const,
       decks,
     };

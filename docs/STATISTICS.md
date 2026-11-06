@@ -13,3 +13,5 @@ interval = [max(0, center-margin), min(1, center+margin)]
 This interval expresses binomial sampling uncertainty under the model. Games share engine heuristics, opponent lists and engine state; the interval cannot measure model bias or guarantee independent trials. Aggregated equal-per-list rates differ from population meta-share-weighted estimates.
 
 Each opponent summary uses its own valid sample and denominator. Average/median player turns (end rounds for historical native-parser jobs) and average game duration use valid games only; unavailable turns are omitted. Play/draw splits require an observed starting player. The deterministic tests include known Wilson values and datasets mixing wins, losses, rule draws, timeouts, errors and unknown starters.
+
+For four-player pods, the compatible `onPlay`/`onDraw` fields mean the submitted player started first/later. The UI labels this starting position, since multiplayer's first player also draws on their first turn.

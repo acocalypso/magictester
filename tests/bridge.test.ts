@@ -94,3 +94,23 @@ test("real four-player telemetry includes 40 life, complete elimination order an
     );
   }
 });
+
+test("real Duel telemetry preserves the distinct mode and 20-life start", async () => {
+  const results = (
+    await readFile("services/forge-runner/fixtures/structured-duel.log", "utf8")
+  )
+    .trim()
+    .split("\n")
+    .map(parseStructuredEvent)
+    .filter((e) => e?.type === "result")
+    .map((e) => e!.result);
+  assert.equal(results.length, 2);
+  for (const result of results) {
+    assert.equal(result.mode, "duel");
+    assert.equal(result.mulliganRule, "London");
+    assert.deepEqual(result.startingLife, [20, 20]);
+    assert.equal(result.players.length, 2);
+    assert.equal(result.termination, "normal");
+    assert.ok(result.commanderCasts.length);
+  }
+});
