@@ -49,7 +49,7 @@ async function refresh() {
       child = spawn(
         process.execPath,
         ["scripts/bootstrap.mjs", "--refresh-cards"],
-        { stdio: "inherit", env: process.env },
+        { stdio: "inherit", env: process.env, detached: true },
       );
       const timer = setTimeout(() => killRefresh("SIGKILL"), 15 * 60 * 1000);
       timer.unref();
