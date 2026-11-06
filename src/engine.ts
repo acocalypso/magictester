@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm, mkdir, readFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
@@ -9,6 +10,23 @@ export type Termination =
   "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
   logId?: string;
+  bridgeVersion?: string;
+  bridgeSourceHash?: string;
+  gameSeed?: number;
+  startingLife?: number[];
+  commanderCasts?: {
+    player: number;
+    card: string;
+    turn: number;
+    playerTurn: number;
+    from: string;
+  }[];
+  eliminations?: {
+    players: number[];
+    placement: number;
+    turn: number;
+    reasons: Record<string, string>;
+  }[];
   index: number;
   engine: "forge";
   engineVersion: string;
@@ -144,6 +162,82 @@ export class ForgeResultParser {
     return result;
   }
 }
+const structuredResult = z.object({
+  index: z.number().int().nonnegative(),
+  batchIndex: z.number().int().nonnegative(),
+  engine: z.literal("forge"),
+  engineVersion: z.literal("2.0.15"),
+  bridgeVersion: z.literal("1"),
+  seed: z.number().int().nonnegative(),
+  gameSeed: z.number().int().nonnegative(),
+  winner: z.number().int().nonnegative().nullable(),
+  players: z
+    .array(
+      z.object({
+        id: z.string(),
+        placement: z.number().int().min(1).max(4).nullable(),
+      }),
+    )
+    .min(2)
+    .max(4),
+  turns: z.number().int().nonnegative().nullable(),
+  startingPlayer: z.number().int().nonnegative().nullable(),
+  startingLife: z.array(z.number().int()).max(4),
+  durationMs: z.number().nonnegative(),
+  termination: z.enum(["normal", "rule_draw", "timeout", "engine_error"]),
+  commanderCasts: z.array(
+    z.object({
+      player: z.number().int().nonnegative(),
+      card: z.string(),
+      turn: z.number().int().nonnegative(),
+      playerTurn: z.number().int().nonnegative(),
+      from: z.string(),
+    }),
+  ),
+  eliminations: z.array(
+    z.object({
+      players: z.array(z.number().int().nonnegative()),
+      placement: z.number().int().min(1).max(4),
+      turn: z.number().int().nonnegative(),
+      reasons: z.record(z.string(), z.string()),
+    }),
+  ),
+});
+export const BRIDGE_PREFIX = "@@MAGICTESTER ";
+export function parseStructuredEvent(line: string) {
+  if (!line.startsWith(BRIDGE_PREFIX)) return null;
+  const event = JSON.parse(line.slice(BRIDGE_PREFIX.length));
+  if (event.type === "result") {
+    const result = structuredResult.parse(event.result);
+    const n = result.players.length;
+    if (
+      (result.winner !== null && result.winner >= n) ||
+      (result.startingPlayer !== null && result.startingPlayer >= n) ||
+      result.commanderCasts.some((c) => c.player >= n) ||
+      result.eliminations.some((e) => e.players.some((p) => p >= n))
+    )
+      throw new Error("Invalid bridge player identity");
+    if (
+      result.termination !== "normal" &&
+      (result.winner !== null ||
+        result.players.some((p) => p.placement !== null))
+    )
+      throw new Error("Incomplete games cannot have winners or placements");
+    if (
+      result.termination === "normal" &&
+      (result.winner === null ||
+        result.players.some((p) => p.placement === null))
+    )
+      throw new Error("Completed games require observed placements");
+    return { type: "result" as const, result };
+  }
+  if (event.type === "game_started")
+    return {
+      type: "game_started" as const,
+      index: z.number().int().nonnegative().parse(event.index),
+    };
+  throw new Error("Unknown bridge event");
+}
 export class ForgeEngineAdapter implements CardGameEngine {
   constructor(
     public home = process.env.FORGE_HOME || "/opt/forge",
@@ -153,13 +247,16 @@ export class ForgeEngineAdapter implements CardGameEngine {
     return {
       engine: "forge",
       version: "2.0.15",
+      bridgeVersion: "1",
       bo1: true,
-      commander: "experimental",
+      commander: true,
       seed: true,
+      perGameSeed: true,
       startingPlayerObserved: true,
       startingPlayerControl: false,
-      commanderCastTiming: false,
-      multiplayerPlacements: false,
+      commanderCastTiming: true,
+      multiplayerPlacements: true,
+      maximumPlayers: 4,
     };
   }
   async runGames(
@@ -176,7 +273,6 @@ export class ForgeEngineAdapter implements CardGameEngine {
       dir.split("/").pop()! +
       ".log";
     const log = createWriteStream(join(this.logDir, logId));
-    let child: ReturnType<typeof spawn> | undefined;
     try {
       await Promise.all(
         req.decks.map((deck, i) =>
@@ -186,108 +282,136 @@ export class ForgeEngineAdapter implements CardGameEngine {
       const version = (
         await readFile(join(this.home, "build.txt"), "utf8")
       ).trim();
-      const parser = new ForgeResultParser(
-        "2.0.15 / " + version,
-        req.seed,
-        req.decks.length,
+      const bridge = JSON.parse(
+        await readFile(join(this.home, "magictester-bridge.json"), "utf8"),
       );
-      const args = [
-        "-Xmx" + (process.env.FORGE_HEAP || "1024m"),
-        "-Djava.awt.headless=true",
-        "-Dfile.encoding=UTF-8",
-        "-jar",
-        "forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
-        "sim",
-        "-D",
-        dir,
-        "-d",
-        ...req.decks.map((_, i) => `player-${i}.dck`),
-        "-n",
-        String(req.games),
-        "-s",
-        String(req.seed),
-        "-c",
-        String(req.clockSeconds),
-        "-f",
-        req.mode || "constructed",
-      ];
-      child = spawn("java", args, {
-        cwd: this.home,
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
-      });
-      const proc = child;
-      let killed = false;
-      let forceTimer: NodeJS.Timeout | undefined;
-      const kill = () => {
-        killed = true;
-        if (proc.pid) {
-          try {
-            process.kill(-proc.pid, "SIGTERM");
-          } catch {
-            /* already exited */
-          }
-          forceTimer = setTimeout(() => {
-            try {
-              process.kill(-proc.pid!, "SIGKILL");
-            } catch {
-              /* already exited */
-            }
-          }, 3000);
-          forceTimer.unref();
-        }
-      };
-      if (signal?.aborted) kill();
-      signal?.addEventListener("abort", kill, { once: true });
-      // The CLI clock starts after card initialization; the outer deadline also bounds JVM startup.
-      const deadline = setTimeout(
-        kill,
-        (req.clockSeconds * req.games + 90) * 1000,
-      );
-      deadline.unref();
-      const exited = new Promise<{
-        code: number | null;
-        signal: NodeJS.Signals | null;
-      }>((resolve, reject) => {
-        proc.once("error", reject);
-        proc.once("close", (code, signal) => resolve({ code, signal }));
-      });
-      // Attach a rejection handler immediately so spawn failures cannot become unhandled.
-      void exited.catch(() => {});
-      proc.stderr!.on("data", (b) => {
-        log.write(b);
-        if (/Exception|StackOverflowError/.test(b.toString()))
-          parser.error = true;
-      });
-      const lines = createInterface({ input: proc.stdout! });
+      if (bridge.version !== "1" || !/^[a-f0-9]{64}$/.test(bridge.sourceHash))
+        throw new Error(
+          "Forge bridge missing or incompatible; rerun bootstrap",
+        );
       let count = 0;
-      try {
-        for await (const line of lines) {
-          log.write(line + "\n");
-          const result = parser.line(line);
-          if (result) {
+      while (count < req.games) {
+        if (signal?.aborted) throw new Error("CANCELLED");
+        const startIndex = count;
+        const configFile = join(dir, "request.json");
+        await writeFile(
+          configFile,
+          JSON.stringify({
+            ...req,
+            mode: req.mode || "constructed",
+            startIndex,
+            decks: req.decks.map((_, i) => join(dir, `player-${i}.dck`)),
+          }),
+        );
+        const proc = spawn(
+          "java",
+          [
+            "-Xmx" + (process.env.FORGE_HEAP || "1024m"),
+            "-Djava.awt.headless=true",
+            "-Dfile.encoding=UTF-8",
+            "-cp",
+            join(this.home, "magictester-bridge") +
+              ":" +
+              join(
+                this.home,
+                "forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+              ),
+            "MagicTesterBridge",
+            configFile,
+          ],
+          { cwd: this.home, stdio: ["ignore", "pipe", "pipe"], detached: true },
+        );
+        let killed = false;
+        let forceTimer: NodeJS.Timeout | undefined;
+        const kill = () => {
+          killed = true;
+          if (proc.pid) {
+            try {
+              process.kill(-proc.pid, "SIGTERM");
+            } catch {
+              /* exited */
+            }
+            forceTimer = setTimeout(() => {
+              try {
+                process.kill(-proc.pid!, "SIGKILL");
+              } catch {
+                /* exited */
+              }
+            }, 3000);
+            forceTimer.unref();
+          }
+        };
+        signal?.addEventListener("abort", kill, { once: true });
+        if (signal?.aborted) kill();
+        let watchdog = setTimeout(kill, 90000);
+        watchdog.unref();
+        const resetWatchdog = (ms: number) => {
+          clearTimeout(watchdog);
+          watchdog = setTimeout(kill, ms);
+          watchdog.unref();
+        };
+        const exited = new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+        }>((resolve, reject) => {
+          proc.once("error", reject);
+          proc.once("close", (code, signal) => resolve({ code, signal }));
+        });
+        void exited.catch(() => {});
+        proc.stderr!.on("data", (b) => log.write(b));
+        const lines = createInterface({ input: proc.stdout! });
+        let lastTermination: string | undefined;
+        try {
+          for await (const line of lines) {
+            log.write(line + "\n");
+            const event = parseStructuredEvent(line);
+            if (event?.type === "game_started") {
+              if (event.index !== count)
+                throw new Error("Invalid bridge game start identity");
+              resetWatchdog((req.clockSeconds + 5) * 1000);
+            }
+            if (event?.type !== "result") continue;
+            const result: GameResult = event.result;
+            if (
+              result.index !== count ||
+              result.batchIndex !== count ||
+              result.seed !== req.seed ||
+              result.players.length !== req.decks.length ||
+              result.gameSeed !== (req.seed + count * 1009) % 2147483647
+            )
+              throw new Error("Invalid bridge result identity");
+            result.engineVersion = "2.0.15 / " + version;
+            result.bridgeSourceHash = bridge.sourceHash;
             result.logId = logId;
+            lastTermination = result.termination;
             await onResult(result);
             count++;
+            resetWatchdog(90000);
           }
+          const end = await exited;
+          if (killed)
+            throw new Error(
+              signal?.aborted ? "CANCELLED" : "FORGE_PROCESS_TIMEOUT",
+            );
+          const interruptedGame =
+            end.code === 75 &&
+            count > startIndex &&
+            ["timeout", "engine_error"].includes(lastTermination || "");
+          if (!interruptedGame && (end.code !== 0 || count !== req.games))
+            throw new Error(
+              `FORGE_ERROR exit=${end.code} signal=${end.signal} results=${count}/${req.games}`,
+            );
+          // Timeouts/errors terminate their JVM. Start the next independent BO1 game
+          // with its own stable seed, keeping already streamed results unchanged.
+        } catch (error) {
+          kill();
+          await exited.catch(() => {});
+          throw error;
+        } finally {
+          clearTimeout(watchdog);
+          if (forceTimer) clearTimeout(forceTimer);
+          signal?.removeEventListener("abort", kill);
         }
-        const end = await exited;
-        if (killed)
-          throw new Error(
-            signal?.aborted ? "CANCELLED" : "FORGE_PROCESS_TIMEOUT",
-          );
-        if (end.code !== 0 || count !== req.games)
-          throw new Error(
-            `FORGE_ERROR exit=${end.code} signal=${end.signal} results=${count}/${req.games}`,
-          );
-      } catch (error) {
-        kill();
-        await exited.catch(() => {});
-        throw error;
-      } finally {
-        clearTimeout(deadline);
-        if (forceTimer) clearTimeout(forceTimer);
-        signal?.removeEventListener("abort", kill);
       }
     } finally {
       log.end();

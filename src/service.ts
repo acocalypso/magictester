@@ -82,6 +82,12 @@ export async function createSimulation(
           "equal games per selected deck; remainder assigned in snapshot order",
         engine: "forge",
         forgeRelease: "2.0.15",
+        bridgeVersion: "1",
+        aiProfile: "Default",
+        bridge: provider.provenance.engineBridge,
+        seedMethod: "(matchupSeed + batchIndex * 1009) modulo 2147483647",
+        turnUnit:
+          "individual player turns (Forge GameOutcome.getLastTurnNumber)",
         submittedSeat: 0,
       },
     });
@@ -170,7 +176,9 @@ export async function resultsFor(id: string) {
       "Starting player is observed, not forced; equal play/draw counts are not guaranteed.",
       "Seeds are passed to Forge; exact replay across builds or concurrent engine internals is not guaranteed.",
       "Timeouts and engine errors are excluded from the win-rate denominator; rule draws are non-wins.",
-      "Turn count is Forge’s reported end round, not the number of individual player turns.",
+      job.config.bridgeVersion === "1"
+        ? "Turn count is the number of individual player turns reported by Forge GameOutcome; commander casts also carry the caster’s own turn number."
+        : "Legacy turn count is Forge’s reported end round, not individual player turns.",
     ],
   };
 }

@@ -182,6 +182,17 @@ export class CachedCardDataProvider implements CardDataProvider {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       this.provenance.engineFacts = { available: false };
     }
+    try {
+      this.provenance.engineBridge = JSON.parse(
+        await readFile(
+          (process.env.FORGE_HOME || dir + "/forge") +
+            "/magictester-bridge.json",
+          "utf8",
+        ),
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
     return this;
   }
   engineFacts(name: string) {

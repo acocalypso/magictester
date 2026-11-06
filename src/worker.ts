@@ -85,6 +85,10 @@ const worker = new Worker(
             error: null,
           })
           .where(and(eq(jobs.id, id), eq(jobs.cancelRequested, false)));
+        if (job.config.bridgeVersion !== "1")
+          throw new Error(
+            "This queued job predates the structured engine bridge. Resubmit it to use the current result and seed contract.",
+          );
         for (const plan of planGames(job.games, job.snapshot.decks, job.seed)) {
           if (controller.signal.aborted) throw new Error("Job interrupted");
           const pending = await db
@@ -102,18 +106,16 @@ const worker = new Worker(
             .update(jobs)
             .set({ state: "RUNNING" })
             .where(and(eq(jobs.id, id), eq(jobs.cancelRequested, false)));
-          await db
-            .insert(events)
-            .values({
-              id: randomUUID(),
-              jobId: id,
-              kind: "MATCHUP_STARTED",
-              data: {
-                opponentId: plan.opponent.id,
-                name: plan.opponent.name,
-                seed: plan.seed,
-              },
-            });
+          await db.insert(events).values({
+            id: randomUUID(),
+            jobId: id,
+            kind: "MATCHUP_STARTED",
+            data: {
+              opponentId: plan.opponent.id,
+              name: plan.opponent.name,
+              seed: plan.seed,
+            },
+          });
           log("matchup_started", {
             jobId: id,
             opponentId: plan.opponent.id,
@@ -184,6 +186,15 @@ const worker = new Worker(
                   result.seed !== plan.seed
                 )
                   throw new Error("Runner returned invalid result identity");
+                const expectedBridge = job.config.bridge as
+                  { sourceHash?: string } | undefined;
+                if (
+                  expectedBridge?.sourceHash &&
+                  result.bridgeSourceHash !== expectedBridge.sourceHash
+                )
+                  throw new Error(
+                    "Forge bridge changed since submission; resubmit rather than mixing engine versions.",
+                  );
                 result.players = result.players.map((p, i) => ({
                   ...p,
                   id: i === 0 ? job.deck.id : plan.opponent.id,

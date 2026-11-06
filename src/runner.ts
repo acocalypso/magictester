@@ -12,6 +12,8 @@ app.get("/health", async (_req, reply) => {
     await access(
       engine.home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
     );
+    await access(engine.home + "/magictester-bridge.json");
+    await access(engine.home + "/magictester-bridge/MagicTesterBridge.class");
     return {
       status: "ok",
       active,
@@ -25,16 +27,20 @@ app.get("/health", async (_req, reply) => {
 app.post("/games", async (req, reply) => {
   const parsed = z
     .object({
-      decks: z.array(z.string().min(1).max(65536)).length(2),
+      decks: z.array(z.string().min(1).max(65536)).min(2).max(4),
       games: z.number().int().min(1).max(config.MAX_GAMES_PER_JOB),
       seed: z.number().int().min(0).max(2147483646),
       clockSeconds: z.number().int().min(1).max(120),
-      mode: z.literal("constructed").optional(),
+      mode: z.enum(["constructed", "commander"]).optional(),
       traceId: z
         .string()
         .regex(/^[a-f0-9_-]{1,80}$/)
         .optional(),
     })
+    .refine(
+      (data) => data.mode === "commander" || data.decks.length === 2,
+      "Constructed games require two players",
+    )
     .safeParse(req.body);
   if (!parsed.success)
     return reply.code(400).send({ error: "Invalid engine request" });

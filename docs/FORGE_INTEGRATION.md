@@ -10,34 +10,31 @@
 - Source: [SimulateMatch.java at the release](https://github.com/Card-Forge/forge/blob/forge-2.0.15/forge-gui-desktop/src/main/java/forge/view/SimulateMatch.java).
 - AI documentation: [current upstream](https://github.com/Card-Forge/forge/blob/master/docs/AI.md), captured in [UPSTREAM_AI.md](UPSTREAM_AI.md).
 
-The archive name and runtime snapshot banner differ; results preserve both the release identifier and packaged build timestamp. No Forge code is modified or embedded in the application.
+The archive name and runtime snapshot banner differ; results preserve both the release identifier and packaged build timestamp. The downloaded Forge archive remains intact; the application and bridge are GPL-3.0-only.
 
-## Actual invocation
+## Structured bridge
+
+Production now invokes the maintained `services/forge-runner/bridge/MagicTesterBridge.java` through the pinned release's public engine API. Bootstrap compiles it with the full JDK against the exact release JAR; runtime uses a JRE. The JAR is unchanged. This avoids copying or patching Forge's card-resolution code.
 
 ```sh
 java -Xmx1024m -Djava.awt.headless=true -Dfile.encoding=UTF-8 \
-  -jar forge-gui-desktop-2.0.15-jar-with-dependencies.jar \
-  sim -D /generated/private/directory -d player-0.dck player-1.dck \
-  -n 25 -s 12345 -c 30 -f constructed
+  -cp /data/forge/magictester-bridge:/data/forge/forge-gui-desktop-2.0.15-jar-with-dependencies.jar \
+  MagicTesterBridge /generated/private/directory/request.json
 ```
 
-`-D` selects the directory and `-d` receives filenames. Passing an absolute path to `-d` alone does not work in this version because Forge concatenates its deck base directory. `-s` is implemented in the release source and command help even though the AI guide omits it. `-q` omits the turns needed by this adapter, so the runner retains full game logs.
+The private JSON request gives deck filenames, mode, batch seed, first game index, game count and clock seconds. Constructed uses `GameType.Constructed`; Commander uses `RegisteredPlayer.forCommander` and 40 starting life. Each BO1 creates a fresh Match; no sideboarding across independent games is implied.
 
-CLI format `constructed` specifies game rules, not legality. Pauper legality is validated by the application before queueing. Commander uses `-f commander` and `RegisteredPlayer.forCommander`; documented multiplayer support is source-verified, but this release of MagicTester does not expose or claim runtime-verified Commander benchmarks.
+Lines prefixed `@@MAGICTESTER ` carry schema-checked JSON. Native logs are retained for auditing, but their prose is not the production source of winners or measurements. Game results include the engine/bridge version, bridge source SHA-256, batch/game seeds, observed starter/life totals, actual individual player turns, duration, termination, commander casts and elimination groups. The original native-parser fixtures/tests remain for historical data and timeout-regression documentation.
 
-## Result parsing
+`GameEventGameStarted` supplies the observed first player. `GameEventSpellAbilityCast` supplies real commander casts, caster, origin zone, global turn and caster's own turn. A small `Game` subclass observes `onPlayerLost` before removals. Forge marks the complete simultaneous-loss group before calling that hook; all members receive the same competition placement. An alternate win eliminating three remaining opponents gives those opponents tied second place. Draws, timeouts and engine errors have no winner/placements.
 
-Actual stdout fixture: `services/forge-runner/fixtures/real-game.log`, captured from a Linux Docker game.
+The game clock wraps the actual `Match.startGame` call. On timeout/error the bridge emits that game's result and exits its JVM with code 75. The adapter starts a clean JVM at the next game index, preserving completed results. An external 90-second startup deadline and clock-plus-five-second per-game watchdog kill hung process groups with SIGTERM/SIGKILL. A timed-out engine thread is never reused for another game. Normal game logs are emitted after completion; timeout results retain observed cast/elimination evidence without concurrently traversing the engine's mutable log.
 
-- `Turn: Turn 1 (Ai(N)-...)`: observed starting player.
-- `Game Outcome: Turn N`: Forge's reported end round.
-- `Game Result: Game N ended in ... ms. Ai(N)-... has won!`: winner and in-game duration.
-- `Game Result: Game N ended in a Draw! Took ... ms.`: draw.
-- `Stopping slow match as draw`: timeout overrides any later apparent winner.
+Each game seeds `MyRandom` with `(batchSeed + batchIndex * 1009) modulo 2147483647`, before loading its decks. Independent BO1 recovery no longer depends on replaying the prior game's RNG consumption. Exact deterministic replay across engine builds or concurrent internals remains unpromised. Jobs retain their bridge source hash; workers reject a different bridge hash rather than mixing results. Jobs submitted before this result/seed contract require resubmission.
 
-The native clock can produce a winner-looking result after timeout; timeout wins are deliberately discarded. Native clock expiry can also emit `InterruptedException`; the explicit clock-expiry signal takes precedence over these interruption errors. A nonzero exit, missing final results or exception output is an engine error. An external deadline also covers JVM/database startup and hangs outside the native clock. Child processes are killed as a process group, with a forced kill fallback.
+## Historical CLI baseline
 
-A seed initializes `MyRandom` for a batch, not a fresh independent RNG for each game. Store the batch seed together with `batchIndex`. Exact deterministic replay is not promised: Forge initializes some state before applying the seed and may use multiple internal threads.
+The initial spike used `java -jar ... sim -D directory -d player-0.dck player-1.dck -n N -s seed -c seconds -f constructed`. `-D` supplies the directory, and `-d` filenames. `-q` omits the turn log. Its `Game Outcome: Turn` value is an end round rather than individual player turns. Native clock expiry can print an apparent win and interruption trace; the preserved legacy parser gives explicit clock expiry precedence over both. These historical measurements are not silently reinterpreted as bridge measurements.
 
 ## Updating
 

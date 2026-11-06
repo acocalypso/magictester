@@ -27,6 +27,7 @@ type Snapshot = {
   selectionMethod: string;
 };
 type Job = {
+  config?: { bridgeVersion?: string };
   format: string;
   id: string;
   name: string;
@@ -320,6 +321,8 @@ export default function Home() {
       setBusy(false);
     }
   };
+  const turnLabel =
+    result?.job.config?.bridgeVersion === "1" ? "Player turns" : "End round";
   const pool = snapshots.find((s) => s.id === snapshotId);
   const running = jobs.filter((j) => active.includes(j.state));
   return (
@@ -833,12 +836,13 @@ export default function Home() {
                     }
                   />
                   <Stat
-                    title="Average end round"
+                    title={"Average " + turnLabel.toLowerCase()}
                     value={result.summary.averageTurns?.toFixed(1) || "—"}
                     note={
                       "Median " +
                       (result.summary.medianTurns ?? "—") +
-                      " · Forge round counter"
+                      " · " +
+                      turnLabel.toLowerCase()
                     }
                   />
                   <Stat
@@ -952,14 +956,15 @@ export default function Home() {
                   <div className="panel-heading">
                     <h2>Game length distribution</h2>
                     <span className="muted">
-                      {result.summary.games} valid games · End round
+                      {result.summary.games} valid games · {turnLabel}
                     </span>
                   </div>
                   <div
                     className="histogram"
                     role="img"
                     aria-label={
-                      "End round distribution: " +
+                      turnLabel +
+                      " distribution: " +
                       JSON.stringify(result.summary.turnDistribution)
                     }
                   >
@@ -989,7 +994,7 @@ export default function Home() {
                       )
                     ) : (
                       <p className="muted">
-                        Round data will appear as games complete.
+                        Turn data will appear as games complete.
                       </p>
                     )}
                   </div>
@@ -1027,7 +1032,7 @@ export default function Home() {
                           <th>Opponent</th>
                           <th>Game</th>
                           <th>Outcome</th>
-                          <th>Round</th>
+                          <th>{turnLabel}</th>
                           <th>Duration</th>
                           <th>Seed</th>
                           <th />

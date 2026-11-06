@@ -164,6 +164,55 @@ if (factsCache?.sourceHash !== factsSourceHash) {
     }),
   );
 }
+// Compile the maintained bridge against exactly this release. Runtime needs only a JRE.
+const bridgeSource = new URL(
+  "../services/forge-runner/bridge/MagicTesterBridge.java",
+  import.meta.url,
+);
+const bridgeBytes = await readFile(bridgeSource);
+const bridgeHash = createHash("sha256").update(bridgeBytes).digest("hex");
+let bridgeCache;
+try {
+  bridgeCache = JSON.parse(
+    await readFile(home + "/magictester-bridge.json", "utf8"),
+  );
+} catch {
+  /* first bootstrap */
+}
+if (
+  bridgeCache?.sourceHash !== bridgeHash ||
+  !existsSync(home + "/magictester-bridge/MagicTesterBridge.class")
+) {
+  const sourceFile = root + "/MagicTesterBridge.java";
+  await writeFile(sourceFile, bridgeBytes);
+  await rm(home + "/magictester-bridge", { recursive: true, force: true });
+  await mkdir(home + "/magictester-bridge", { recursive: true });
+  execFileSync(
+    "java",
+    [
+      "-m",
+      "jdk.compiler/com.sun.tools.javac.Main",
+      "-cp",
+      home + "/forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
+      "-d",
+      home + "/magictester-bridge",
+      sourceFile,
+    ],
+    { cwd: home, stdio: "inherit" },
+  );
+  await writeFile(
+    home + "/magictester-bridge.json",
+    JSON.stringify({
+      version: "1",
+      engineVersion: "2.0.15",
+      sourceHash: bridgeHash,
+    }),
+  );
+  await rm(sourceFile);
+  console.log(
+    JSON.stringify({ event: "forge_bridge_compiled", sourceHash: bridgeHash }),
+  );
+}
 console.log(
   JSON.stringify({
     event: "bootstrap_complete",
