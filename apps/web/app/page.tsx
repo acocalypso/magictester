@@ -1605,7 +1605,8 @@ export default function Home() {
                                   </strong>
                                   {resultIsMatch && (
                                     <small>
-                                      {pct(m.matchSummary?.winRate)} match
+                                      {pct(m.matchSummary?.winRate)} match ·{" "}
+                                      {m.matchSummary?.matches ?? 0} scored
                                     </small>
                                   )}
                                   <div className="mini-bar">
