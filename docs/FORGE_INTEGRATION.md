@@ -14,7 +14,7 @@ The archive name and runtime snapshot banner differ; results preserve both the r
 
 ## Structured bridge
 
-Production now invokes the maintained `services/forge-runner/bridge/MagicTesterBridge.java` through the pinned release's public engine API. Bootstrap compiles it with the full JDK against the exact release JAR; runtime uses a JRE. The JAR is unchanged. Pinned separately compiled overrides are documented in `services/forge-runner/bridge/README.md` and pinned by source URL/SHA-256 plus exact replacements in `patches.json`. Two Duel-only replacements disable commander-damage loss and lock other designated commanders after the first command-zone cast. Additional small guards permit declining optional companions, honor the declared candidate, and avoid a missing-winner exception during sideboarding after a draw. All normal Commander zone-return/tax behavior remains enabled; other modes execute the original branches. Bootstrap rejects changed upstream source or ambiguous patches and includes the manifest in the bridge source hash.
+Production now invokes the maintained `services/forge-runner/bridge/MagicTesterBridge.java` through the pinned release's public engine API. Bootstrap compiles it with the full JDK against the exact release JAR; runtime uses a JRE. The JAR is unchanged. Pinned separately compiled overrides are documented in `services/forge-runner/bridge/README.md` and pinned by source URL/SHA-256 plus exact replacements in `patches.json`. Two Duel-only replacements disable commander-damage loss and lock other designated commanders after the first command-zone cast. Additional small guards permit declining optional companions, honor the declared candidate, and avoid a missing-winner exception during sideboarding after a draw, and honor deck-required pregame wild-color choices. All normal Commander zone-return/tax behavior remains enabled; other modes execute the original branches. Bootstrap rejects changed upstream source or ambiguous patches and includes the manifest in the bridge source hash.
 
 ```sh
 java -Xmx1024m -Djava.awt.headless=true -Dfile.encoding=UTF-8 \
@@ -39,3 +39,5 @@ The initial spike used `java -jar ... sim -D directory -d player-0.dck player-1.
 ## Updating
 
 Choose a release, inspect its license and `SimulateMatch.java`, update URL/checksum/JAR/build identity together, refresh the supported-card index and run the parser tests, real-game spike, timeout/cancellation tests and Compose smoke. Preserve old results and engine versions. Do not silently replace historical engine or opponent metadata.
+
+Recovery can request sorted absolute unit indices; seeds retain their original indices. Compiled classes live in immutable source-hash directories captured by each runner request. Actual wild-commander color choices appear in `commanderColors`; required colors include a declared companion’s identity. See the bridge README for the exact pinned native replacements.

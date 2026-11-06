@@ -4,15 +4,15 @@ The supported initial boundary is a trusted local/private lab. Compose binds the
 
 ## Services and storage
 
-`bootstrap` is a one-shot data download, migration and seed step. `web`, `api`, `worker`, `forge-runner`, `postgres` and `redis` have health checks and restart policies. The runner handles one or a configured small number of JVMs and must remain a single replica to retain its global process bound. Configure memory to cover process count × heap plus JVM/Node overhead. The default 2 GB runner accommodates one 1 GB heap, not eight.
+`bootstrap` is a one-shot data download, migration and seed step. `web`, `api`, `worker`, `forge-runner`, `maintenance`, `postgres` and `redis` have health checks and restart policies. The runner handles one or a configured small number of JVMs and must remain a single replica to retain its global process bound. Configure memory to cover process count × heap plus JVM/Node overhead. The default 2 GB runner accommodates one 1 GB heap, not eight.
 
-Named volumes preserve PostgreSQL records, Redis AOF, Forge/card cache and game logs. Back up PostgreSQL and runtime metadata before upgrades. Engine stdout/stderr are in `forge-logs`; Docker JSON logs rotate at 10 MB × 3 files. Archive/prune per-game log files operationally as needed; automatic game-log retention is not implemented.
+Named volumes preserve PostgreSQL records, Redis AOF, Forge/card cache and game logs. Back up PostgreSQL and runtime metadata before upgrades. Engine stdout/stderr are in `forge-logs`; Docker JSON logs rotate at 10 MB × 3 files. Engine logs have automatic byte/file/age limits; see [operations](OPERATIONS.md) for configuration and metadata refresh.
 
 `docker compose down` preserves volumes. `down -v` deletes them and must not be used for routine restarts. Never commit `.env`, credentials, caches, or generated benchmark artifacts.
 
 ## Recovery
 
-BullMQ maintains worker locks and detects stalled attempts. A PostgreSQL advisory lock prevents concurrent processing of a single benchmark. Every game is planned with a unique stable identity, and completed writes only replace pending rows. After a worker interruption, an incomplete batch is replayed; completed identities are skipped. On ordinary process/HTTP failure BullMQ retries once; final unresolved games become explicit errors. Failed/cancelled benchmarks have an explicit retry action that preserves completed rows.
+BullMQ maintains worker locks and detects stalled attempts. A PostgreSQL advisory lock prevents concurrent processing of a single benchmark. Every game is planned with a unique stable identity, and completed writes only replace pending rows. After interruption, only pending absolute unit indices execute. A partially played BO3 restarts from its first game; completed games/matches remain unchanged and interrupted game observations stay in the audit. On ordinary process/HTTP failure BullMQ retries once; final unresolved games become explicit errors. Failed/cancelled benchmarks have an explicit retry action that preserves completed rows.
 
 API reconciliation checks active durable jobs every 10 seconds and republishes missing queue entries, covering a database commit followed by a Redis failure. Redis AOF and PostgreSQL must both retain their data for normal operations. Recovery from deliberate Redis data deletion is outside the ordinary restart path; review persisted job states before restoring backups.
 
@@ -23,10 +23,13 @@ Cancellation stores a durable flag immediately and stops new work. Polling abort
 - API `/health`: database, Redis and loaded card data.
 - Runner `/health`: JAR availability, active/capacity and verified capabilities.
 - Worker `/health`: BullMQ running status, database and Redis.
+- Maintenance `/health`: refresh activity and last success/error; admin refresh is proxied through the API.
 - Web root: HTTP availability; `/api/v1/status` checks the proxied API path.
 - PostgreSQL `pg_isready`; Redis `PING`.
 
 Structured logs carry job/opponent IDs and failures. Logs retain game text and stderr; never expose the internal runner directly to untrusted clients. Job/runs APIs intentionally omit internal stack traces. API OpenAPI/Swagger is proxied through `/api/docs`.
+
+Scheduled feeds, immutable build publication, card-cache hot reload, storage retention and operational health are described in [operations](OPERATIONS.md).
 
 ## Limits
 

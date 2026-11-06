@@ -10,6 +10,11 @@ flowchart LR
   Worker --> PG
   Worker --> Runner[Internal Forge runner]
   Runner --> JVM[Isolated Forge JVM]
+  API --> Feeds[Authorized HTTPS JSON feeds]
+  API --> Cache[(Card metadata / immutable engine builds)]
+  Runner --> Cache
+  Maintenance[Metadata maintenance] --> Cache
+  Maintenance --> PG
 ```
 
 The API does inexpensive parsing, validation, snapshot import, job planning and read operations. It never spawns Forge. Fastify supplies explicit modules, request schemas, rate limits, structured logs and OpenAPI with less scaffolding than NestJS for this MVP. Next.js uses React and TypeScript; plain CSS makes the compact interface independent of a styling build plugin.
@@ -23,3 +28,5 @@ The worker runs one opponent batch at a time and checkpoints each BO1 game or fi
 Cancellation commits a flag/status, the worker aborts its HTTP stream, and the runner terminates the Java process group with SIGTERM followed by SIGKILL. Completed rows survive. On recovery, an incomplete opponent batch uses its stable per-game seed schedule; already committed run identities are skipped. Unfinished BO3 matches restart with their native history/sideboarding context rebuilt; completed match rows remain unchanged and prior game observations remain visible. This is checkpoint recovery, not mid-game continuation or deterministic replay.
 
 The database stores normalized results, snapshots, configuration, engine build, batch seed and game index. Aggregates are computed from those results and can always be rebuilt. No calculated rate is persisted as a substitute for evidence.
+
+Metadata maintenance performs bounded scheduled/admin refreshes outside the API. Cache publication and engine build manifests are atomic; the API loads a full replacement card provider before switching. Remote-feed imports publish new immutable snapshots. Only pending absolute unit indices are submitted on recovery, while interrupted BO3 observations remain separate audit records. See [operations](OPERATIONS.md) and [opponent allocation](OPPONENT_SELECTION.md).

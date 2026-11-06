@@ -1,0 +1,265 @@
+{
+  "measuredAt": "2026-11-06T21:04:59.443Z",
+  "jobId": "f1fd7acd-e761-43da-9b8a-0ae44eaf26ff",
+  "format": "pauper",
+  "mode": "BO1",
+  "seed": 12345,
+  "forgeRelease": "2.0.15",
+  "bridgeVersion": "2",
+  "bridgeSourceHash": "a6b75c4bb8248bdda19d3efd827bfcba7bd4bcfabf20cd2bfcc4b21e719558da",
+  "createdAt": "2026-11-06 20:43:57.300644+00",
+  "finishedAt": "2026-11-06 21:04:57.403+00",
+  "snapshot": {
+    "id": "e7840c3f-5b6c-4fc8-b832-98e56e2e5837",
+    "name": "Pauper \u00b7 Local reference pool",
+    "source": "Project-authored reference lists for integration testing. Not tournament data or a current metagame.",
+    "sourceDate": null,
+    "metadata": {
+      "url": "https://raw.githubusercontent.com/acocalypso/magictester/main/examples/pauper-reference.json",
+      "feedId": "6c142fec-cfd9-41a7-a813-ebcc169ae1fa",
+      "sha256": "9123bc0017707710dcce18c5792036c51d2dfd803bd83b2f44c69fcf60f95fd7",
+      "cardData": {
+        "sha256": "ef366564b135443499055f7e11cc46039be8df83d0c02f7cc16ed9de7181aede",
+        "source": "Scryfall oracle_cards",
+        "fetchedAt": "2026-11-06T17:54:27.496Z",
+        "engineFacts": {
+          "sha256": "f36c02f4416a2e04062cd65e4ad97812f4b71a31ff8f48cdd585c504e92390b4",
+          "failures": [
+            "b/bind_liberate.txt: IllegalArgumentException: CopyFaceFrom-only script needs the full engine database",
+            "s/start_fire.txt: IllegalArgumentException: CopyFaceFrom-only script needs the full engine database"
+          ],
+          "sourceHash": "c4918441def74bd2e24223c51d9863e45dc71c2de1574ef1330556c3229aa5b2",
+          "engineVersion": "2.0.15"
+        },
+        "engineBridge": {
+          "version": "2",
+          "sourceHash": "c532a1011fb8e664de75961cd411513bc3bfcad32f356f9bcceb40a66d758088",
+          "engineVersion": "2.0.15",
+          "upstreamOverrides": [
+            {
+              "path": "forge/game/player/Player.java",
+              "sha256": "f5353a9f4e69ea21437f336390d558aba0bcd8d4e9ec5fbd29d92edf4d0e7451",
+              "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception."
+            },
+            {
+              "path": "forge/game/staticability/StaticAbilityCantBeCast.java",
+              "sha256": "60c3aed9c191920f8bad88e5dd5fee47af0c97fcd1e183506306135b4da9b382",
+              "purpose": "Lock other designated commanders after the first command-zone cast, retaining recasts and casting from other zones."
+            },
+            {
+              "path": "forge/ai/PlayerControllerAi.java",
+              "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
+              "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner."
+            },
+            {
+              "path": "forge/ai/ability/ChooseCompanionAi.java",
+              "sha256": "50e031fcf8d59c4a4b07c58b288d68dd7ddc9a4862577b37b3aed8128c93717c",
+              "purpose": "Honor the submitted companion candidate; decline rather than substitute another card if it is not eligible after sideboarding."
+            }
+          ]
+        },
+        "sourceUpdatedAt": "2026-11-06T10:02:05.252+00:00"
+      },
+      "fetchedAt": "2026-11-06T20:21:52.717Z",
+      "weighting": "Job execution plan records the allocation; source shares are not inferred",
+      "permission": "Project-authored feed under repository GPL license"
+    }
+  },
+  "rules": {
+    "format": "pauper",
+    "engineMode": "constructed",
+    "mulliganRule": "London",
+    "startingLife": 20
+  },
+  "executionPlan": [
+    {
+      "key": "c3cb614f-4cae-4c9a-9611-6c2d50c59619",
+      "kind": "matchup",
+      "name": "Mono-red Burn",
+      "seed": 12345,
+      "games": 500,
+      "opponentIds": ["c3cb614f-4cae-4c9a-9611-6c2d50c59619"]
+    },
+    {
+      "key": "f702160a-01bb-49e9-a488-cb0064b29b60",
+      "kind": "matchup",
+      "name": "Mono-green Stompy",
+      "seed": 112348,
+      "games": 500,
+      "opponentIds": ["f702160a-01bb-49e9-a488-cb0064b29b60"]
+    }
+  ],
+  "wallSeconds": 1260.103,
+  "gamesPerMinute": 47.6151552690534,
+  "summary": {
+    "averagePlacement": 1.463,
+    "placementGames": 1000,
+    "placementDistribution": {
+      "1": 537,
+      "2": 463
+    },
+    "commanderTiming": null,
+    "games": 1000,
+    "attempted": 1000,
+    "wins": 537,
+    "losses": 463,
+    "draws": 0,
+    "timeouts": 0,
+    "errors": 0,
+    "cancelled": 0,
+    "winRate": 0.537,
+    "confidence95": [0.5060124890263216, 0.5677043308457475],
+    "averageTurns": 19.424,
+    "medianTurns": 18,
+    "averageDurationMs": 1233.056,
+    "onPlay": {
+      "games": 502,
+      "wins": 253,
+      "winRate": 0.5039840637450199
+    },
+    "onDraw": {
+      "games": 498,
+      "wins": 284,
+      "winRate": 0.570281124497992
+    },
+    "lowSample": false,
+    "turnDistribution": {
+      "7": 2,
+      "8": 4,
+      "9": 14,
+      "10": 22,
+      "11": 31,
+      "12": 49,
+      "13": 57,
+      "14": 74,
+      "15": 61,
+      "16": 54,
+      "17": 79,
+      "18": 82,
+      "19": 59,
+      "20": 68,
+      "21": 38,
+      "22": 42,
+      "23": 26,
+      "24": 38,
+      "25": 28,
+      "26": 33,
+      "27": 25,
+      "28": 21,
+      "29": 16,
+      "30": 10,
+      "31": 11,
+      "32": 10,
+      "33": 7,
+      "34": 6,
+      "35": 5,
+      "36": 5,
+      "37": 2,
+      "38": 1,
+      "39": 1,
+      "40": 2,
+      "41": 4,
+      "42": 5,
+      "43": 1,
+      "44": 2,
+      "45": 1,
+      "48": 1,
+      "49": 1,
+      "50": 1,
+      "51": 1
+    }
+  },
+  "matchups": [
+    {
+      "name": "Mono-red Burn",
+      "games": 500,
+      "wins": 260,
+      "losses": 240,
+      "draws": 0,
+      "winRate": 0.52,
+      "confidence95": [0.47622345295527013, 0.5634715734262677]
+    },
+    {
+      "name": "Mono-green Stompy",
+      "games": 500,
+      "wins": 277,
+      "losses": 223,
+      "draws": 0,
+      "winRate": 0.554,
+      "confidence95": [0.5101829628154826, 0.5969936084146699]
+    }
+  ],
+  "resources": {
+    "runnerHeap": "1024m",
+    "configuredRunnerCpuLimit": 2,
+    "configuredRunnerMemoryLimit": "2g",
+    "sampleIntervalSeconds": 10,
+    "sampleCount": 122,
+    "sampledPeakJavaHighWaterKB": 959364,
+    "observedCpuSecondsLowerBound": 1236.6,
+    "clockTicksPerSecond": 100,
+    "qualification": "Samples can miss the final CPU/RSS peak before a JVM exits; CPU is a lower bound, not a full cgroup profile.",
+    "configuredRunnerMemoryBytes": 2147483648
+  },
+  "qualifications": [
+    "Project-authored fixed reference lists, not a current tournament metagame or human win-rate prediction.",
+    "Concurrent isolated rules-audit JVMs and verification clients ran in this executor; throughput is a measured workload result, not an isolated performance certification.",
+    "The benchmark retained its original source fingerprint. The subsequent pregame wild-commander color correction is verified separately and is not represented as part of this measured run."
+  ],
+  "postUpgradeVerification": {
+    "verifiedAt": "2026-11-06T21:07:31.097Z",
+    "uniqueRuns": 1000,
+    "identityAndSeedChecksPassed": true,
+    "summaryUnchanged": true
+  },
+  "schemaVersion": 1,
+  "submittedDeck": {
+    "id": "1ca91e36-9b6f-452d-ba53-e1168446839e",
+    "name": "1000-game runtime benchmark",
+    "decklistSha256": "17748c279f3931fa0d978e5f2f08dd86305f307564a9ade4464d35a3b60a49fe",
+    "cardData": {
+      "sha256": "b964b0a7b1dedf0a49bb3d39a914bb245a06c8ceabe2c68e49b4162dfae49864",
+      "source": "Scryfall oracle_cards",
+      "fetchedAt": "2026-11-06T20:34:37.052Z",
+      "engineFacts": {
+        "sha256": "f36c02f4416a2e04062cd65e4ad97812f4b71a31ff8f48cdd585c504e92390b4",
+        "failures": [
+          "b/bind_liberate.txt: IllegalArgumentException: CopyFaceFrom-only script needs the full engine database",
+          "s/start_fire.txt: IllegalArgumentException: CopyFaceFrom-only script needs the full engine database"
+        ],
+        "sourceHash": "c4918441def74bd2e24223c51d9863e45dc71c2de1574ef1330556c3229aa5b2",
+        "engineVersion": "2.0.15"
+      },
+      "engineBridge": {
+        "version": "2",
+        "sourceHash": "a6b75c4bb8248bdda19d3efd827bfcba7bd4bcfabf20cd2bfcc4b21e719558da",
+        "engineVersion": "2.0.15",
+        "classDirectory": "bridge-builds/a6b75c4bb8248bdda19d3efd827bfcba7bd4bcfabf20cd2bfcc4b21e719558da",
+        "upstreamOverrides": [
+          {
+            "path": "forge/game/player/Player.java",
+            "sha256": "f5353a9f4e69ea21437f336390d558aba0bcd8d4e9ec5fbd29d92edf4d0e7451",
+            "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception."
+          },
+          {
+            "path": "forge/game/staticability/StaticAbilityCantBeCast.java",
+            "sha256": "60c3aed9c191920f8bad88e5dd5fee47af0c97fcd1e183506306135b4da9b382",
+            "purpose": "Lock other designated commanders after the first command-zone cast, retaining recasts and casting from other zones."
+          },
+          {
+            "path": "forge/ai/PlayerControllerAi.java",
+            "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
+            "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner."
+          },
+          {
+            "path": "forge/ai/ability/ChooseCompanionAi.java",
+            "sha256": "50e031fcf8d59c4a4b07c58b288d68dd7ddc9a4862577b37b3aed8128c93717c",
+            "purpose": "Honor the submitted companion candidate; decline rather than substitute another card if it is not eligible after sideboarding."
+          }
+        ]
+      },
+      "sourceUpdatedAt": "2026-11-06T10:02:05.252+00:00"
+    }
+  },
+  "clockSeconds": 30
+}

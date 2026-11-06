@@ -1,18 +1,20 @@
 # MagicTester
 
-A private, Docker-hosted Magic: The Gathering deck benchmark lab. Paste a Standard, Pioneer, Modern, Pauper, Legacy or Vintage deck, validate it against cached Scryfall metadata and pinned Forge card scripts, queue real AI-vs-AI BO1 games, and inspect persistent per-opponent results.
+A private, Docker-hosted Magic: The Gathering deck benchmark lab. Paste a deck, validate it against cached Scryfall metadata and pinned Forge card scripts, queue real AI-vs-AI games or matches, and inspect persistent results. Supports Standard, Pioneer, Modern, Pauper, Legacy, Vintage, Commander, cEDH and Duel Commander.
 
 **No random or fabricated matchup results.** The bundled opponent pool is explicitly labeled as project-authored reference decks, not a current tournament metagame. Import your own sourced JSON/CSV snapshots for metagame testing.
+
+**Verified:** all nine formats, native BO3, 45 local tests and clean Docker integration. The [real 1,000-game workload](docs/benchmarks/README.md) completed with zero timeouts/errors.
 
 ![MagicTester deck analysis](docs/screenshots/analysis.png)
 
 ## Run
 
-Requires Docker Engine with Compose v2, Internet access on first boot, and approximately 4 GB RAM and 8 GB free storage (more when Docker uses the VFS storage driver).
+Requires Docker Engine with Compose v2, Internet access on first boot, and at least 4 GB RAM (6 GB recommended) and 8 GB free storage (more when Docker uses the VFS storage driver).
 
 ```sh
 cp .env.example .env
-# Optional: set ADMIN_TOKEN to a generated token for snapshot imports.
+# Set ADMIN_TOKEN for imports, scheduled feeds and metadata maintenance.
 docker compose up --build -d --wait
 ```
 
@@ -40,7 +42,10 @@ The optional overlay mounts `CODEX_PROXY_CERT` (or the system CA bundle) for dep
 - BullMQ/Redis queue, job creation limits, bounded JVM capacity, progress events, cancellation, explicit retry, durable planned run identities, restart recovery, and completed-result deduplication.
 - Analysis, queue, results, run evidence, benchmark browser, JSON/CSV admin import; charcoal-and-white interface with locally hosted typography.
 - Win/loss/draw records, per-opponent rates, Wilson 95% intervals, sample warnings, observed play/draw splits, and player-turn distributions.
-- OpenAPI, structured logs, service health checks, graceful shutdown, Docker builds, CI and scheduled/manual real-engine smoke tests.
+- Authorized scheduled JSON feeds with immutable content versions, source hashes, dates, freshness and admin controls; manual JSON/CSV import remains available.
+- Equal, source-share and custom weighted opponents; seeded weighted multiplayer rosters or explicit ordered pods. Exact plans and allocation methods are saved.
+- Scheduled/admin metadata refresh with atomic caches and API hot reload; immutable source-hash engine builds, bounded diagnostic logs and service health.
+- OpenAPI, graceful shutdown, Docker builds, CI and scheduled/manual real-engine acceptance plus 50/250/1000-game benchmark workflows.
 
 Commander/cEDH/Duel deck validation and all companion restrictions are available. Commander and cEDH run real four-player pods with saved rosters, unique player identities, placements and commander-cast timing. Cancellation and retry preserve completed games. Duel runs at 20 life with tested commander-damage and partner-cast rules. BO3 reports game and match rates separately, native sideboard changes and actual companion selections. Interrupted match observations remain audit evidence. Sideboarding is a generic Forge heuristic, not a claim of human matchup intelligence.
 
@@ -59,7 +64,7 @@ node scripts/smoke.mjs
 # After npx playwright install chromium:
 npm run test:browser
 node scripts/benchmark.mjs 50
-node scripts/benchmark.mjs 250
+BENCHMARK_RESOURCES=1 node scripts/benchmark.mjs 1000
 ```
 
 The smoke test queues real games, checks SSE and results, cancels a running job, resumes it and verifies stable unique run identities. Benchmark reports are written under ignored `data/`. CI unit tests do not substitute for real-engine integration; the latter has a separate scheduled/manual workflow.
@@ -87,4 +92,4 @@ See [simulation methodology](docs/SIMULATION_MODEL.md), [Forge integration](docs
 
 This independent application is not affiliated with or endorsed by Wizards of the Coast. Magic: The Gathering is a trademark of Wizards of the Coast. No card artwork is bundled.
 
-Scheduled authorized JSON feeds, provenance, polling and freshness: [source contract](docs/sources/METAGAME.md). Configure `META_FEED_HOSTS` for trusted public sources; registration and refresh require `ADMIN_TOKEN`. Bundled reference lists do not claim to be current tournament decks.
+See [opponent allocation](docs/OPPONENT_SELECTION.md), [operations](docs/OPERATIONS.md), and scheduled authorized JSON feed [source contract](docs/sources/METAGAME.md). Configure `META_FEED_HOSTS` for trusted public sources; registration and refresh require `ADMIN_TOKEN`. Bundled reference lists do not claim to be current tournament decks.
