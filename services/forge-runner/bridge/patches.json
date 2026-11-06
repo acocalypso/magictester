@@ -3,7 +3,7 @@
     "path": "forge/game/player/Player.java",
     "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/player/Player.java",
     "sha256": "f5353a9f4e69ea21437f336390d558aba0bcd8d4e9ec5fbd29d92edf4d0e7451",
-    "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception.",
+    "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception. Honor legal pregame wild-color choices from the registered deck rather than an empty-hand AI color guess.",
     "replacements": [
       {
         "find": "if (game.getRules().hasAppliedVariant(GameType.Commander)) {",
@@ -12,6 +12,10 @@
       {
         "find": "        PlayerZone commandZone = getZone(ZoneType.Command);\n        companion = game.getAction().moveTo(ZoneType.Command, companion, null, AbilityKey.newMap());",
         "replace": "        if (companion == null) return; // Optional companion choice can be declined.\n        PlayerZone commandZone = getZone(ZoneType.Command);\n        companion = game.getAction().moveTo(ZoneType.Command, companion, null, AbilityKey.newMap());"
+      },
+      {
+        "find": "            byte chosenColor = p.getController().chooseColor(prompt, cmdColorsa, ColorSet.WUBRG);",
+        "replace": "            String configured = System.getProperty(\"magictester.commanderColor.\" + p.getName() + \".\" + cmd.getName());\n            byte chosenColor = configured == null ? p.getController().chooseColor(prompt, cmdColorsa, ColorSet.WUBRG) : MagicColor.fromName(configured);\n            if (Integer.bitCount(chosenColor & 0xff) != 1) throw new IllegalStateException(\"Invalid pregame commander color\");"
       }
     ]
   },

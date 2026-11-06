@@ -18,3 +18,5 @@ The upstream source retains its Forge Team copyright and GPL-3.0-or-later notice
 Protocol 2 distinguishes games from first-to-two BO3 matches and streams real game observations before match completion. Game-limit matches have no winner; child rule draws remain draws. Interrupted match attempts retain audit observations, while retry rebuilds the native match from its start. No outcomes or sideboard swaps are synthesized.
 
 Runtime class directories are immutable and named by the bridge source hash. Bootstrap publishes the completed build and manifest atomically. Optional sorted absolute unit indices allow checkpoint recovery without replaying completed work; each index retains its original seed.
+
+A further pinned Player guard honors pregame wild-color assignments derived from the registered deck, rather than the AI’s empty-hand color guess. Games record the actual chosen colors. `CommanderColorContracts.java` checks required colors, a companion’s identity, Faceless One and insufficient choices separately from real four-player acceptance.

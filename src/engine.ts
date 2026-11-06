@@ -10,6 +10,7 @@ export type Termination =
   "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
   unit?: "game";
+  commanderColors?: { player: number; card: string; colors: string[] }[] | null;
   sideboardChanges?:
     | {
         player: number;
@@ -68,6 +69,7 @@ export interface MatchResult extends Omit<
   | "eliminations"
   | "sideboardChanges"
   | "companionSelections"
+  | "commanderColors"
 > {
   unit: "match";
   bestOf: 3;
@@ -232,6 +234,16 @@ const structuredResult = z.object({
     )
     .nullable()
     .optional(),
+  commanderColors: z
+    .array(
+      z.object({
+        player: z.number().int().nonnegative(),
+        card: z.string(),
+        colors: z.array(z.string()).length(1),
+      }),
+    )
+    .nullable()
+    .optional(),
   companionSelections: z
     .array(
       z.object({
@@ -291,6 +303,7 @@ const structuredMatch = structuredResult
     eliminations: true,
     sideboardChanges: true,
     companionSelections: true,
+    commanderColors: true,
   })
   .extend({
     unit: z.literal("match"),

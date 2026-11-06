@@ -34,6 +34,24 @@ public class MagicTesterBridge {
         boolean sideboarding;
         String mode;
     }
+    public static void configureCommanderColors(Deck deck,int seat) {
+        int fixed=0,required=0;List<forge.item.PaperCard> wild=new ArrayList<>();
+        var commanders=deck.get(DeckSection.Commander);
+        if(commanders==null) return;
+        for(var entry:commanders) {
+            var card=entry.getKey();fixed|=card.getRules().getColorIdentity().getColor();
+            if(card.getRules().getAddsWildCardColor()) wild.add(card);
+        }
+        if(wild.isEmpty()) return;
+        for(var section:deck) for(var entry:section.getValue()) required|=entry.getKey().getRules().getColorIdentity().getColor();
+        required&=~fixed;
+        if(Integer.bitCount(required)>wild.size()) throw new IllegalArgumentException("Starting deck requires more commander colors than available choices");
+        wild.sort(Comparator.comparing(forge.item.PaperCard::getName));
+        for(var card:wild) {
+            int chosen=required==0?1:Integer.lowestOneBit(required);required&=~chosen;
+            System.setProperty("magictester.commanderColor.player-"+seat+"."+card.getName(),forge.card.MagicColor.toLongString((byte)chosen));
+        }
+    }
     static List<Map<String,Object>> players(Integer winner,int count,Map<Integer,Integer> placements) {
         List<Map<String,Object>> values=new ArrayList<>();
         for(int i=0;i<count;i++) {Map<String,Object> p=new LinkedHashMap<>();p.put("id","player-"+i);p.put("placement",winner==null?null:(winner==i?1:placements.get(i)));values.add(p);}
@@ -80,6 +98,7 @@ public class MagicTesterBridge {
         result.put("startingLife",new ArrayList<>(recorder.startingLife));result.put("players",players(winner,registered.size(),recorder.placements));
         result.put("commanderCasts",new ArrayList<>(recorder.commanderCasts));result.put("eliminations",new ArrayList<>(recorder.eliminations));
         result.put("sideboardChanges",recorder.setupComplete?new ArrayList<>(recorder.sideboardChanges):null);
+        result.put("commanderColors",recorder.setupComplete?new ArrayList<>(recorder.commanderColors):null);
         result.put("companionSelections",recorder.setupComplete?new ArrayList<>(recorder.companionSelections):null);
         if(termination.equals("normal") || termination.equals("rule_draw")) {
             var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);pendingLog=log;
@@ -117,6 +136,7 @@ public class MagicTesterBridge {
                     for(var section:deck) for(var entry:section.getValue()) {
                         if(entry.getKey().getRules()==null || entry.getKey().getRules().isUnsupported()) throw new IllegalArgumentException("Pinned Forge cannot load card: "+entry.getKey().getName());
                     }
+                    if(commander) configureCommanderColors(deck,seat);
                     RegisteredPlayer player=commander?RegisteredPlayer.forCommander(deck):new RegisteredPlayer(deck);if(duel) player.setStartingLife(20);
                     player.setPlayer(GamePlayerUtil.createAiPlayer("player-"+seat,seat,"Default"));registered.add(player);
                     System.setProperty("magictester.companion.player-"+seat,request.companions!=null && request.companions[seat]!=null?request.companions[seat]:"");
@@ -176,6 +196,7 @@ public class MagicTesterBridge {
         final List<Map<String,Integer>> previous;
         final Request request;
         final int gameIndex;
+        final List<Map<String,Object>> commanderColors=new CopyOnWriteArrayList<>();
         final List<Map<String,Object>> sideboardChanges=new CopyOnWriteArrayList<>(),companionSelections=new CopyOnWriteArrayList<>();
         volatile boolean setupComplete=false;
         Recorder(Game game,List<RegisteredPlayer> registered,List<Map<String,Integer>> previous,Request request,int gameIndex) {this.game=game;this.registered=registered;this.previous=previous;this.request=request;this.gameIndex=gameIndex;}
@@ -187,6 +208,7 @@ public class MagicTesterBridge {
                 sideboardChanges.add(Map.of("player",i,"added",difference(current,previous.get(i)),"removed",difference(previous.get(i),current),"mainboardSize",size,"sideboardSize",side));
                 String declared=request.companions==null?null:request.companions[i],selected=null;
                 for(Card card:game.getRegisteredPlayers().get(i).getCardsIn(forge.game.zone.ZoneType.Command)) if(!card.isCommander() && card.hasKeyword(forge.game.keyword.Keyword.COMPANION)) selected=card.getName();
+                for(Card commander:game.getRegisteredPlayers().get(i).getCommanders()) if(commander.getRules().getAddsWildCardColor()) commanderColors.add(Map.of("player",i,"card",commander.getName(),"colors",com.google.common.collect.Lists.newArrayList(commander.getChosenColors())));
                 Map<String,Object> choice=new LinkedHashMap<>();choice.put("player",i);choice.put("declared",declared);choice.put("selected",selected);companionSelections.add(choice);
                 if(gameIndex==0 && declared!=null && !declared.equals(selected)) missing=true;
             }

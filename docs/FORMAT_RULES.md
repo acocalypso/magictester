@@ -38,3 +38,7 @@ Duel execution honors 20 life, no commander-damage win condition and its first-c
 ## Acceptance
 
 `node scripts/formats-smoke.mjs` validates and queues two real games in each enabled format using a matching snapshot, checks persisted format/player identities and results, and optionally verifies JSON imports when `ADMIN_TOKEN` is supplied. `node scripts/formats-browser.mjs` checks all six selectors, validated examples, modern banned-card feedback and format-specific pool browsing. The scheduled/manual real-engine workflow runs both in addition to the general smoke and browser workflow.
+
+## Pregame wild-color choices
+
+For The Prismatic Piper/Faceless One, the submitted library, designated commanders and companion must fit the colors chosen before play. The bridge assigns required colors outside the fixed commanders’ identities in WUBRG order and rejects a request that needs more colors than its wild choices permit. If no additional color is required, white is a deterministic legal choice. A pinned `Player.initCommanderColor` override honors that pregame configuration; ordinary undeclared engine calls retain the native AI branch. Actual chosen colors are recorded in game evidence as `commanderColors`. This prevents the native empty-hand “most prominent color” guess from selecting a color incompatible with the registered deck.

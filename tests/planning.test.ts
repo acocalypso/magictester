@@ -145,3 +145,22 @@ test("weighted selection conserves units, excludes zero weights and freezes dete
     }),
   );
 });
+
+test("actual Commander pregame color telemetry preserves the deck-required Piper choice", async () => {
+  const event = parseStructuredEvent(
+    (
+      await readFile(
+        "services/forge-runner/fixtures/commander-colors.log",
+        "utf8",
+      )
+    ).trim(),
+  );
+  assert.equal(event?.type, "result");
+  if (event?.type !== "result" || event.result.unit === "match")
+    throw Error("Expected actual game fixture");
+  assert.deepEqual(event.result.commanderColors, [
+    { player: 0, card: "The Prismatic Piper", colors: ["green"] },
+  ]);
+  assert.equal(event.result.players.length, 4);
+  assert.equal(event.result.termination, "normal");
+});
