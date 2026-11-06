@@ -4,7 +4,7 @@ import { z } from "zod";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 
 export type Termination =
@@ -149,6 +149,51 @@ export function serializeDeck(
       .join("\n") +
     "\n"
   );
+}
+// Forge stores transform/adventure cards under their front-face name; true split
+// cards have a complete rules entry and must retain both halves.
+export function canonicalizeForgeDeck(
+  deck: string,
+  facts: Record<string, { name: string }>,
+  aliases: Record<string, string> = {},
+) {
+  const normalizeName = (value: string) =>
+    value
+      .normalize("NFKC")
+      .replace(/’/g, "'")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  const names = new Map(
+    Object.entries(facts).map(([key, value]) => [
+      normalizeName(key),
+      value.name,
+    ]),
+  );
+  for (const [alias, canonical] of Object.entries(aliases)) {
+    const native = names.get(normalizeName(canonical));
+    if (native) names.set(normalizeName(alias), native);
+  }
+  let physical = false;
+  return deck
+    .split(/\r?\n/)
+    .map((line) => {
+      if (/^\[.*\]$/.test(line.trim())) {
+        physical = /^\[(Main|Sideboard|Commander)\]$/i.test(line.trim());
+        return line;
+      }
+      if (!physical) return line;
+      const match = /^(\d+)\s+(.+?)\s*$/.exec(line);
+      if (!match) return line;
+      const name = match[2];
+      const canonical =
+        names.get(normalizeName(name)) ||
+        (name.includes(" // ")
+          ? names.get(normalizeName(name.split(" // ")[0]))
+          : undefined);
+      return canonical ? match[1] + " " + canonical : line;
+    })
+    .join("\n");
 }
 export class ForgeResultParser {
   turns: number | null = null;
@@ -445,9 +490,34 @@ export class ForgeEngineAdapter implements CardGameEngine {
       ".log";
     const log = await boundedLog(this.logDir, logId);
     try {
+      const metadataRoot = runtime.bridge.metadataDirectory
+        ? resolve(home, runtime.bridge.metadataDirectory)
+        : process.env.DATA_DIR || resolve(home, "..");
+      const facts = JSON.parse(
+        await readFile(join(metadataRoot, "forge-facts.json"), "utf8"),
+      );
+      if (facts.engineVersion !== runtime.bridge.engineVersion)
+        throw new Error(
+          "Forge card names do not match the pinned engine release",
+        );
+      const aliases = JSON.parse(
+        await readFile(
+          join(
+            process.env.DATA_DIR || resolve(home, ".."),
+            "card-aliases.json",
+          ),
+          "utf8",
+        ).catch((e) => {
+          if (e.code === "ENOENT") return "{}";
+          throw e;
+        }),
+      );
       await Promise.all(
         req.decks.map((deck, i) =>
-          writeFile(join(dir, `player-${i}.dck`), deck),
+          writeFile(
+            join(dir, `player-${i}.dck`),
+            canonicalizeForgeDeck(deck, facts.cards, aliases),
+          ),
         ),
       );
       const version = (await readFile(join(home, "build.txt"), "utf8")).trim();
@@ -540,7 +610,11 @@ export class ForgeEngineAdapter implements CardGameEngine {
           proc.once("close", (code, signal) => resolve({ code, signal }));
         });
         void exited.catch(() => {});
-        proc.stderr!.on("data", (b) => log.write(b));
+        let stderrTail = "";
+        proc.stderr!.on("data", (b: Buffer) => {
+          log.write(b);
+          stderrTail = (stderrTail + b.toString("utf8")).slice(-8192);
+        });
         const lines = createInterface({ input: proc.stdout! });
         let lastTermination: string | undefined;
         let expectedGame = 0;
@@ -631,7 +705,10 @@ export class ForgeEngineAdapter implements CardGameEngine {
             ["timeout", "engine_error"].includes(lastTermination || "");
           if (!interruptedGame && (end.code !== 0 || count !== indices.length))
             throw new Error(
-              `FORGE_ERROR exit=${end.code} signal=${end.signal} results=${count}/${req.games}`,
+              `FORGE_ERROR exit=${end.code} signal=${end.signal} results=${count}/${indices.length}; log=${logId}` +
+                (stderrTail.trim()
+                  ? "; " + stderrTail.trim().slice(0, 2000)
+                  : ""),
             );
           // Timeouts/errors terminate their JVM. Start the next independent BO1 game
           // with its own stable seed, keeping already streamed results unchanged.

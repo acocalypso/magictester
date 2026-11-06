@@ -11,6 +11,7 @@ for (const name of [
   "DuelContracts",
   "MatchContracts",
   "CommanderColorContracts",
+  "DeckNameContracts",
 ]) {
   execFileSync(
     "java",
@@ -79,7 +80,12 @@ await writeFile(
   home + "/validation.json",
   JSON.stringify({
     validatedAt: new Date().toISOString(),
-    contracts: ["DuelContracts", "MatchContracts", "CommanderColorContracts"],
+    contracts: [
+      "DuelContracts",
+      "MatchContracts",
+      "CommanderColorContracts",
+      "DeckNameContracts",
+    ],
     played: report,
   }),
 );

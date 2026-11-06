@@ -3,7 +3,12 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 const name = process.argv[2];
 if (
-  !["DuelContracts", "MatchContracts", "CommanderColorContracts"].includes(name)
+  ![
+    "DuelContracts",
+    "MatchContracts",
+    "CommanderColorContracts",
+    "DeckNameContracts",
+  ].includes(name)
 )
   throw Error("Unknown engine contract");
 const runtime = await resolveRuntime();

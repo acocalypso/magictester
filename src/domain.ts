@@ -167,6 +167,11 @@ export class CachedCardDataProvider implements CardDataProvider {
       for (const face of card.faces || [])
         if (!this.cards.has(normalize(face.name)))
           this.cards.set(normalize(face.name), card);
+    for (const [alias, canonical] of Object.entries(data.aliases || {})) {
+      const card = this.cards.get(normalize(String(canonical)));
+      if (card && !this.cards.has(normalize(alias)))
+        this.cards.set(normalize(alias), card);
+    }
     this.supported = new Set(
       (
         JSON.parse(
@@ -230,6 +235,15 @@ export function validateDeck(
   provider: CardDataProvider,
 ) {
   const { cards, errors } = parseDeck(text);
+  // Canonical identities make aliases and face names share copy limits and engine input.
+  for (const card of cards) {
+    const metadata = provider.find(card.name);
+    if (metadata) {
+      card.name = metadata.name;
+      card.normalizedName = normalize(metadata.name);
+    }
+  }
+
   const definition = FORMATS.find((f) => f.id === format);
   if (!definition?.validationSupported)
     errors.push({

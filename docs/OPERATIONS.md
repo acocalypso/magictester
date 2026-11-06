@@ -20,6 +20,21 @@ The maintenance service checks once per minute whether `cards.json` is older tha
 
 `LOG_FILE_MB=8` bounds each retained engine log; parsing and result collection continue after the diagnostic log cap, with an explicit truncation marker. `LOG_TOTAL_MB=512`, `LOG_MAX_FILES=500`, and `LOG_RETENTION_DAYS=7` bound completed log retention. Retention runs before and after batches, deleting oldest excess/expired logs. Current `.active` logs are excluded; abandoned active files age out after 24 hours. Concurrent processes may temporarily add up to one capped log each beyond completed-log limits. Log write errors are caught/reported rather than crashing on an unhandled stream event. Measurements and provenance remain in PostgreSQL after diagnostic logs expire.
 
-Back up PostgreSQL and runtime metadata (and desired logs) before a host migration. Redis is durable coordination; PostgreSQL is the authoritative job/result record. Keep runtime metadata read-only in API/worker/runner, writable only in bootstrap/maintenance. Do not change Forge release/source while jobs are queued unless intentionally invalidating their unfinished work.
+Back up PostgreSQL and runtime metadata (and desired logs) before a host migration. Redis is durable coordination; PostgreSQL is the authoritative job/result record. Keep runtime metadata read-only in API/worker/runner, writable only in bootstrap/maintenance. Retain archived runtimes referenced by unfinished or resumable jobs.
 
 This managed executor has an 8 GB Docker VFS disk. Its live runtime uses bind-mounted cached Forge data and copied compiled artifacts; clean source-image builds are verified in GitHub Actions. Local maintenance acceptance reused the existing runtime image with unchanged cached Java artifacts; the repository's maintenance service uses the full JDK bootstrap image. Session proxy, CA and hostname mapping remain untracked environment configuration. Internal services, including `maintenance`, must be listed in `NO_PROXY` when configuring outbound proxies.
+
+The raw Java output is in the **forge-runner** service, in `/app/logs`. List or copy it from the directory containing the Compose file:
+
+```sh
+docker compose exec forge-runner sh -c 'ls -lt /app/logs | head -15'
+docker compose cp forge-runner:/app/logs ./forge-logs
+```
+
+Job logs start with the job UUID, followed by `_`, the execution-plan key and a generated filename. Replace `JOB_ID` below with the UUID shown in the failed job:
+
+```sh
+docker compose exec forge-runner sh -c 'tail -n 100 /app/logs/JOB_ID_*.log'
+```
+
+`FORGE_ERROR exit=1 results=0/7` means the JVM exited without a final result for this batch's seven remaining units; completed results in other batches are still retained. Process-exit errors now include the log filename and the bounded Java stderr tail, so the underlying cause appears in the job error. Resume a failed job after correcting its cause to retain completed units.

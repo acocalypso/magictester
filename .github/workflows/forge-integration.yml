@@ -25,6 +25,7 @@ jobs:
       - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs DuelContracts
       - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs MatchContracts
       - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs CommanderColorContracts
+      - run: docker compose run --rm --no-deps bootstrap node scripts/run-engine-contract.mjs DeckNameContracts
       - run: docker compose exec -T -e COMMANDER_COLORS_REPORT=/tmp/commander-colors.json forge-runner node scripts/commander-colors-smoke.mjs
       - run: docker compose exec -T forge-runner cat /tmp/commander-colors.json > data/commander-colors.json
       - run: docker compose exec -T -e BO3_REPORT=/tmp/bo3-engine-report.json forge-runner node scripts/bo3-engine-smoke.mjs
@@ -52,6 +53,8 @@ jobs:
       - run: docker compose exec -T forge-runner cat /tmp/operations-engine.json > data/operations-engine.json
       - run: node scripts/daily-meta-smoke.mjs
       - run: node scripts/daily-meta-browser.mjs
+      - run: docker compose exec -T -e BO3_MATCHES=1 forge-runner node scripts/daily-meta-bo3-smoke.mjs
+      - run: docker compose exec -T forge-runner cat /tmp/daily-meta-bo3.json > data/daily-meta-bo3.json
       - run: node scripts/maintenance-smoke.mjs
       - run: node scripts/recovery-smoke.mjs
       - if: always()
@@ -80,5 +83,6 @@ jobs:
             data/commander-colors.json
             data/daily-metagame-report.json
             data/runtime-pinning.json
+            data/daily-meta-bo3.json
       - if: always()
         run: docker compose down

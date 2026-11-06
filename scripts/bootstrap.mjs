@@ -1,3 +1,4 @@
+import { flavorAliases } from "../src/card-aliases.mjs";
 // Download immutable Forge release and cache Scryfall bulk metadata. No card artwork.
 import { existsSync, createReadStream } from "node:fs";
 import {
@@ -132,6 +133,32 @@ if (cachedSchema !== 2 || process.argv.includes("--refresh-cards")) {
   await rename(root + "/cards.json.tmp", root + "/cards.json");
   console.log(JSON.stringify({ event: "cards_cached", count: cards.length }));
 }
+// Oracle bulk selects one printing, so cache alternate printed names separately.
+const cardCache = JSON.parse(await readFile(root + "/cards.json", "utf8"));
+if (
+  cardCache.aliasSchemaVersion !== 1 ||
+  process.argv.includes("--refresh-cards")
+) {
+  cardCache.aliases = await flavorAliases(async (url) => {
+    const page = await (await get(url)).json();
+    await new Promise((r) => setTimeout(r, 100));
+    return page;
+  });
+  cardCache.aliasSchemaVersion = 1;
+  await writeFile(root + "/cards.json.aliases.tmp", JSON.stringify(cardCache));
+  await rename(root + "/cards.json.aliases.tmp", root + "/cards.json");
+  console.log(
+    JSON.stringify({
+      event: "card_aliases_cached",
+      count: Object.keys(cardCache.aliases).length,
+    }),
+  );
+}
+await writeFile(
+  root + "/card-aliases.json.tmp",
+  JSON.stringify(cardCache.aliases || {}),
+);
+await rename(root + "/card-aliases.json.tmp", root + "/card-aliases.json");
 // Extract supported card names from the release's scripts archive using the JDK jar utility.
 if (!existsSync(metadataRoot + "/forge-cards.json")) {
   const archive = home + "/res/cardsfolder/cardsfolder.zip";
