@@ -1,0 +1,37 @@
+name: Real Forge benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        description: Actual BO1 games against the fixed reference pool
+        required: true
+        type: choice
+        default: "50"
+        options: ["50", "250", "1000"]
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: docker compose up --build -d --wait
+      - run: node scripts/benchmark.mjs "$GAMES"
+        env:
+          GAMES: ${{ inputs.games }}
+          BENCHMARK_RESOURCES: "1"
+      - if: always()
+        run: docker compose logs --no-color > compose.log
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-evidence
+          path: |
+            data/benchmark-*.json
+            compose.log
+      - if: always()
+        run: docker compose down
