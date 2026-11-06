@@ -1,4 +1,6 @@
+import { partitionIndices, runParallel, interleave } from "./parallel.js";
 import Fastify from "fastify";
+import { setMaxListeners } from "node:events";
 import { Worker } from "bullmq";
 import { and, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -12,7 +14,11 @@ import { executionPlans } from "./planning.js";
 import { getFormat } from "./formats.js";
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ event, ...data }));
+// Each active analysis installs a shutdown listener; allow the supported 16 slots.
+process.setMaxListeners(Math.max(process.getMaxListeners(), 20));
 const activeControllers = new Map<string, AbortController>();
+let parallelSlots = 1;
+let workerStopping = false;
 const worker = new Worker(
   "simulations",
   async (task) => {
@@ -30,6 +36,7 @@ const worker = new Worker(
       let job = await getJob(id);
       if (["COMPLETED", "CANCELLED"].includes(job.state)) return;
       const controller = new AbortController();
+      setMaxListeners(32, controller.signal);
       let shuttingDown = false;
       let deadlineReached = false;
       const elapsed = job.startedAt
@@ -90,9 +97,9 @@ const worker = new Worker(
           throw new Error(
             "This analysis uses an older engine version. Start a new analysis instead of mixing result contracts.",
           );
+        const prepared = [];
         for (const plan of executionPlans(job)) {
-          if (controller.signal.aborted) throw new Error("Job interrupted");
-          const pending = await db
+          const allPending = await db
             .select()
             .from(runs)
             .where(
@@ -102,197 +109,237 @@ const worker = new Worker(
                 eq(runs.state, "PENDING"),
               ),
             );
-          if (!pending.length) continue;
-          await db
-            .update(jobs)
-            .set({ state: "RUNNING" })
-            .where(and(eq(jobs.id, id), eq(jobs.cancelRequested, false)));
-          await db.insert(events).values({
-            id: randomUUID(),
-            jobId: id,
-            kind: plan.kind === "pod" ? "POD_STARTED" : "MATCHUP_STARTED",
-            data: {
-              opponentId: plan.key,
-              name: plan.name,
-              seed: plan.seed,
-            },
-          });
-          log(plan.kind === "pod" ? "pod_started" : "matchup_started", {
-            jobId: id,
-            opponentId: plan.key,
-            games: plan.games,
-          });
-          let response: Response | undefined;
-          // Capacity is global in the single runner service. Queue here, without creating another JVM.
-          while (!response) {
-            const r = await fetch(
-              (process.env.RUNNER_URL || "http://localhost:3002") + "/games",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  decks: [
-                    serializeDeck(job.deck.cards, "player-0"),
-                    ...plan.opponents.map((opponent, i) =>
-                      serializeDeck(opponent.cards, `player-${i + 1}`),
-                    ),
-                  ],
-                  mode: getFormat(job.format)!.engineGameType,
-                  bestOf: job.config.gameMode === "BO3" ? 3 : 1,
-                  maxMatchGames:
-                    job.config.gameMode === "BO3"
-                      ? Number(job.config.maxMatchGames)
-                      : 5,
-                  sideboarding: job.config.sideboardMode === "forge",
-                  companions: [
-                    job.deck.cards,
-                    ...plan.opponents.map((o) => o.cards),
-                  ].map(
-                    (cards) =>
-                      cards.find((c) => c.section === "COMPANION")?.name ??
-                      null,
-                  ),
-                  games: plan.games,
-                  indices: pending
-                    .map((r) => r.batchIndex)
-                    .sort((a, b) => a - b),
+          if (allPending.length) prepared.push({ plan, allPending });
+        }
+        const groups: (() => Promise<void>)[][] = [];
+        const lanesPerPlan = Math.max(
+          1,
+          Math.ceil(parallelSlots / Math.max(1, prepared.length)),
+        );
+        for (const { plan, allPending } of prepared) {
+          const group: (() => Promise<void>)[] = [];
+          groups.push(group);
+          const sorted = allPending
+            .map((r) => r.batchIndex)
+            .sort((a, b) => a - b);
+          for (const batch of partitionIndices(
+            sorted,
+            lanesPerPlan,
+            config.FORGE_BATCH_SIZE,
+          )) {
+            const indices = new Set(batch);
+            const pending = allPending.filter((r) => indices.has(r.batchIndex));
+            group.push(async () => {
+              if (controller.signal.aborted) throw Error("Job interrupted");
+              await db.insert(events).values({
+                id: randomUUID(),
+                jobId: id,
+                kind: plan.kind === "pod" ? "POD_STARTED" : "MATCHUP_STARTED",
+                data: {
+                  opponentId: plan.key,
+                  name: plan.name,
                   seed: plan.seed,
-                  clockSeconds: job.clockSeconds,
-                  traceId: id + "_" + plan.key,
-                  runtime: job.config.bridge,
-                }),
-                signal: controller.signal,
-              },
-            );
-            if (r.status === 429) {
-              await r.body?.cancel();
-              await new Promise<void>((resolve) => {
-                const timer = setTimeout(resolve, 1000);
-                controller.signal.addEventListener(
-                  "abort",
-                  () => {
-                    clearTimeout(timer);
-                    resolve();
-                  },
-                  { once: true },
-                );
+                },
               });
-              if (controller.signal.aborted) throw new Error("Job interrupted");
-              continue;
-            }
-            if (!r.ok) throw new Error(`Runner HTTP ${r.status}`);
-            response = r;
-          }
-          const reader = response.body!.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          let complete = false;
-          try {
-            while (true) {
-              const chunk = await reader.read();
-              if (chunk.done) break;
-              buffer += decoder.decode(chunk.value, { stream: true });
-              let newline;
-              while ((newline = buffer.indexOf("\n")) !== -1) {
-                const line = buffer.slice(0, newline);
-                buffer = buffer.slice(newline + 1);
-                if (!line.trim()) continue;
-                const message = JSON.parse(line);
-                if (message.type === "error") throw new Error(message.error);
-                if (message.type === "complete") complete = true;
-                if (message.type === "game") {
-                  const game = message.result as GameResult;
-                  const matchIndex = message.matchIndex;
-                  const expectedBridge = job.config.bridge as {
-                    sourceHash?: string;
-                  };
-                  if (
-                    job.config.gameMode !== "BO3" ||
-                    !Number.isInteger(matchIndex) ||
-                    matchIndex < 0 ||
-                    matchIndex >= plan.games ||
-                    game.seed !==
-                      (plan.seed + matchIndex * 1009) % 2147483647 ||
-                    game.bridgeSourceHash !== expectedBridge.sourceHash
-                  )
-                    throw new Error("Invalid match observation");
-                  game.players = game.players.map((p, i) => ({
-                    ...p,
-                    id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
-                    deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
-                    seat: i,
-                  }));
-                  await db.insert(events).values({
-                    id: randomUUID(),
-                    jobId: id,
-                    kind: "GAME_OBSERVED",
-                    data: {
-                      opponentId: plan.key,
-                      matchIndex,
-                      attemptId: game.logId,
-                      result: game,
-                    },
+              log(plan.kind === "pod" ? "pod_started" : "matchup_started", {
+                jobId: id,
+                opponentId: plan.key,
+                games: pending.length,
+                totalGames: plan.games,
+              });
+              let response: Response | undefined;
+              // Capacity is global in the single runner service. Queue here, without creating another JVM.
+              while (!response) {
+                const r = await fetch(
+                  (process.env.RUNNER_URL || "http://localhost:3002") +
+                    "/games",
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      jobId: id,
+                      decks: [
+                        serializeDeck(job.deck.cards, "player-0"),
+                        ...plan.opponents.map((opponent, i) =>
+                          serializeDeck(opponent.cards, `player-${i + 1}`),
+                        ),
+                      ],
+                      mode: getFormat(job.format)!.engineGameType,
+                      bestOf: job.config.gameMode === "BO3" ? 3 : 1,
+                      maxMatchGames:
+                        job.config.gameMode === "BO3"
+                          ? Number(job.config.maxMatchGames)
+                          : 5,
+                      sideboarding: job.config.sideboardMode === "forge",
+                      companions: [
+                        job.deck.cards,
+                        ...plan.opponents.map((o) => o.cards),
+                      ].map(
+                        (cards) =>
+                          cards.find((c) => c.section === "COMPANION")?.name ??
+                          null,
+                      ),
+                      games: plan.games,
+                      indices: pending
+                        .map((r) => r.batchIndex)
+                        .sort((a, b) => a - b),
+                      seed: plan.seed,
+                      clockSeconds: job.clockSeconds,
+                      traceId: id + "_" + plan.key,
+                      runtime: job.config.bridge,
+                    }),
+                    signal: controller.signal,
+                  },
+                );
+                if (r.status === 429) {
+                  await r.body?.cancel();
+                  await new Promise<void>((resolve) => {
+                    const timer = setTimeout(resolve, 1000);
+                    controller.signal.addEventListener(
+                      "abort",
+                      () => {
+                        clearTimeout(timer);
+                        resolve();
+                      },
+                      { once: true },
+                    );
                   });
+                  if (controller.signal.aborted)
+                    throw new Error("Job interrupted");
                   continue;
                 }
-                if (message.type !== "result") continue;
-                const result = message.result as EngineResult;
-                if (
-                  result.index < 0 ||
-                  result.index >= plan.games ||
-                  result.seed !== plan.seed
-                )
-                  throw new Error("Runner returned invalid result identity");
-                const expectedBridge = job.config.bridge as
-                  { sourceHash?: string } | undefined;
-                if (
-                  expectedBridge?.sourceHash &&
-                  result.bridgeSourceHash !== expectedBridge.sourceHash
-                )
-                  throw new Error(
-                    "Forge bridge changed since submission; resubmit rather than mixing engine versions.",
-                  );
-                result.players = result.players.map((p, i) => ({
-                  ...p,
-                  id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
-                  deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
-                  seat: i,
-                }));
-                if (result.unit === "match")
-                  result.games = result.games.map((game) => ({
-                    ...game,
-                    players: game.players.map((p, i) => ({
+                if (!r.ok) throw new Error(`Runner HTTP ${r.status}`);
+                response = r;
+              }
+              const reader = response.body!.getReader();
+              const decoder = new TextDecoder();
+              let buffer = "";
+              let complete = false;
+              try {
+                while (true) {
+                  const chunk = await reader.read();
+                  if (chunk.done) break;
+                  buffer += decoder.decode(chunk.value, { stream: true });
+                  let newline;
+                  while ((newline = buffer.indexOf("\n")) !== -1) {
+                    const line = buffer.slice(0, newline);
+                    buffer = buffer.slice(newline + 1);
+                    if (!line.trim()) continue;
+                    const message = JSON.parse(line);
+                    if (message.type === "started")
+                      await db
+                        .update(jobs)
+                        .set({ state: "RUNNING" })
+                        .where(
+                          and(eq(jobs.id, id), eq(jobs.cancelRequested, false)),
+                        );
+                    if (message.type === "error")
+                      throw new Error(message.error);
+                    if (message.type === "complete") complete = true;
+                    if (message.type === "game") {
+                      const game = message.result as GameResult;
+                      const matchIndex = message.matchIndex;
+                      const expectedBridge = job.config.bridge as {
+                        sourceHash?: string;
+                      };
+                      if (
+                        job.config.gameMode !== "BO3" ||
+                        !Number.isInteger(matchIndex) ||
+                        matchIndex < 0 ||
+                        matchIndex >= plan.games ||
+                        !indices.has(matchIndex) ||
+                        game.seed !==
+                          (plan.seed + matchIndex * 1009) % 2147483647 ||
+                        game.bridgeSourceHash !== expectedBridge.sourceHash
+                      )
+                        throw new Error("Invalid match observation");
+                      game.players = game.players.map((p, i) => ({
+                        ...p,
+                        id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
+                        deckId:
+                          i === 0 ? job.deck.id : plan.opponents[i - 1].id,
+                        seat: i,
+                      }));
+                      await db.insert(events).values({
+                        id: randomUUID(),
+                        jobId: id,
+                        kind: "GAME_OBSERVED",
+                        data: {
+                          opponentId: plan.key,
+                          matchIndex,
+                          attemptId: game.logId,
+                          result: game,
+                        },
+                      });
+                      continue;
+                    }
+                    if (message.type !== "result") continue;
+                    const result = message.result as EngineResult;
+                    if (
+                      result.index < 0 ||
+                      result.index >= plan.games ||
+                      !indices.has(result.index) ||
+                      result.seed !== plan.seed
+                    )
+                      throw new Error(
+                        "Runner returned invalid result identity",
+                      );
+                    const expectedBridge = job.config.bridge as
+                      { sourceHash?: string } | undefined;
+                    if (
+                      expectedBridge?.sourceHash &&
+                      result.bridgeSourceHash !== expectedBridge.sourceHash
+                    )
+                      throw new Error(
+                        "Forge bridge changed since submission; resubmit rather than mixing engine versions.",
+                      );
+                    result.players = result.players.map((p, i) => ({
                       ...p,
                       id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
                       deckId: i === 0 ? job.deck.id : plan.opponents[i - 1].id,
                       seat: i,
-                    })),
-                  }));
-                await db
-                  .update(runs)
-                  .set({
-                    state:
-                      result.termination === "engine_error" ? "ERROR" : "DONE",
-                    result,
-                    finishedAt: new Date().toISOString(),
-                  })
-                  .where(
-                    and(
-                      eq(runs.jobId, id),
-                      eq(runs.opponentId, plan.key),
-                      eq(runs.batchIndex, result.index),
-                      eq(runs.state, "PENDING"),
-                    ),
-                  );
+                    }));
+                    if (result.unit === "match")
+                      result.games = result.games.map((game) => ({
+                        ...game,
+                        players: game.players.map((p, i) => ({
+                          ...p,
+                          id: i === 0 ? job.deck.id : `${plan.key}:seat-${i}`,
+                          deckId:
+                            i === 0 ? job.deck.id : plan.opponents[i - 1].id,
+                          seat: i,
+                        })),
+                      }));
+                    await db
+                      .update(runs)
+                      .set({
+                        state:
+                          result.termination === "engine_error"
+                            ? "ERROR"
+                            : "DONE",
+                        result,
+                        finishedAt: new Date().toISOString(),
+                      })
+                      .where(
+                        and(
+                          eq(runs.jobId, id),
+                          eq(runs.opponentId, plan.key),
+                          eq(runs.batchIndex, result.index),
+                          eq(runs.state, "PENDING"),
+                        ),
+                      );
+                  }
+                }
+                if (!complete)
+                  throw new Error("Runner disconnected before completion");
+              } finally {
+                await reader.cancel().catch(() => {});
+                reader.releaseLock();
               }
-            }
-            if (!complete)
-              throw new Error("Runner disconnected before completion");
-          } finally {
-            await reader.cancel().catch(() => {});
-            reader.releaseLock();
+            });
           }
         }
+        await runParallel(interleave(groups), () => parallelSlots, controller);
         job = await getJob(id);
         if (job.cancelRequested) throw new Error("Job cancelled");
         await db
@@ -369,14 +416,47 @@ const worker = new Worker(
   },
   {
     connection: redisOptions,
-    concurrency: config.SIMULATION_CONCURRENCY,
+    concurrency: config.SIMULATION_CONCURRENCY || 1,
     lockDuration: 60000,
+    autorun: false,
   },
 );
+let checkingCapacity = false;
+async function refreshCapacity() {
+  if (checkingCapacity) return;
+  checkingCapacity = true;
+  try {
+    const response = await fetch(
+      (process.env.RUNNER_URL || "http://localhost:3002") + "/health",
+      { signal: AbortSignal.timeout(3000) },
+    );
+    if (!response.ok) throw Error("Engine health is unavailable");
+    const health = (await response.json()) as { max?: number };
+    parallelSlots = Math.max(1, Math.min(16, Number(health.max) || 1));
+    if (workerStopping) return;
+    const next = config.SIMULATION_CONCURRENCY || parallelSlots;
+    const wake = next > worker.concurrency && worker.isRunning();
+    // BullMQ's concurrency setter does not wake a loop waiting on active jobs.
+    // Public pause/resume keeps active jobs and their locks while waking the fetch loop.
+    if (wake) await worker.pause(true);
+    worker.concurrency = next;
+    if (wake && !workerStopping) await worker.resume();
+  } catch (error) {
+    log("capacity_check_failed", { error: (error as Error).message });
+  } finally {
+    checkingCapacity = false;
+  }
+}
+await refreshCapacity();
+const capacityTimer = setInterval(() => void refreshCapacity(), 5000);
+capacityTimer.unref();
 worker.on("error", (error) => log("worker_error", { error: error.message }));
 worker.on("failed", (task, error) =>
   log("queue_attempt_failed", { jobId: task?.id, error: error.message }),
 );
+void worker
+  .run()
+  .catch((error) => log("worker_error", { error: error.message }));
 const health = Fastify();
 health.get("/health", async (_req, reply) => {
   try {
@@ -384,7 +464,12 @@ health.get("/health", async (_req, reply) => {
     await queue.getJobCounts();
     if (!worker.isRunning())
       return reply.code(503).send({ status: "stopping" });
-    return { status: "ok", active: activeControllers.size };
+    return {
+      status: "ok",
+      active: activeControllers.size,
+      maxAnalyses: worker.concurrency,
+      parallelRequestsPerAnalysis: parallelSlots,
+    };
   } catch {
     return reply.code(503).send({ status: "unavailable" });
   }
@@ -398,6 +483,8 @@ for (const signal of ["SIGTERM", "SIGINT"])
       void (async () => {
         if (stopping) return;
         stopping = true;
+        workerStopping = true;
+        clearInterval(capacityTimer);
         for (const c of activeControllers.values()) c.abort();
         await worker.close();
         await health.close();

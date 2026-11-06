@@ -2260,3 +2260,6 @@ td strong,
   font-size: 12px;
   font-weight: 400;
 }
+
+.capacity-panel { padding: 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.6; }
+.capacity-panel p { color: var(--muted); margin: 6px 0; }

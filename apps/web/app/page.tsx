@@ -278,7 +278,21 @@ export default function Home() {
     };
   }>({ engine: "Forge", forgeUpdates: { status: "checking" } });
   const [operations, setOperations] = useState<{
-    runner: { status: string; active?: number; max?: number };
+    runner: {
+      status: string;
+      active?: number;
+      max?: number;
+      resources?: {
+        cpuCores: number;
+        availableMemoryMiB: number;
+        reservedMemoryMiB: number;
+        perProcessMiB: number;
+        waiting: number;
+        mode: string;
+        reason: string;
+        configuredCap: number | null;
+      };
+    };
     metadata: { status: string; lastSuccessAt?: string; error?: string };
     cacheReloadError: string | null;
   } | null>(null);
@@ -1491,6 +1505,48 @@ export default function Home() {
                   + New analysis
                 </button>
               </div>
+              {operations?.runner.resources && (
+                <section
+                  className="panel capacity-panel"
+                  aria-label="Parallel simulation capacity"
+                >
+                  <div>
+                    <strong>Parallel matches</strong>
+                    <p>
+                      {operations.runner.active ?? 0} running ·{" "}
+                      {operations.runner.resources.waiting} waiting · up to{" "}
+                      {operations.runner.max ?? 0} at once
+                    </p>
+                  </div>
+                  <p>
+                    Detected {operations.runner.resources.cpuCores.toFixed(1)}{" "}
+                    CPU cores and{" "}
+                    {(
+                      operations.runner.resources.availableMemoryMiB / 1024
+                    ).toFixed(1)}{" "}
+                    GB available RAM. Each match reserves{" "}
+                    {(operations.runner.resources.perProcessMiB / 1024).toFixed(
+                      1,
+                    )}{" "}
+                    GB, with{" "}
+                    {(
+                      operations.runner.resources.reservedMemoryMiB / 1024
+                    ).toFixed(1)}{" "}
+                    GB left as headroom.
+                  </p>
+                  <p>
+                    {operations.runner.resources.reason}. Matches share capacity
+                    across active tests; the limit is checked again before each
+                    batch starts. Running matches finish if capacity falls.
+                  </p>
+                  {operations.runner.resources.configuredCap === 1 && (
+                    <p>
+                      Your server configuration caps this at one match. Set
+                      MAX_FORGE_PROCESSES=0 for automatic sizing.
+                    </p>
+                  )}
+                </section>
+              )}
               <div className="stat-grid">
                 <Stat
                   title="Active benchmarks"

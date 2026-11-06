@@ -16,8 +16,12 @@ x-app: &app
     NO_PROXY: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web,maintenance
     no_proxy: localhost,127.0.0.1,api,redis,postgres,forge-runner,worker,web,maintenance
     MAX_GAMES_PER_JOB: ${MAX_GAMES_PER_JOB:-1000}
-    SIMULATION_CONCURRENCY: ${SIMULATION_CONCURRENCY:-1}
-    MAX_FORGE_PROCESSES: ${MAX_FORGE_PROCESSES:-1}
+    SIMULATION_CONCURRENCY: ${SIMULATION_CONCURRENCY:-0}
+    MAX_FORGE_PROCESSES: ${MAX_FORGE_PROCESSES:-0}
+    FORGE_CPUS_PER_PROCESS: ${FORGE_CPUS_PER_PROCESS:-2}
+    FORGE_MEMORY_OVERHEAD_MB: ${FORGE_MEMORY_OVERHEAD_MB:-512}
+    FORGE_MEMORY_RESERVE_MB: ${FORGE_MEMORY_RESERVE_MB:-0}
+    FORGE_BATCH_SIZE: ${FORGE_BATCH_SIZE:-50}
     MAX_JOB_RUNTIME_SECONDS: ${MAX_JOB_RUNTIME_SECONDS:-21600}
   volumes:
     - runtime:/data:ro
@@ -112,8 +116,8 @@ services:
       LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-7}
     volumes: [runtime:/data:ro, forge-logs:/app/logs]
     tmpfs: ["/tmp:mode=1777,size=128m"]
-    mem_limit: ${RUNNER_MEMORY:-2g}
-    cpus: ${RUNNER_CPUS:-2}
+    mem_limit: ${RUNNER_MEMORY:-0}
+    cpus: ${RUNNER_CPUS:-0}
     stop_grace_period: 15s
     depends_on:
       bootstrap: { condition: service_completed_successfully }

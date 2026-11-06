@@ -1,3 +1,4 @@
+import { config } from "./config.js";
 import { resolveRuntime } from "./runtime.mjs";
 import { boundedLog } from "./logs.js";
 import { z } from "zod";
@@ -477,6 +478,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
     onResult: (r: EngineResult) => Promise<void>,
     signal?: AbortSignal,
     onGame?: (observation: GameObservation) => Promise<void>,
+    onProcess?: (pid: number | null) => void,
   ) {
     const runtime = await resolveRuntime(this.home, req.runtime);
     const home = runtime.home;
@@ -557,6 +559,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
           "java",
           [
             "-Xmx" + (process.env.FORGE_HEAP || "1024m"),
+            "-XX:ActiveProcessorCount=" + config.FORGE_CPUS_PER_PROCESS,
             "-Djava.awt.headless=true",
             "-Dmagictester.engineVersion=" + bridge.engineVersion,
             "-Dfile.encoding=UTF-8",
@@ -573,6 +576,8 @@ export class ForgeEngineAdapter implements CardGameEngine {
           ],
           { cwd: home, stdio: ["ignore", "pipe", "pipe"], detached: true },
         );
+        onProcess?.(proc.pid || null);
+        proc.once("close", () => onProcess?.(null));
         let killed = false;
         let forceTimer: NodeJS.Timeout | undefined;
         const kill = () => {

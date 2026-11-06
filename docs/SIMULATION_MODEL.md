@@ -53,7 +53,7 @@ The structured bridge measures individual player turns using Forge's GameOutcome
 
 ## Limits
 
-The game clock defaults to 30 seconds for constructed games. The bridge also enforces a separate 90-second startup deadline and an outer per-game watchdog five seconds longer than the game clock. A timed-out JVM exits before another game is started. Worker job runtime defaults to six hours. Global runner capacity defaults to one JVM, with configurable heap/process count and container CPU/memory bounds. Worker concurrency does not bypass runner capacity.
+The game clock defaults to 30 seconds for constructed games. The bridge also enforces a separate 90-second startup deadline and an outer per-game watchdog five seconds longer than the game clock. A timed-out JVM exits before another game is started. Worker job runtime defaults to six hours. Global runner capacity defaults to automatic sizing from available memory and allocated CPU, with configurable heap, process caps and container CPU/memory bounds. Independent matches can run concurrently; games within a BO3 remain sequential. Worker concurrency does not bypass runner capacity. See [deployment](DEPLOYMENT.md#parallel-analyses-and-matches) for the admission budget.
 
 Seeds are stored and passed to the engine; deterministic replay across versions or concurrent internals is not guaranteed. Recovery uses stable per-game seeds and skips already persisted run identities. The new execution may differ, which is why this is described as recovery rather than exact replay.
 

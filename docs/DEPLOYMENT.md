@@ -4,7 +4,7 @@ The supported initial boundary is a trusted local/private lab. Compose binds the
 
 ## Services and storage
 
-`bootstrap` is a one-shot data download, migration and seed step. `web`, `api`, `worker`, `forge-runner`, `maintenance`, `postgres` and `redis` have health checks and restart policies. The runner handles one or a configured small number of JVMs and must remain a single replica to retain its global process bound. Configure memory to cover process count × heap plus JVM/Node overhead. The default 2 GB runner accommodates one 1 GB heap, not eight.
+`bootstrap` is a one-shot data download, migration and seed step. `web`, `api`, `worker`, `forge-runner`, `maintenance`, `postgres` and `redis` have health checks and restart policies. The runner schedules JVMs against detected CPU and available memory and must remain a single replica to retain its global process bound. Docker CPU/memory limits and Docker Desktop VM allocations bound the detected resources. The queue screen shows current capacity and its limiting resource.
 
 Named volumes preserve PostgreSQL records, Redis AOF, Forge/card cache and game logs. Back up PostgreSQL and runtime metadata before upgrades. Engine stdout/stderr are in `forge-logs`; Docker JSON logs rotate at 10 MB × 3 files. Engine logs have automatic byte/file/age limits; see [operations](OPERATIONS.md) for configuration and metadata refresh.
 
@@ -33,9 +33,30 @@ Scheduled feeds, immutable build publication, card-cache hot reload, storage ret
 
 ## Limits
 
-`MAX_GAMES_PER_JOB` (default 1000), `MAX_ACTIVE_JOBS_PER_CLIENT` (3), `MAX_QUEUED_JOBS` (100), `MAX_JOB_RUNTIME_SECONDS` (21600), `MAX_DECKLIST_BYTES` (32768), `SIMULATION_CONCURRENCY` (1), `MAX_FORGE_PROCESSES` (1), `FORGE_HEAP` (1024m). Job creation has a five-requests-per-minute IP limit. The current UI caps custom depth at 1000; lower server limits still apply.
+`MAX_GAMES_PER_JOB` (default 1000), `MAX_ACTIVE_JOBS_PER_CLIENT` (3), `MAX_QUEUED_JOBS` (100), `MAX_JOB_RUNTIME_SECONDS` (21600), `MAX_DECKLIST_BYTES` (32768), `SIMULATION_CONCURRENCY` (0: automatic), `MAX_FORGE_PROCESSES` (0: automatic), `FORGE_HEAP` (1024m). Job creation has a five-requests-per-minute IP limit. The current UI caps custom depth at 1000; lower server limits still apply.
 
 Untrusted deck names never become paths or shell command text. Card input is parsed, canonicalized and validated; the adapter writes generated filenames in private temporary directories and passes an argument array to `spawn` without a shell.
+
+## Parallel analyses and matches
+
+Automatic mode allows several analyses and several independent matches within each analysis. All requests share the single runner's resource budget. New batches favor analyses with fewer active batches; an existing batch finishes before its slot changes hands. Games within one BO3 stay sequential so sideboarding and match state remain correct. Completed run identities and seeds survive parallel execution, cancellation and retry.
+
+Before each launch, the runner reads CPU quotas, CPU affinity and available memory, including Linux cgroup limits. The default CPU budget is two cores per JVM (`FORGE_CPUS_PER_PROCESS=2`). Each process reserves `FORGE_HEAP` (default 1024m) plus `FORGE_MEMORY_OVERHEAD_MB` (512). Additional memory headroom is 15% of detected memory, between 256 MiB and 2 GiB; set `FORGE_MEMORY_RESERVE_MB` to a positive value to override it. Running JVM anonymous RSS is credited once while unused heap remains reserved. Capacity is capped at 16 processes. When memory falls short, new launches wait; running matches finish normally. Other workloads and JVM native allocations can still vary, so this is a conservative admission estimate, not an OOM guarantee.
+
+`SIMULATION_CONCURRENCY` limits active analyses; `MAX_FORGE_PROCESSES` caps total JVMs. Zero enables automatic capacity. Positive values retain an operator cap. Match work is split into batches of at most `FORGE_BATCH_SIZE` units (default 50); smaller batches improve sharing and resource adaptation but repeat Forge's expensive startup more often. The worker refreshes capacity every five seconds; the runner checks every second and before each admission. A free slot can serve another opponent, another batch against the same opponent, or another analysis. More processes help only when hardware has spare capacity.
+
+For an existing installation, old `.env` values still apply. To enable detection instead of the former single-analysis and 2 GB runner settings, use:
+
+```dotenv
+SIMULATION_CONCURRENCY=0
+MAX_FORGE_PROCESSES=0
+RUNNER_MEMORY=0
+RUNNER_CPUS=0
+```
+
+`RUNNER_MEMORY=0` and `RUNNER_CPUS=0` remove Compose's additional runner-only limit; detected machine/VM limits still apply. Explicit Docker limits remain supported. Restart with `docker compose up -d --build` after current analyses finish. On Docker Desktop, increase its assigned resources if needed; the app cannot use hardware outside that VM allocation.
+
+For real-engine acceptance on an idle lab configured for at least two slots, run `node scripts/concurrency-smoke.mjs`. It checks one analysis using two batches, two analyses sharing the runner, and cancellation/retry with stable completed results. The script records actual capacity and a report in `data/concurrency-smoke.json`; it creates real analyses and consumes Forge time.
 
 ## CI
 

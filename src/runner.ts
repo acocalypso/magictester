@@ -1,3 +1,5 @@
+import { EngineScheduler, memoryMiB } from "./resources.js";
+import { randomUUID } from "node:crypto";
 import { resolveRuntime } from "./runtime.mjs";
 import Fastify from "fastify";
 import { z } from "zod";
@@ -6,7 +8,14 @@ import { ForgeEngineAdapter } from "./engine.js";
 import { config } from "./config.js";
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 const engine = new ForgeEngineAdapter();
-let active = 0;
+const scheduler = new EngineScheduler({
+  heapMiB: memoryMiB(process.env.FORGE_HEAP || "1024m"),
+  overheadMiB: config.FORGE_MEMORY_OVERHEAD_MB,
+  cpuPerProcess: config.FORGE_CPUS_PER_PROCESS,
+  reserveMiB: config.FORGE_MEMORY_RESERVE_MB,
+  processCap: config.MAX_FORGE_PROCESSES,
+});
+await scheduler.refresh();
 const controllers = new Set<AbortController>();
 app.get("/health", async (_req, reply) => {
   try {
@@ -25,11 +34,13 @@ app.get("/health", async (_req, reply) => {
         "/MagicTesterBridge.class",
     );
     if (bridge.version !== "2") throw new Error("Incompatible bridge");
+    const resources = await scheduler.refresh();
     return {
       bridgeSourceHash: bridge.sourceHash,
       status: "ok",
-      active,
-      max: config.MAX_FORGE_PROCESSES,
+      active: resources.active,
+      max: resources.max,
+      resources,
       capabilities: {
         ...engine.getCapabilities(),
         version: bridge.engineVersion,
@@ -42,6 +53,7 @@ app.get("/health", async (_req, reply) => {
 app.post("/games", async (req, reply) => {
   const parsed = z
     .object({
+      jobId: z.uuid().optional(),
       runtime: z
         .object({
           engineVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -91,9 +103,8 @@ app.post("/games", async (req, reply) => {
     .safeParse(req.body);
   if (!parsed.success)
     return reply.code(400).send({ error: "Invalid engine request" });
-  if (active >= config.MAX_FORGE_PROCESSES)
-    return reply.code(429).send({ error: "Engine capacity reached" });
-  active++;
+  if (scheduler.status().waiting >= 256)
+    return reply.code(429).send({ error: "Engine wait queue is full" });
   const abort = new AbortController();
   controllers.add(abort);
   reply.hijack();
@@ -106,7 +117,13 @@ app.post("/games", async (req, reply) => {
   const heartbeat = setInterval(() => {
     if (!reply.raw.destroyed) reply.raw.write('{"type":"heartbeat"}\n');
   }, 5000);
+  let lease: Awaited<ReturnType<EngineScheduler["acquire"]>> | undefined;
   try {
+    lease = await scheduler.acquire(
+      parsed.data.jobId || randomUUID(),
+      abort.signal,
+    );
+    if (!reply.raw.destroyed) reply.raw.write('{"type":"started"}\n');
     await engine.runGames(
       parsed.data,
       async (result) => {
@@ -120,6 +137,7 @@ app.post("/games", async (req, reply) => {
             JSON.stringify({ type: "game", ...observation }) + "\n",
           );
       },
+      (pid) => lease?.track(pid),
     );
     if (!reply.raw.destroyed) reply.raw.write('{"type":"complete"}\n');
   } catch (error) {
@@ -131,13 +149,14 @@ app.post("/games", async (req, reply) => {
       );
   } finally {
     clearInterval(heartbeat);
-    active--;
+    lease?.release();
     controllers.delete(abort);
     reply.raw.end();
   }
 });
 for (const signal of ["SIGTERM", "SIGINT"])
   process.once(signal, () => {
+    scheduler.stop();
     for (const c of controllers) c.abort();
     void app.close();
   });
