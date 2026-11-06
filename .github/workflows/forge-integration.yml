@@ -34,6 +34,7 @@ jobs:
       - run: npm run test:browser
       - run: node scripts/commander-smoke.mjs
       - run: node scripts/pods-smoke.mjs
+      - run: node scripts/pod-selection-smoke.mjs
       - run: node scripts/duel-smoke.mjs
       - run: node scripts/pods-browser.mjs
       - run: node scripts/formats-smoke.mjs
@@ -61,6 +62,7 @@ jobs:
             data/formats-smoke.json
             data/bridge-smoke.json
             data/pods-smoke.json
+            data/pod-selection-smoke.json
             data/duel-smoke.json
             data/bo3-engine-smoke.json
             data/companion-smoke.json

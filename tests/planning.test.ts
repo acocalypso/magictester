@@ -134,6 +134,18 @@ test("weighted selection conserves units, excludes zero weights and freezes dete
     explicit.map((p) => p.games),
     [5, 2],
   );
+  const override = planBenchmark("commander", 7, opponents, 12, {
+    mode: "meta",
+    pods: [
+      { opponentIds: ["a", "b", "c"], weight: 3 },
+      { opponentIds: ["d", "c", "b"], weight: 1 },
+    ],
+  });
+  assert.deepEqual(
+    override.map((p) => p.games),
+    [5, 2],
+    "Explicit pod weights do not require unused source shares",
+  );
   assert.deepEqual(
     explicit[1].opponents.map((d) => d.id),
     ["d", "c", "b"],

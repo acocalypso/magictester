@@ -75,11 +75,13 @@ export function planBenchmark(
     )
       throw new Error("Weights reference an unselected opponent");
     if (
+      !selection.pods &&
       selection.mode === "meta" &&
       opponents.some((d) => d.metaShare === null || d.metaShare === undefined)
     )
       throw new Error("Every selected deck needs a source-reported meta share");
     if (
+      !selection.pods &&
       selection.mode === "custom" &&
       opponents.some((d) => selection!.weights?.[d.id] === undefined)
     )
@@ -88,11 +90,13 @@ export function planBenchmark(
   const players = getFormat(format)?.players || 2;
   if (selection && (selection.mode !== "equal" || selection.pods)) {
     const weights = opponents.map((d) =>
-      selection.mode === "meta"
-        ? d.metaShare!
-        : selection.mode === "custom"
-          ? selection.weights![d.id]
-          : 1,
+      selection.pods
+        ? 1
+        : selection.mode === "meta"
+          ? d.metaShare!
+          : selection.mode === "custom"
+            ? selection.weights![d.id]
+            : 1,
     );
     const make = (rosters: Opponent[][], allocation: number[]) =>
       rosters
