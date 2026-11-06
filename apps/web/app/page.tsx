@@ -487,18 +487,21 @@ export default function Home() {
   const resultIsCommander = !!formats.find((f) => f.id === result?.job.format)
     ?.commander;
   const pool = snapshots.find((s) => s.id === snapshotId);
+  const selectedOpponents =
+    pool?.decks.filter((d) => !excludedDecks.includes(d.id)) || [];
   const podPreview =
-    isPod && pool
-      ? pool.decks
+    isPod && pool && allocationMode === "equal" && !customPods.length
+      ? selectedOpponents
           .map((_, i) => ({
             name: `Pod ${i + 1}`,
             opponents: Array.from(
               { length: 3 },
-              (_, seat) => pool.decks[(i + seat) % pool.decks.length],
+              (_, seat) =>
+                selectedOpponents[(i + seat) % selectedOpponents.length],
             ),
             games:
-              Math.floor(games / pool.decks.length) +
-              (i < games % pool.decks.length ? 1 : 0),
+              Math.floor(games / selectedOpponents.length) +
+              (i < games % selectedOpponents.length ? 1 : 0),
           }))
           .filter((p) => p.games > 0)
       : [];
@@ -1122,13 +1125,19 @@ export default function Home() {
                         }
                       />
                       <p className="distribution">
-                        {pool
-                          ? isPod
-                            ? `${games} games across ${podPreview.length} rotating pods. Your deck occupies seat 1. ${pool.decks.length < 3 ? "Lists repeat to fill the three opponent seats." : "Opponent lists rotate through the other seats."}`
-                            : `${games} ${unitLabel} across ${Math.min(pool.decks.length, games)} opponents. ${Math.floor(games / pool.decks.length)}–${Math.ceil(games / pool.decks.length)} ${unitLabel} per deck.`
-                          : "Import a benchmark pool to begin."}
+                        {!pool
+                          ? "Import a benchmark pool to begin."
+                          : !selectedOpponents.length
+                            ? "Select at least one opponent."
+                            : customPods.length && isPod
+                              ? `${games} games allocated across ${customPods.length} explicit ordered pods using their pod weights. The saved plan records exact counts.`
+                              : allocationMode !== "equal"
+                                ? `${games} ${unitLabel} using ${allocationMode === "meta" ? "source-reported shares" : "custom weights"}. ${isPod ? "Up to 50 seeded roster draws approximate opponent seat shares." : "Largest remainders determine exact integer counts; zero weights receive no games."}`
+                                : isPod
+                                  ? `${games} games across ${podPreview.length} rotating pods. Your deck occupies seat 1. ${selectedOpponents.length < 3 ? "Lists repeat to fill the three opponent seats." : "Opponent lists rotate through the other seats."}`
+                                  : `${games} ${unitLabel} across ${Math.min(selectedOpponents.length, games)} opponents. ${Math.floor(games / selectedOpponents.length)}–${Math.ceil(games / selectedOpponents.length)} ${unitLabel} per deck.`}
                       </p>
-                      {isPod && (
+                      {isPod && podPreview.length > 0 && (
                         <ol className="pod-preview" aria-label="Planned pods">
                           {podPreview.map((p) => (
                             <li key={p.name}>
