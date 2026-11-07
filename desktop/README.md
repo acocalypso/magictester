@@ -57,7 +57,7 @@ Development setup needs Java 21 JDK and `tar` on PATH. Release packages supply t
 
 ## Storage and operation
 
-Per-user state is in `%LOCALAPPDATA%\MagicTester` on Windows and the .NET local application data directory (`~/.local/share/MagicTester`) on Linux. `desktop.sqlite` holds jobs, inputs, pools, histories and HTTP cache. `forge/` holds retained immutable engine builds and metadata; `logs/` holds bounded diagnostic logs. Back up the complete directory with the application closed. Updating the application folder does not replace user data.
+Per-user state is in `%LOCALAPPDATA%\MagicTester` on Windows and the .NET local application data directory (`~/.local/share/MagicTester`) on Linux. `desktop.sqlite` holds jobs, inputs, pools, histories and HTTP cache. `forge/` holds retained immutable engine builds and metadata; `logs/` holds bounded diagnostic logs; `setup.log` records the latest download/compile stages. Back up the complete directory with the application closed. Updating the application folder does not replace user data.
 
 Only one worker can own a data directory. Closing the UI drains/cancels running processes and preserves unfinished checkpoints for next launch. An unfinished BO3 restarts from its first game; completed matches and prior observed games remain. Retry with a different clock creates a new run; it does not alter earlier results or their recorded actions. No CPU or memory limit can guarantee that every complex Forge game finishes before the clock.
 

@@ -10,6 +10,7 @@ import {
   readdir,
   link,
   copyFile,
+  appendFile,
 } from "node:fs/promises";
 import { join, delimiter } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +28,9 @@ export class RuntimeManager {
     this.controller = null;
   }
   async run(script, args = [], env = {}) {
+    this.controller?.signal.throwIfAborted();
+    const log = join(this.data, "setup.log");
+    await writeFile(log, "Starting " + script + "\n");
     await new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [join(here, script), ...args], {
         cwd: here,
@@ -42,8 +46,16 @@ export class RuntimeManager {
       });
       this.child = child;
       let tail = "";
+      let interruption;
+      let logged = 0;
+      let logWork = Promise.resolve();
       const capture = (chunk) => {
         tail = (tail + chunk.toString()).slice(-6000);
+        if (logged < 4 * 1024 * 1024) {
+          const bounded = chunk.subarray(0, 4 * 1024 * 1024 - logged);
+          logged += bounded.length;
+          logWork = logWork.then(() => appendFile(log, bounded)).catch(() => {});
+        }
         for (const line of chunk.toString().split("\n")) {
           try {
             const e = JSON.parse(line);
@@ -57,19 +69,23 @@ export class RuntimeManager {
       };
       child.stdout.on("data", capture);
       child.stderr.on("data", capture);
-      const abort = () => this.killCurrent();
+      const abort = () => {
+        interruption = Error("Engine setup was cancelled");
+        this.killCurrent();
+      };
       this.controller?.signal.addEventListener("abort", abort, { once: true });
       const timer = setTimeout(() => {
+        interruption = Error("Engine setup exceeded its 20-minute limit. " + tail.slice(-1800));
         this.killCurrent();
-        reject(Error("Engine setup exceeded its 20-minute limit"));
       }, 1200000);
       timer.unref();
       child.on("error", reject);
-      child.once("close", (code) => {
+      child.once("close", async (code) => {
         clearTimeout(timer);
         this.controller?.signal.removeEventListener("abort", abort);
         this.child = null;
-        code === 0
+        await logWork;
+        interruption ? reject(interruption) : code === 0
           ? resolve()
           : reject(Error("Engine setup failed. " + tail.slice(-1800)));
       });
@@ -216,7 +232,9 @@ export class RuntimeManager {
       await registerRuntime(this.root, final, bridge);
       active = await resolveRuntime(this.root);
     } catch (error) {
-      await rm(stage, { recursive: true, force: true });
+      await rm(stage, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch((cleanup) => {
+        this.emit("warning", { message: "Staging cleanup will need to be retried: " + cleanup.message });
+      });
       await this.saveState({
         status: "error",
         error: error.message,
@@ -260,6 +278,9 @@ export class RuntimeManager {
       "CommanderColorContracts",
       "DeckNameContracts",
     ]) {
+      this.controller?.signal.throwIfAborted();
+      const labels = { DuelContracts: "Duel Commander rules", MatchContracts: "match rules", CommanderColorContracts: "Commander color rules", DeckNameContracts: "card-name handling" };
+      this.emit("setup", { message: "Checking " + labels[name] + "…" });
       await new Promise((resolve, reject) => {
         const c = spawn(
           "java",
@@ -317,6 +338,8 @@ export class RuntimeManager {
       },
       { decks: [commander, commander], mode: "duel" },
     ]) {
+      this.controller?.signal.throwIfAborted();
+      this.emit("setup", { message: "Playing a " + (request.mode === "commander" ? "four-player Commander" : request.mode === "duel" ? "Duel Commander" : request.bestOf === 3 ? "BO3" : "BO1") + " validation game…" });
       // Resolve directly against the candidate's standalone manifest before activation.
       const adapter = new ForgeEngineAdapter(
         runtime.home,

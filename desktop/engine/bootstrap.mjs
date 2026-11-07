@@ -72,9 +72,11 @@ if (!existsSync(home + "/build.txt")) {
   const tar = process.platform === "win32"
     ? join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe")
     : "tar";
+  console.log(JSON.stringify({ event: "extracting_forge", tool: tar }));
   execFileSync(tar, ["-xjf", "forge.tar.bz2"], {
-    cwd: home, windowsHide: true, encoding: "utf8", stdio: "inherit",
+    cwd: home, windowsHide: true, encoding: "utf8", stdio: "inherit", timeout: 300000,
   });
+  console.log(JSON.stringify({ event: "forge_extracted" }));
   await rm(archive);
 }
 const cachedSchema = existsSync(root + "/cards.json")
@@ -168,6 +170,7 @@ await writeFile(
 await rename(root + "/card-aliases.json.tmp", root + "/card-aliases.json");
 // Extract supported card names from the release's scripts archive using the JDK jar utility.
 if (!existsSync(metadataRoot + "/forge-cards.json")) {
+  console.log(JSON.stringify({ event: "reading_forge_card_names" }));
   const archive = home + "/res/cardsfolder/cardsfolder.zip";
   // Python isn't required: the `jar tf` list contains named script paths, but the card's actual
   // Name field can differ. Use a tiny Java ZIP reader to preserve exact names.
@@ -180,6 +183,8 @@ if (!existsSync(metadataRoot + "/forge-cards.json")) {
     {
       maxBuffer: 16 * 1024 * 1024,
       windowsHide: true,
+      timeout: 120000,
+      encoding: "utf8",
     },
   )
     .toString()
@@ -204,6 +209,7 @@ if (
   factsCache?.sourceHash !== factsSourceHash ||
   factsCache?.engineVersion !== release.version
 ) {
+  console.log(JSON.stringify({ event: "reading_forge_card_rules" }));
   const sourceFile = root + "/CardFacts.java";
   await writeFile(sourceFile, await readFile(factsSource));
   execFileSync(
@@ -219,7 +225,7 @@ if (
       home + "/res/cardsfolder/cardsfolder.zip",
       metadataRoot + "/forge-facts.json.tmp",
     ],
-    { cwd: home, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
+    { cwd: home, maxBuffer: 16 * 1024 * 1024, windowsHide: true, encoding: "utf8", timeout: 180000 },
   );
   const facts = JSON.parse(
     await readFile(metadataRoot + "/forge-facts.json.tmp", "utf8"),
@@ -303,6 +309,7 @@ if (
     (p) => !existsSync(classPath + "/" + p.path.replace(/\.java$/, ".class")),
   )
 ) {
+  console.log(JSON.stringify({ event: "compiling_forge_bridge" }));
   const buildSource = await mkdtemp(root + "/bridge-source-");
   const sourceFile = buildSource + "/MagicTesterBridge.java";
   await writeFile(sourceFile, bridgeBytes);
@@ -341,7 +348,7 @@ if (
       sourceFile,
       ...patchedSources,
     ],
-    { cwd: home, stdio: "inherit", windowsHide: true },
+    { cwd: home, stdio: "inherit", windowsHide: true, timeout: 180000 },
   );
   await chmod(buildClasses, 0o755);
   if (!existsSync(classPath)) await rename(buildClasses, classPath);

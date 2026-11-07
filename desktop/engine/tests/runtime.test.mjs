@@ -84,3 +84,33 @@ test("failed bridge validation never activates a candidate, including a same-ver
     await rm(data, { recursive: true, force: true });
   }
 });
+
+test("setup cancellation drains the process tree before removing its staging directory", { timeout: 15000 }, async () => {
+  const data = await mkdtemp(join(tmpdir(), "desktop-stop-"));
+  const stage = join(data, "stage");
+  await mkdir(stage);
+  let pid, childPid;
+  const manager = new RuntimeManager(data, (_event, payload) => {
+    if (payload.event === "setup_lock_ready") {
+      pid = payload.pid;
+      childPid = payload.childPid;
+      manager.controller.abort();
+    }
+  });
+  manager.controller = new AbortController();
+  try {
+    await assert.rejects(manager.run("../tests/fixtures/setup-lock.mjs", [], { FORGE_CANDIDATE_HOME: stage }), /cancelled/);
+    assert.equal(manager.child, null);
+    assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    // Windows taskkill /T and POSIX process groups both terminate descendants.
+    for (let i = 0; i < 50; i++) {
+      try { process.kill(childPid, 0); } catch (error) { if (error.code === "ESRCH") break; throw error; }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    if (process.platform === "win32") assert.throws(() => process.kill(childPid, 0), { code: "ESRCH" });
+    await rm(stage, { recursive: true });
+  } finally {
+    await manager.close();
+    await rm(data, { recursive: true, force: true });
+  }
+});

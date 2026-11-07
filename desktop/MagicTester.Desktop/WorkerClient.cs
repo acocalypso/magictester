@@ -92,7 +92,9 @@ internal static class WorkerCheck
 {
     public static async Task<int> RunEngineAsync()
     {
+        Console.OutputEncoding = new UTF8Encoding(false);
         await using var worker = new WorkerClient();
+        worker.Notification += (kind, payload) => { if (kind is "setup" or "warning") Console.WriteLine(payload?["message"]?.ToString()); };
         Console.WriteLine("Checking bundled Java, verified Forge download and native contracts…");
         await worker.CallAsync("setup");
         var pools = (await worker.CallAsync("snapshots", new { format = "pauper" }))!.AsArray();
@@ -101,7 +103,7 @@ internal static class WorkerCheck
         string id = job!["id"]!.ToString();
         async Task<JsonNode> Until(string jobId, Func<JsonNode, bool> condition)
         {
-            for (int i = 0; i < 600; i++) { var current = (await worker.CallAsync("job", new { id = jobId }))!; if (current["state"]?.ToString() == "FAILED") throw new IOException(current["error"]?.ToString()); if (condition(current)) return current; await Task.Delay(1000); }
+            for (int i = 0; i < 600; i++) { var current = (await worker.CallAsync("job", new { id = jobId }))!; if (current["state"]?.ToString() == "FAILED") throw new IOException(current["error"]?.ToString()); if (condition(current)) return current; if (i % 30 == 0) Console.WriteLine($"Acceptance run {jobId}: {current["state"]}; resources: {(await worker.CallAsync("status"))?["resources"]}"); await Task.Delay(1000); }
             throw new TimeoutException("Packaged engine acceptance timed out");
         }
         await Until(id, j => j["state"]?.ToString() == "COMPLETED");

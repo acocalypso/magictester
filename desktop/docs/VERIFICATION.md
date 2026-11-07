@@ -7,7 +7,7 @@ Verified locally on Linux x64 on 7 November 2026. Windows checks run on the Wind
 - Native .NET 10 / Avalonia 12.1.5 compilation: zero errors and zero warnings.
 - Genuine Skia headless rendering of the native window and asynchronous clean shutdown: passed. The build workflow retains a screenshot.
 - C# executable → private Node worker → SQLite initialization/command handshake: passed with all nine formats. No HTTP listener, PostgreSQL or Redis is involved.
-- Engine contracts: all 83 passed against real cached card data, without skips, including persistence, frozen inputs, resource admission, runtime activation failure, checkpoints, deck rules and game history. On an empty cache, metadata-dependent tests skip explicitly.
+- Engine contracts: all 84 passed against real cached card data, without skips, including persistence, frozen inputs, resource admission, runtime activation failure, checkpoints, deck rules and game history. On an empty cache, metadata-dependent tests skip explicitly.
 - Real native-worker acceptance with the Docker services stopped: four Pauper games completed normally with saved action histories. A separate 240-second retry preserved the original results, was cancelled, resumed with the same identifier and completed.
 - Real BO3 acceptance: two Modern matches completed with five actual games and inspectable observed-game evidence.
 - Real multiplayer acceptance: one four-player Commander game completed normally with recorded actions and an actual fourth-place finish.
