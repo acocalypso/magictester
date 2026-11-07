@@ -14,6 +14,12 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     private val app get() = getApplication<Application>()
     private val prefs = app.getSharedPreferences("workbench",0)
     val store = RunStore(app)
+    val deckLibrary=DeckLibrary(app)
+    var savedDecks by mutableStateOf<List<SavedDeckSummary>>(emptyList())
+    var savedDeckId by mutableStateOf(prefs.getString("savedDeckId",null))
+        private set
+    private var loadedSavedDeck by mutableStateOf<SavedDeck?>(null)
+    var deckLink by mutableStateOf(prefs.getString("deckLink","") ?: "")
     var deck by mutableStateOf(prefs.getString("deck","") ?: "")
     var title by mutableStateOf(prefs.getString("title","My deck") ?: "My deck")
     var format by mutableStateOf(prefs.getString("format","pauper") ?: "pauper")
@@ -32,13 +38,22 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     init {
         runCatching { MetaJobService.schedule(app) }.onFailure { Diagnostics.event("metadata.schedule_failed","Daily refresh could not be scheduled",level="ERROR",error=it) }
         loadPool()
+        viewModelScope.launch {
+            val initialId=savedDeckId
+            val saved=withContext(Dispatchers.IO) {initialId?.let {deckLibrary.get(it)}}
+            if(savedDeckId==initialId) loadedSavedDeck=saved
+        }
+        viewModelScope.launch {DeckLibraryEvents.changes.collect {
+            try {savedDecks=withContext(Dispatchers.IO) {deckLibrary.all()}}
+            catch(error:Exception) {Diagnostics.event("decks.read_failed","Could not read saved decks",level="ERROR",error=error);message="The saved deck library could not be opened."}
+        }}
         viewModelScope.launch { RunEvents.changes.collect {
             try { runs = withContext(Dispatchers.IO) { store.all() } }
             catch(error:Exception) { Diagnostics.event("database.read_failed","History could not be read",level="ERROR",error=error);message="Local history could not be opened. Export diagnostic logs from Setup for details." }
         } }
         viewModelScope.launch { try { latest = withContext(Dispatchers.IO) { ForgeRelease.check(app) } } catch(_:Exception) { } }
     }
-    fun saveDraft() { prefs.edit().putString("deck",deck).putString("title",title).putString("format",format).apply() }
+    fun saveDraft() { prefs.edit().putString("deck",deck).putString("title",title).putString("format",format).putString("deckLink",deckLink).putString("savedDeckId",savedDeckId).apply() }
     fun chooseFormat(value: String) { format=value;saveDraft();loadPool() }
     fun loadPool() {
         latestPool = Metagame(app).cached(format)
@@ -54,6 +69,40 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             try { block() } catch(error:Throwable) { if(error is CancellationException) throw error; Diagnostics.event("operation.failed",error.message ?: "Operation failed",level="ERROR",error=error); message=error.message ?: "The operation failed." }
             finally { busy=false;fraction=null }
         }
+    }
+    val hasUnsavedDeck: Boolean get() {
+        val saved=loadedSavedDeck
+        return deck.isNotBlank() && (saved==null || title.trim()!=saved.name || format!=saved.format || deck!=saved.text || deckLink!=saved.sourceUrl)
+    }
+    fun useDeckFile(text: String) {savedDeckId=null;loadedSavedDeck=null;deckLink="";deck=text;saveDraft()}
+    fun newDeck() {savedDeckId=null;loadedSavedDeck=null;title="My deck";deck="";deckLink="";saveDraft()}
+    fun loadReference() {newDeck();deck=if(DeckText.commander(format)) Examples.commander() else Examples.burn;title="Local reference";saveDraft()}
+    fun saveDeck(asNew: Boolean=false) = launchWork {
+        status="Saving deck on this device"
+        val id=if(asNew) null else savedDeckId
+        val name=title;val selectedFormat=format;val text=deck;val link=deckLink
+        val saved=withContext(Dispatchers.IO) {deckLibrary.save(id,name,selectedFormat,text,link)}
+        savedDeckId=saved.id;loadedSavedDeck=saved;saveDraft()
+        message="Saved ${saved.name} locally. Legality is checked when you choose Check deck or start an analysis."
+    }
+    fun loadSavedDeck(id: String) = launchWork {
+        status="Loading saved deck"
+        val saved=withContext(Dispatchers.IO) {deckLibrary.get(id)} ?: error("Saved deck not found.")
+        savedDeckId=saved.id;loadedSavedDeck=saved;title=saved.name;format=saved.format;deck=saved.text;deckLink=saved.sourceUrl
+        saveDraft();loadPool();message="Loaded ${saved.name}. No analysis has been started."
+    }
+    fun renameSavedDeck(id: String,name: String) = launchWork {
+        status="Renaming saved deck"
+        val old=withContext(Dispatchers.IO) {deckLibrary.get(id)} ?: error("Saved deck not found.")
+        val saved=withContext(Dispatchers.IO) {deckLibrary.rename(id,name)}
+        if(savedDeckId==id) {if(title==old.name) title=saved.name;loadedSavedDeck=saved;saveDraft()}
+        message="Renamed saved deck to ${saved.name}."
+    }
+    fun deleteSavedDeck(id: String) = launchWork {
+        status="Removing saved copy"
+        withContext(Dispatchers.IO) {deckLibrary.delete(id)}
+        if(savedDeckId==id) {savedDeckId=null;loadedSavedDeck=null;saveDraft()}
+        message="Saved copy removed. Your current draft and analysis history are kept."
     }
     fun setup() = launchWork {
         Diagnostics.event("setup.started","Local engine setup requested", "setup")
@@ -79,7 +128,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     fun importLink(link: String, opponent: Boolean = false) = launchWork {
         status="Importing public deck"
         val (name,text)=withContext(Dispatchers.IO) { DeckLinks.load(link) }
-        if(opponent) addOpponent(name,text) else { title=name;deck=text;saveDraft() }
+        if(opponent) addOpponent(name,text) else { savedDeckId=null;loadedSavedDeck=null;title=name;deck=text;deckLink=link.trim();saveDraft() }
         message="Imported $name. Review its commander and companion sections before testing."
     }
     fun addOpponent(name: String, text: String) {
@@ -130,7 +179,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
                 Diagnostics.event("run.import_failed","Could not restore a selected analysis export",level="ERROR",error=error)
             }
         }
-        if(deck.isBlank()) draft?.let {payload ->deck=payload.getString("deck");title=payload.optString("title","My deck");format=payload.getString("format");saveDraft();loadPool()}
+        if(deck.isBlank()) draft?.let {payload ->savedDeckId=null;loadedSavedDeck=null;deckLink="";deck=payload.getString("deck");title=payload.optString("title","My deck");format=payload.getString("format");saveDraft();loadPool()}
         message="Restored $imported analysis exports. Open Runs to inspect them. No games were started."+if(errors.isEmpty()) "" else "\n"+errors.joinToString("\n")
     }
     fun exportDiagnostics(uri: android.net.Uri, runId: String?, includeDecklists: Boolean) {
@@ -170,5 +219,5 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     fun startQueue() { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java)) }
     fun cancel(id: String) { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java).setAction("cancel").putExtra("id",id)) }
     fun resume(id: String, timeout: Int) { store.resume(id,timeout);startQueue() }
-    override fun onCleared() { ForgeClient.cancel("setup");ForgeClient.cancel("validation");super.onCleared() }
+    override fun onCleared() { ForgeClient.cancel("setup");ForgeClient.cancel("validation");deckLibrary.close();super.onCleared() }
 }

@@ -45,6 +45,8 @@ class MainActivity : ComponentActivity() {
 }
 @Composable private fun WorkbenchApp(model: Workbench) {
     var tab by remember { mutableIntStateOf(if(model.firstSetup) 3 else 0) }
+    var showDeckLibrary by remember {mutableStateOf(false)}
+    var confirmNewDeck by remember {mutableStateOf(false)}
     var deletingRun by remember { mutableStateOf<String?>(null) }
     var selectedRun by remember { mutableStateOf<String?>(null) }
     val tabHistory=remember {mutableStateListOf<Int>()}
@@ -65,7 +67,7 @@ class MainActivity : ComponentActivity() {
     val scope=rememberCoroutineScope()
     val notification=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val open=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if(uri != null) scope.launchIO(model) { val text=context.contentResolver.openInputStream(uri)!!.use { input -> val buffer=ByteArray(200001);var used=0;while(used<buffer.size) { val n=input.read(buffer,used,buffer.size-used);if(n<0) break;used+=n };require(used<=200000) { "Deck file exceeds 200 KB" };String(buffer,0,used,Charsets.UTF_8) }; withContext(Dispatchers.Main) { model.deck=text;model.saveDraft() } }
+        if(uri != null) scope.launchIO(model) { val text=context.contentResolver.openInputStream(uri)!!.use { input -> val buffer=ByteArray(200001);var used=0;while(used<buffer.size) { val n=input.read(buffer,used,buffer.size-used);if(n<0) break;used+=n };require(used<=200000) { "Deck file exceeds 200 KB" };String(buffer,0,used,Charsets.UTF_8) }; withContext(Dispatchers.Main) { model.useDeckFile(text) } }
     }
     val export=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val id=exportRun
@@ -89,13 +91,15 @@ class MainActivity : ComponentActivity() {
             if(model.busy || model.exportingDiagnostics) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(if(model.exportingDiagnostics) "Collecting diagnostic logs" else model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.exportingDiagnostics || model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
             if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
-                0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{navigateTab(2)})
+                0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{navigateTab(2)},{showDeckLibrary=true},{if(model.hasUnsavedDeck) confirmNewDeck=true else model.newDeck()})
                 1 -> if(selectedRun == null) RunsScreen(model,{selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it})
                 2 -> PoolsScreen(model) { deckDialog=it }
                 else -> SetupScreen(model,diagnostics={ includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) },restore={restoreRuns.launch(arrayOf("application/json","text/plain","application/octet-stream"))})
             }
         }
     }
+    if(showDeckLibrary) DeckLibraryDialog(model,onLoad={id ->model.loadSavedDeck(id);navigateTab(0);showDeckLibrary=false},onDismiss={showDeckLibrary=false})
+    if(confirmNewDeck) AlertDialog(onDismissRequest={confirmNewDeck=false},title={Text("Start a new deck?")},text={Text("Save the current draft to the library first if you want to keep it.")},confirmButton={TextButton(onClick={model.newDeck();confirmNewDeck=false}) {Text("New deck")}},dismissButton={TextButton(onClick={confirmNewDeck=false}) {Text("Keep editing")}})
     deletingRun?.let { id -> AlertDialog(onDismissRequest={deletingRun=null},title={Text("Delete analysis?")},text={Text("This stops its active games and deletes its saved results and decklists. Export anything you want to keep first.")},confirmButton={TextButton(onClick={model.deleteRun(id);if(selectedRun==id) selectedRun=null;deletingRun=null}) {Text("Delete")}},dismissButton={TextButton(onClick={deletingRun=null}) {Text("Keep")}}) }
     diagnosticRequest?.let { request ->
         AlertDialog(onDismissRequest={diagnosticRequest=null},title={Text("Export diagnostic logs")},text={Column {
@@ -110,19 +114,28 @@ class MainActivity : ComponentActivity() {
 private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: suspend () -> Unit) = this.launch(context=Dispatchers.IO) { try { block() } catch(error:Exception) { withContext(Dispatchers.Main) { model.message=error.message ?: "The operation failed." } } }
 @Composable private fun PageTitle(kicker: String, title: String, description: String) { Column { Text(kicker.uppercase(),color=accent,fontSize=10.sp,letterSpacing=2.sp);Spacer(Modifier.height(8.dp));Text(title,fontSize=30.sp,fontWeight=FontWeight.Medium,lineHeight=34.sp);Spacer(Modifier.height(8.dp));Text(description,color=MaterialTheme.colorScheme.onSurfaceVariant,fontSize=14.sp,lineHeight=20.sp) } }
 @Composable private fun FormatPicker(model: Workbench) { var expanded by remember { mutableStateOf(false) };Box { OutlinedButton(onClick={expanded=true},enabled=!model.busy) { Text("Format: ${model.format.replaceFirstChar { it.uppercase() }} ▾") };DropdownMenu(expanded,onDismissRequest={expanded=false}) { DeckText.formats.forEach { format -> DropdownMenuItem(text={Text(format)},onClick={model.chooseFormat(format);expanded=false}) } } } }
-@Composable private fun TestScreen(model: Workbench, open: () -> Unit, pools: () -> Unit) {
-    var link by remember { mutableStateOf("") };var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(if(DeckText.commander(model.format)) 300 else 120) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
+@Composable private fun TestScreen(model: Workbench, open: () -> Unit, pools: () -> Unit, library: () -> Unit, newDeck: () -> Unit) {
+    var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(if(DeckText.commander(model.format)) 300 else 120) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
     LaunchedEffect(model.format) { timeout=if(DeckText.commander(model.format)) 300 else 120 }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageTitle("01 / Prepare","Put your deck\nto the test.","Real Forge AI games, saved locally. Compare your list with selected opponents and inspect every recorded turn.")
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick=library,enabled=!model.busy) {Text("Saved decks")}
+            TextButton(onClick=newDeck,enabled=!model.busy) {Text("New deck")}
+        }
         FormatPicker(model)
         OutlinedTextField(model.title,{model.title=it;model.saveDraft()},label={Text("Deck name")},modifier=Modifier.fillMaxWidth(),singleLine=true)
-        OutlinedTextField(link,{link=it},label={Text("Moxfield or Archidekt link")},modifier=Modifier.fillMaxWidth(),singleLine=true)
-        OutlinedButton(onClick={model.importLink(link)},enabled=!model.busy && link.isNotBlank()) {Text("Import public deck")}
+        OutlinedTextField(model.deckLink,{model.deckLink=it;model.saveDraft()},label={Text("Moxfield or Archidekt link")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+        OutlinedButton(onClick={model.importLink(model.deckLink)},enabled=!model.busy && model.deckLink.isNotBlank()) {Text("Import public deck")}
         if(DeckText.commander(model.format)) Text("Place both eligible commanders under a Commander heading. Use Deck for the other cards. A legal pair counts toward the 100-card total.",fontSize=13.sp,color=accent)
         OutlinedTextField(model.deck,{model.deck=it;model.saveDraft()},label={Text("Decklist")},modifier=Modifier.fillMaxWidth().heightIn(min=230.dp,max=420.dp),textStyle=LocalTextStyle.current.copy(fontFamily=FontFamily.Monospace,fontSize=13.sp))
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick=open) { Text("Open file") };OutlinedButton(onClick={model.validate()},enabled=!model.busy && model.deck.isNotBlank()) {Text("Check deck")} }
-        TextButton(onClick={model.deck=if(DeckText.commander(model.format)) Examples.commander() else Examples.burn;model.title="Local reference";model.saveDraft()}) {Text("Load reference deck")}
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Button(onClick={model.saveDeck()},enabled=!model.busy && model.deck.isNotBlank()) {Text(if(model.savedDeckId==null) "Save deck" else "Update saved deck")}
+            if(model.savedDeckId!=null) TextButton(onClick={model.saveDeck(true)},enabled=!model.busy && model.deck.isNotBlank()) {Text("Save as new")}
+        }
+        Text("Saved decks stay on this device and keep their format, commanders, sideboard and source link. Saving does not require engine setup or a legality check.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick={model.loadReference()},enabled=!model.busy) {Text("Load reference deck")}
         HorizontalDivider()
         Text("Analysis settings",fontSize=19.sp)
         Text("$games matches · ${if(bestOf && !DeckText.commander(model.format)) "best of three" else "single games"}")
