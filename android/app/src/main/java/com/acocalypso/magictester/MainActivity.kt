@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
 }
 @Composable private fun WorkbenchApp(model: Workbench) {
     var tab by remember { mutableIntStateOf(if(model.firstSetup) 3 else 0) }
+    var deletingRun by remember { mutableStateOf<String?>(null) }
     var selectedRun by remember { mutableStateOf<String?>(null) }
     var deckDialog by remember { mutableStateOf<Pair<String,String>?>(null) }
     var exportRun by remember { mutableStateOf<String?>(null) }
@@ -79,12 +80,13 @@ class MainActivity : ComponentActivity() {
             if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
                 0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{tab=2})
-                1 -> if(selectedRun == null) RunsScreen(model) { selectedRun=it } else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)})
+                1 -> if(selectedRun == null) RunsScreen(model,{selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it})
                 2 -> PoolsScreen(model) { deckDialog=it }
                 else -> SetupScreen(model) { includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) }
             }
         }
     }
+    deletingRun?.let { id -> AlertDialog(onDismissRequest={deletingRun=null},title={Text("Delete analysis?")},text={Text("This stops its active games and deletes its saved results and decklists. Export anything you want to keep first.")},confirmButton={TextButton(onClick={model.deleteRun(id);if(selectedRun==id) selectedRun=null;deletingRun=null}) {Text("Delete")}},dismissButton={TextButton(onClick={deletingRun=null}) {Text("Keep")}}) }
     diagnosticRequest?.let { request ->
         AlertDialog(onDismissRequest={diagnosticRequest=null},title={Text("Export diagnostic logs")},text={Column {
             Text(if(request.runId==null) "Save startup, setup and recent run diagnostics." else "Save the selected run's settings, errors and engine evidence.")
@@ -126,12 +128,12 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         Text("How it works: current legality and Forge card support are checked first. Forge then pilots every seat. A timeout is shown as unfinished evidence and never counted as a loss. AI results estimate matchup behavior; they do not predict human tournament performance.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
-@Composable private fun RunsScreen(model: Workbench, select: (String) -> Unit) {
+@Composable private fun RunsScreen(model: Workbench, select: (String) -> Unit, delete: (String) -> Unit) {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { PageTitle("02 / Observe","Your analyses","Queue progress, recorded outcomes, and the evidence behind each result.") }
         if(model.runs.isEmpty()) item { Text("No analyses yet. Add a deck and opponents, then queue your first run.",Modifier.padding(vertical=24.dp)) }
         items(model.runs,key={it.id}) { run -> OutlinedCard(onClick={select(run.id)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)) {
-            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true) }
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true);TextButton(onClick={delete(run.id)}) {Text("Delete analysis")} }
         } }
     }
 }

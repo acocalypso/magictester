@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.update
 
 object RunEvents { val changes=MutableStateFlow(0L);fun changed() { changes.update { it+1 } } }
 data class Run(val id: String, val state: String, val label: String, val completed: Int, val payload: JSONObject, val liveGame: JSONObject?=null)
-class RunStore(context: Context) : SQLiteOpenHelper(context, "runs.db", null, 2) {
-    private val directory = File(context.filesDir, "runs").apply { mkdirs() }
+class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "runs.db", null, 2) {
+    companion object { private val evidenceLock=Any() }
+    private val directory = File(appContext.filesDir, "runs").apply { mkdirs() }
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE runs (id TEXT PRIMARY KEY, state TEXT NOT NULL, label TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0, payload TEXT NOT NULL, created INTEGER NOT NULL, live_game TEXT)")
     }
@@ -97,6 +98,21 @@ class RunStore(context: Context) : SQLiteOpenHelper(context, "runs.db", null, 2)
         writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label","Resuming unfinished matches") },"id=?",arrayOf(id))
         Diagnostics.event("run.resumed","Unfinished matches requeued",id,details=JSONObject().put("clockSeconds",clock))
         RunEvents.changed()
+    }
+    fun saveAttempt(id: String, source: File, unit: Int): File? = synchronized(evidenceLock) {
+        if(get(id)?.state!="running") return@synchronized null
+        val destination=file(id,"${unit.toString().padStart(5,'0')}-${System.currentTimeMillis()}.jsonl")
+        source.copyTo(destination)
+        destination
+    }
+    fun delete(id: String): Boolean = synchronized(evidenceLock) {
+        require(id.matches(Regex("[A-Za-z0-9_-]{1,80}")))
+        val removed=writableDatabase.delete("runs","id=?",arrayOf(id))>0
+        File(directory,id).deleteRecursively()
+        Diagnostics.directory(appContext).listFiles().orEmpty().filter { it.name.startsWith("engine-$id-") || it.name.startsWith("threads-$id-") }.forEach { it.delete() }
+        Diagnostics.event("run.deleted","Analysis and its saved evidence were deleted",id)
+        RunEvents.changed()
+        removed
     }
     fun file(id: String, name: String) = File(File(directory,id),name)
     fun results(id: String): List<JSONObject> = File(directory,id).listFiles().orEmpty().filter { it.name.endsWith(".jsonl") }.sortedBy { it.name }.flatMap { file -> file.useLines { lines -> lines.mapNotNull { line -> try { JSONObject(line).takeIf { it.optString("type") == "result" }?.getJSONObject("result") } catch (_: Exception) { null } }.toList() } }

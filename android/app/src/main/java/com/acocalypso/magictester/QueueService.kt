@@ -77,8 +77,9 @@ class QueueService : Service() {
                             if(store.get(run.id)?.state == "running") store.update(run.id,"running","Match ${unit+1}/$count · $label",completed.size)
                             notifyProgress("Match ${unit+1}/$count · $label")
                         }
-                        val destination = store.file(run.id,"${unit.toString().padStart(5,'0')}-${System.currentTimeMillis()}.jsonl")
-                        result.copyTo(destination); result.delete()
+                        val destination = store.saveAttempt(run.id,result,unit)
+                        result.delete()
+                        if(destination==null) break
                         val events = destination.readLines().filter { it.isNotBlank() }.map { JSONObject(it) }
                         events.firstOrNull { it.optString("type") == "error" }?.let { error(it.optString("message")) }
                         val unitResult = events.firstOrNull { it.optString("type") == "result" }?.getJSONObject("result") ?: error("Forge returned no game evidence.")

@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import kotlin.math.sqrt
 
-@Composable fun RunDetail(model: Workbench, id: String, back: () -> Unit, deck: (Pair<String,String>) -> Unit, export: (String) -> Unit, diagnostics: (String) -> Unit) {
+@Composable fun RunDetail(model: Workbench, id: String, back: () -> Unit, deck: (Pair<String,String>) -> Unit, export: (String) -> Unit, diagnostics: (String) -> Unit, delete: (String) -> Unit) {
     val run = model.runs.firstOrNull { it.id == id } ?: return
     var results by remember(id) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var selectedGame by remember(id) { mutableStateOf<JSONObject?>(null) }
@@ -45,6 +45,7 @@ import kotlin.math.sqrt
             }
             TextButton(onClick={export(id)}) {Text("Export results and game evidence")}
             OutlinedButton(onClick={diagnostics(id)},enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}
+            TextButton(onClick={delete(id)}) {Text("Delete analysis")}
         }
         item { HorizontalDivider();Text("Match evidence",fontSize=20.sp);Text("Each card below is a real engine attempt. Expand a match to inspect its games and recorded actions.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         if(results.isEmpty()) item { Text("No match evidence saved yet. Initialization and the first game may take a few minutes.",fontSize=13.sp) }

@@ -121,6 +121,15 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             finally { exportingDiagnostics=false }
         }
     }
+    fun deleteRun(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                store.get(id)?.let { store.update(id,"deleting","Removing analysis") }
+                ForgeClient.cancel(id)
+                store.delete(id)
+            } catch(error:Exception) { Diagnostics.event("run.delete_failed","Analysis could not be deleted",id,level="ERROR",error=error);withContext(Dispatchers.Main) { message=error.message ?: "Could not remove this analysis." } }
+        }
+    }
     fun startQueue() { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java)) }
     fun cancel(id: String) { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java).setAction("cancel").putExtra("id",id)) }
     fun resume(id: String, timeout: Int) { store.resume(id,timeout);startQueue() }
