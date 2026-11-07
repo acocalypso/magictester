@@ -8,6 +8,8 @@ while True:
     try:
         with urllib.request.urlopen(base+'SHA256SUMS',timeout=20) as source:checksums=source.read().decode()
         expected={line.split()[1]:line.split()[0] for line in checksums.splitlines() if len(line.split())==2}[name]
+        # Release assets upload separately; wait until the APK itself is downloadable too.
+        baseline=urllib.request.urlopen(base+name,timeout=60)
         break
     except (urllib.error.URLError,KeyError) as error:
         if isinstance(error,urllib.error.HTTPError) and error.code not in [404,429,500,502,503,504]:raise
@@ -15,7 +17,7 @@ while True:
         print('Waiting for the tested 0.1.3 release before cross-release upgrade checks...',flush=True);time.sleep(20)
 args.destination.parent.mkdir(parents=True,exist_ok=True);partial=args.destination.with_suffix('.partial')
 try:
-    with urllib.request.urlopen(base+name,timeout=60) as source,partial.open('wb') as output:
+    with baseline as source,partial.open('wb') as output:
         size=0
         while True:
             data=source.read(1024*1024)
