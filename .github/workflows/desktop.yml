@@ -1,6 +1,7 @@
 name: Desktop · Windows and Linux
 on:
   push:
+    branches: ["main"]
     paths: ["desktop/**", ".github/workflows/desktop.yml"]
     tags: ["desktop-v*"]
   pull_request:

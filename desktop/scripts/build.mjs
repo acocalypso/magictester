@@ -36,6 +36,7 @@ function run(file, args, cwd = root, env = process.env) {
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
+    timeout: args.includes("--worker-check") ? 60000 : 15 * 60 * 1000,
     shell: process.platform === "win32" && file === "npm",
   });
   if (r.stdout) process.stdout.write(r.stdout);
