@@ -19,6 +19,14 @@ try:
         if baseline.is_file():(output/'upgrade-baseline.json').write_text(baseline.read_text())
     sdk=int(subprocess.check_output(['adb','shell','getprop','ro.build.version.sdk'],text=True).strip())
     if sdk>=33:subprocess.run(['adb','shell','pm','grant','com.acocalypso.magictester','android.permission.POST_NOTIFICATIONS'],check=True)
+    # A cold emulator can leave its launcher in an input-focus ANR after unlock.
+    # Stop only the known system launcher before tests so its dialog cannot eat
+    # physical Back events. App crashes/ANRs remain visible and still fail tests.
+    home=subprocess.check_output(['adb','shell','cmd','package','resolve-activity','--brief','-a','android.intent.action.MAIN','-c','android.intent.category.HOME'],text=True).strip().splitlines()
+    launcher=home[-1].split('/')[0] if home else ''
+    if launcher in ('com.android.launcher3','com.google.android.apps.nexuslauncher'):
+        subprocess.run(['adb','shell','am','force-stop',launcher],check=True)
+        print(f'Stopped cold-boot launcher {launcher} before app acceptance',flush=True)
     reports=[]
     for label,selection,timeout in [('ui',['-e','class','com.acocalypso.magictester.WorkbenchUiTest'],180),('engine',['-e','notClass','com.acocalypso.magictester.WorkbenchUiTest'],1800)]:
         result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000',*selection,'com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=timeout)
