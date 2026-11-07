@@ -14,8 +14,9 @@ import kotlinx.coroutines.runBlocking
 @RunWith(AndroidJUnit4::class)
 class ForgeRuntimeTest {
     @get:Rule val visibleWorkbench=ActivityScenarioRule(MainActivity::class.java)
+    private val timingEvents=mutableListOf<JSONObject>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
-    private fun command(request: JSONObject): String = runBlocking { ForgeClient.execute(context,request,"acceptance") { _,_ -> }.readText() }
+    private fun command(request: JSONObject): String = runBlocking { ForgeClient.execute(context,request,"acceptance",onGame={timingEvents += it}) { _,_ -> }.readText() }
     private fun game(format: String, decks: List<String>, seed: Int = 12345, bestOf: Int = 1): List<JSONObject> {
         val request = JSONObject().put("rawDecks",JSONArray(decks)).put("format",format).put("games",1).put("seed",seed)
             .put("clockSeconds",if(DeckText.commander(format)) 300 else 120).put("mode",if(format == "duel") "duel" else if(DeckText.commander(format)) "commander" else "constructed")
@@ -29,6 +30,9 @@ class ForgeRuntimeTest {
         assertEquals(result.toString(),"normal",result.getString("termination"))
         assertTrue(result.getJSONObject("actionLog").getJSONArray("entries").length() > 20)
         assertTrue(events.any { it.optString("type") == "batch_complete" })
+        assertEquals(listOf("game_started","game_finished"),timingEvents.map { it.getString("type") })
+        assertTrue(timingEvents.first().getLong("startedElapsedMs")>0)
+        assertEquals(result.getLong("durationMs"),timingEvents.last().getLong("durationMs"))
     }
     @Test fun engineFailureRetainsFullJavaErrorForDiagnosticExport() {
         val runId="diagnostic-engine-acceptance"
@@ -52,6 +56,10 @@ class ForgeRuntimeTest {
         assertEquals("match",result.getString("unit"))
         assertTrue(result.getJSONArray("games").length() in 2..5)
         assertTrue(result.getJSONArray("games").getJSONObject(1).has("sideboardChanges"))
+        val starts=timingEvents.filter { it.getString("type")=="game_started" }
+        assertEquals(result.getJSONArray("games").length(),starts.size)
+        assertEquals((0 until starts.size).toList(),starts.map { it.getInt("gameIndex") })
+        assertTrue(starts.zipWithNext().all { (a,b) -> b.getLong("startedElapsedMs")>a.getLong("startedElapsedMs") })
     }
     @Test fun legalCommanderPairHasCombinedIdentityWithoutErrorFlood() {
         val text="// Commanders\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n97 Plains\n1 Swamp\n"

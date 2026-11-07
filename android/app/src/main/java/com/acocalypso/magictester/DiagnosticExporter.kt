@@ -110,6 +110,10 @@ object DiagnosticExporter {
                 if(runId!=null && runs.isEmpty()) append("No stored run was available for $runId. Its diagnostic events may still be present.\n")
                 if(runs.isEmpty() && runId==null) append("No analyses were stored. Setup and startup logs are included.\n")
                 for(run in runs) append("Run ${run.id}\n${run.payload.optString("title","Untitled")} · ${run.payload.optString("format")} · ${run.state}\n${run.label}\nSaved matches: ${run.completed}/${run.payload.optInt("games")}; timeout ${run.payload.optInt("clockSeconds")} s; seed ${run.payload.optInt("seed")}.\n\n")
+                for(run in runs) run.liveGame?.let { game ->
+                    val elapsed=GameClock.elapsed(game.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),run.state=="running" && game.optBoolean("active"),game.optLong("elapsedMs"))
+                    append("Run ${run.id}: match ${game.optInt("unitIndex")+1}, game ${game.optInt("gameIndex")+1}: ${GameClock.format(elapsed)} elapsed; ${game.optInt("clockSeconds")} s limit.\n")
+                }
                 val errors=timeline.filter { it.optString("level") in listOf("ERROR","WARN") }
                 append("Recorded warnings/errors: ${errors.size}. See errors.txt for full messages and stack traces.\n")
                 databaseError?.let { append("The history database could not be read. Existing logs were exported; see database-error.txt.\n") }
@@ -125,6 +129,7 @@ object DiagnosticExporter {
             for(run in runs) {
                 val settings=JSONObject().put("runId",run.id).put("state",run.state).put("lastMessage",run.label).put("completed",run.completed)
                 for(key in listOf("title","format","games","clockSeconds","bestOf","players","seed","engineVersion","createdAt","legality")) if(run.payload.has(key)) settings.put(key,run.payload.opt(key))
+                run.liveGame?.let { settings.put("liveGame",it) }
                 settings.put("opponentCount",run.payload.optJSONArray("opponents")?.length() ?: 0)
                 text("runs/${run.id}/settings.json",settings.toString(2))
                 if(includeDecklists) text("runs/${run.id}/decklists.txt",buildString { append("YOUR DECK\n${run.payload.optString("deck")}\n");val opponents=run.payload.optJSONArray("opponents") ?: JSONArray();for(i in 0 until opponents.length()) { val opponent=opponents.getJSONObject(i);append("\nOPPONENT ${i+1}: ${opponent.optString("name")}\n${opponent.optString("text")}\n") } })

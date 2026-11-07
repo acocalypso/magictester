@@ -15,10 +15,11 @@ class QueueService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var store: RunStore
     private var runner: Job? = null
-    private var currentId = ""
+    @Volatile private var currentId = ""
     override fun onCreate() {
         super.onCreate(); store = RunStore(this)
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("runs", "Deck analyses", NotificationManager.IMPORTANCE_LOW))
+        scope.launch { while(isActive) { delay(5000);val id=currentId;if(id.isNotEmpty()) runCatching { store.checkpointGame(id) } } }
     }
     private fun notifyProgress(text: String) {
         val notification = NotificationCompat.Builder(this,"runs").setSmallIcon(android.R.drawable.ic_media_play).setContentTitle("MagicTester · local analysis").setContentText(text).setOngoing(true)
@@ -72,7 +73,7 @@ class QueueService : Service() {
                             .put("games",count).put("indices",JSONArray(listOf(unit))).put("seed",payload.getInt("seed"))
                             .put("clockSeconds",timeout).put("mode",if(payload.getString("format") == "duel") "duel" else if(DeckText.commander(payload.getString("format"))) "commander" else "constructed")
                             .put("bestOf",payload.optInt("bestOf",1)).put("sideboarding",payload.optInt("bestOf") == 3).put("maxMatchGames",5)
-                        val result = ForgeClient.execute(this,request,run.id) { label,_ ->
+                        val result = ForgeClient.execute(this,request,run.id,onGame={ event -> store.gameEvent(run.id,event) }) { label,_ ->
                             if(store.get(run.id)?.state == "running") store.update(run.id,"running","Match ${unit+1}/$count · $label",completed.size)
                             notifyProgress("Match ${unit+1}/$count · $label")
                         }

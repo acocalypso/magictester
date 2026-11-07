@@ -131,7 +131,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         item { PageTitle("02 / Observe","Your analyses","Queue progress, recorded outcomes, and the evidence behind each result.") }
         if(model.runs.isEmpty()) item { Text("No analyses yet. Add a deck and opponents, then queue your first run.",Modifier.padding(vertical=24.dp)) }
         items(model.runs,key={it.id}) { run -> OutlinedCard(onClick={select(run.id)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)) {
-            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true) }
         } }
     }
 }

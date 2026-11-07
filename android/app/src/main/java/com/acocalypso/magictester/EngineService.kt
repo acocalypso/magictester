@@ -59,7 +59,12 @@ class EngineService : Service() {
                         resultFile.bufferedWriter().use { writer ->
                             AndroidForgeBridge.execute(request.toString()) { event -> writer.appendLine(event); writer.flush(); val json = JSONObject(event)
                                 when(json.optString("type")) {
-                                    "game_started" -> Diagnostics.event("game.started","Forge started an observed game",runId,details=JSONObject().put("unit",json.optInt("index")).put("game",json.optInt("gameIndex")).put("gameSeed",json.optInt("gameSeed")))
+                                    "game_started" -> {
+                                        json.put("startedAtEpochMs",System.currentTimeMillis()).put("startedElapsedMs",SystemClock.elapsedRealtime()).put("clockSeconds",request.optInt("clockSeconds"))
+                                        send(4,json.toString())
+                                        Diagnostics.event("game.started","Forge started an observed game",runId,details=JSONObject().put("unit",json.optInt("index")).put("game",json.optInt("gameIndex")).put("gameSeed",json.optInt("gameSeed")).put("clockSeconds",request.optInt("clockSeconds")))
+                                    }
+                                    "game_finished" -> { send(4,json.toString());Diagnostics.event("game.finished","Observed game finished",runId,details=json) }
                                     "result" -> { val result=json.getJSONObject("result");val termination=result.optString("termination");if(termination !in listOf("normal","rule_draw")) Diagnostics.threadDump(this@EngineService,requestRunId);Diagnostics.event("game.result","Game/match finished: $termination",runId,level=if(termination in listOf("normal","rule_draw")) "INFO" else "ERROR",details=JSONObject().put("unit",result.optInt("index")).put("termination",termination).put("durationMs",result.optLong("durationMs")).put("turns",result.optInt("turns")).put("clockSeconds",request.optInt("clockSeconds"))) }
                                     "error" -> Diagnostics.event("game.error",json.optString("message","Forge reported an error"),runId,level="ERROR")
                                 }

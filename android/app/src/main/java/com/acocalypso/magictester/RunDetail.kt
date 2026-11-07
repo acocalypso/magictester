@@ -26,6 +26,7 @@ import kotlin.math.sqrt
     val wins=decisive.count { !it.isNull("winner") && it.optInt("winner",-1) == 0 }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { TextButton(onClick=back) { Text("← All analyses") };Text(run.payload.optString("title"),fontSize=28.sp,fontWeight=FontWeight.Medium);Text("${run.payload.optString("format")} · Forge ${run.payload.optString("engineVersion")} · ${run.state}",fontSize=13.sp);Spacer(Modifier.height(10.dp));Text(run.label,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { LiveGamePanel(run) }
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(24.dp)) { Column { Text("${completed.size}",fontSize=36.sp);Text("finished matches",fontSize=12.sp) };Column { Text(if(decisive.isEmpty()) "—" else "${wins*100/decisive.size}%",fontSize=36.sp);Text("observed wins",fontSize=12.sp) } }
             if(decisive.isNotEmpty()) { val n=decisive.size.toDouble();val p=wins/n;val d=1+3.8416/n;val mid=(p+1.9208/n)/d;val radius=1.96*sqrt(p*(1-p)/n+0.9604/(n*n))/d;Text("95% Wilson interval: ${((mid-radius)*100).toInt()}–${((mid+radius)*100).toInt()}%. Selected-pool estimate; unfinished attempts are excluded.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }

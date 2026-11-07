@@ -127,6 +127,7 @@ public class AndroidForgeBridge {
         if(termination.equals("normal") || termination.equals("rule_draw")) {
             var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);pendingLog=log;
         }
+        emit(Map.of("type","game_finished","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"durationMs",result.get("durationMs"),"termination",termination,"clockSeconds",request.clockSeconds));
         return result;
     }
     public static synchronized void execute(String requestJson, Consumer<String> events) {

@@ -87,3 +87,7 @@ The ZIP opens with `README.txt` and `summary.txt`, followed by a chronological t
 Complete decklists are excluded by default and can be included in the export dialog. Error messages and game actions may still contain card names. No device serial number, Android ID or account credentials are requested. Logs remain in private app storage until exported; streams are capped at 2 MiB, with a seven-day/24 MiB retention budget. The timeline includes the last 5,000 matching events. Export limits and omitted files are listed in `omissions.txt`. Full results can be exported separately.
 
 New app crashes are recorded before the normal Android crash handler runs. Android 11+ can also report historical crashes, low-memory kills and other exit reasons. A new installation cannot recover private diagnostic files removed by uninstalling an older debug build.
+
+### Live game timing
+
+Runs and run details show the current game's elapsed time, timeout budget and remaining time. The clock starts on Forge's actual game-start event and resets between BO3 games. Initialization has its own status and does not advance the game clock. Timing uses Android's monotonic clock, survives backgrounding, and stops on completion/cancellation/failure. The visible counter updates once per second; five-second service checkpoints preserve a labeled last-known time after interruption. The database upgrade preserves existing run history. Timing is included in diagnostic exports.

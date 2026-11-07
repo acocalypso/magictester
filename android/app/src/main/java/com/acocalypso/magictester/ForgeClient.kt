@@ -16,7 +16,7 @@ object ForgeClient {
     @Volatile private var owner = ""
     @Volatile private var cancelled = false
     fun cancel(id: String) { if (owner == id) { cancelled=true;pid.getAndSet(0).takeIf { it > 0 }?.let { Process.killProcess(it) } } }
-    suspend fun execute(context: Context, request: JSONObject, id: String, progress: (String, Float?) -> Unit): File = mutex.withLock {
+    suspend fun execute(context: Context, request: JSONObject, id: String, onGame: (JSONObject) -> Unit = {}, progress: (String, Float?) -> Unit): File = mutex.withLock {
         owner = id;cancelled=false
         request.put("diagnosticRunId",id)
         Diagnostics.event("engine.request","Starting a local engine request",id,details=JSONObject().put("operation",request.optString("operation","simulate")).put("clockSeconds",request.optInt("clockSeconds")).put("bestOf",request.optInt("bestOf",1)))
@@ -37,6 +37,7 @@ object ForgeClient {
                             val value = message.data.getString("value") ?: return
                             when (message.what) {
                                 1 -> progress(value, message.data.getFloat("fraction").takeIf { it >= 0 })
+                                4 -> runCatching { onGame(JSONObject(value)) }.onFailure { Diagnostics.event("game.timing_error","Could not save live game timing",id,level="ERROR",error=it) }
                                 2 -> if (continuation.isActive) continuation.resumeWith(Result.success(File(value)))
                                 3 -> if (continuation.isActive) {
                                     val diagnostic=JSONObject(File(value).readText()).optString("error","Forge failed")
