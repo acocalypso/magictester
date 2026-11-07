@@ -1,0 +1,120 @@
+name: Desktop · Windows and Linux
+on:
+  push:
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+    tags: ["desktop-v*"]
+  pull_request:
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+    inputs:
+      engine_check:
+        description: Download Forge and run real packaged-engine acceptance
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            rid: linux-x64
+          - os: windows-2022
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      DOTNET_NOLOGO: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      MAGICTESTER_AUTO_MAINTENANCE: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: desktop/global.json
+      - name: Determine version
+        id: version
+        shell: bash
+        env:
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          node --input-type=module - <<'JS'
+          import { appendFileSync } from 'node:fs';
+          const version = process.env.SOURCE_REF.startsWith('desktop-v') ? process.env.SOURCE_REF.slice(9) : '0.1.0';
+          if (!/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version)) throw Error('Invalid desktop release tag');
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          JS
+      - name: Build native UI and complete runtime bundle
+        run: node desktop/scripts/build.mjs --rid ${{ matrix.rid }} --version ${{ steps.version.outputs.version }}
+      - name: Native renderer and shutdown check
+        shell: bash
+        env:
+          TARGET_RID: ${{ matrix.rid }}
+        run: |
+          export MAGICTESTER_ENGINE="$GITHUB_WORKSPACE/desktop/engine/dist/worker.mjs"
+          export MAGICTESTER_DATA="$RUNNER_TEMP/magictester-ui-check"
+          dotnet run --project desktop/MagicTester.Desktop.Checks -c Release -r "$TARGET_RID"
+      - name: Real packaged Forge acceptance
+        if: startsWith(github.ref, 'refs/tags/desktop-v') || (github.event_name == 'workflow_dispatch' && inputs.engine_check)
+        shell: bash
+        env:
+          TARGET_RID: ${{ matrix.rid }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          export MAGICTESTER_DATA="$RUNNER_TEMP/magictester-native-check"
+          if [ "$TARGET_RID" = 'win-x64' ]; then
+            "desktop/artifacts/MagicTester-$RELEASE_VERSION-$TARGET_RID/MagicTester.exe" --engine-check
+          else
+            "desktop/artifacts/MagicTester-$RELEASE_VERSION-$TARGET_RID/MagicTester" --engine-check
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: magictester-${{ matrix.rid }}
+          compression-level: 0
+          path: |
+            desktop/artifacts/*.zip
+            desktop/artifacts/*.tar.gz
+            desktop/artifacts/*.sha256
+            desktop/artifacts/desktop-ui.png
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: desktop-failure-${{ matrix.rid }}
+          path: |
+            ${{ runner.temp }}/magictester-native-check/*.log
+            ${{ runner.temp }}/magictester-native-check/logs/
+  release:
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: magictester-*
+          merge-multiple: true
+          path: release
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: MagicTester Desktop ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/*.zip
+            release/*.tar.gz
+            release/*.sha256
+          body: |
+            Standalone native Windows/Linux application; Docker is not required.
+            Extract the complete package and run MagicTester. .NET, Node and Java 21 are bundled.
+            First setup downloads verified Forge and card data and requires internet access.
+            Linux needs a graphical desktop with the native libraries listed in desktop/README.md.
+            Packages are unsigned. SHA-256 files are included. Source is available under this tag.

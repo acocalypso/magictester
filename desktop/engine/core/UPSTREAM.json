@@ -1,0 +1,31 @@
+{
+  "commit": "fd59c2d",
+  "files": {
+    "domain.ts": "19755e54b9810b4f9e4f514b64669d2c7b73f8fdb7d1cbfe675d86938337b435",
+    "commander.ts": "f0520dad378982ac24fa4dc619e799198086baefac7b0169f9b8c863662844ae",
+    "companions.ts": "454e5e9d5aa4608df1b5ac7c3dc96a71b9ebbcba2253547f20152d185684ce9b",
+    "formats.ts": "9d218a5fc3e8c16e305ec83d2d3b4734fc0199e7e7a26f6c9f5d5ecee5801f1f",
+    "analytics.ts": "55e06994fca994f5705f4639e89665001f0664ab38bff5500c9cef9e1261b22a",
+    "planning.ts": "d2f73ff6ce66995df062c534e3f9e335e0c6d5b72784da9e41ba5921f8aef24e",
+    "engine.ts": "1ec9ca2d47130991c4ca81925e8aa735b1f2337283836c2ee3295f209e41a388",
+    "config.ts": "e57a5bd2b9a1b64d8a871a8d7ea5c465645ac0707efcd7abb3d44a254bb8084f",
+    "logs.ts": "3172c152f6ff554fc0948b738ff4b41c0acd3aa0971adec8e98e7ed3ffc85905",
+    "runtime.mjs": "c9653a9a17b883596b3c832ef1cd93a3a97c6198ce0b7597dc7548b113143e88",
+    "forge-releases.mjs": "b69cf40339cf869b119e2530dd9a373555056ed7abb9f8210e1f76cf828cc5cd",
+    "card-aliases.mjs": "761b28b20f3a33eb8eaf4b43e2d3a8aa58d127c0c23d5462e16259fa5e0958c8",
+    "reference-pools.ts": "cbcf18bd41a3fcad96d73c06025972c1d03329bdbe97fde0187c11fe4e2774cf",
+    "meta.ts": "44fb8cba7f5f350ac359e1a66c8da57757bd4df9a5197cee62cd87425f6fd1b4",
+    "meta-sources.ts": "3b0def1a2233e913600986aeca14e11c6cd23a78de1cf0365a19a5e7ce8acef9",
+    "deck-links.ts": "67f00405efc51f10d0b2bba172051a0cbb433e489764c5bb72e40ac97e2b74ed",
+    "resources.ts": "689847fd070f41f04c3db070203748ab709732374c98ffca4a5cfe9c07fb03a6",
+    "parallel.ts": "feedf3ee2302a97d38f98b8fb48ea4a818353856a8668c8e7a81f381f0f38674",
+    "game-actions.ts": "0fb67afec3f232776bd631ee36c87b912bf351a9407a759ac3548e01deb0b307",
+    "retry-options.ts": "a2f515b63c4a351285081a8a276d8f7fcc8c9057f0b6455b5c4bee9579047d71"
+  },
+  "adaptations": [
+    "engine.ts: Windows classpath, process-tree cancellation, portable log filenames",
+    "runtime.mjs: standalone asset path",
+    "source-http.ts: SQLite cache instead of PostgreSQL",
+    "observation-review.ts: pure review function only"
+  ]
+}

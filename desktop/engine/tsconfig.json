@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "checkJs": false
+  },
+  "include": ["core/**/*", "*.mjs"],
+  "exclude": ["dist", "node_modules", "tests", "scripts"]
+}

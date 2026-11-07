@@ -1,0 +1,20 @@
+{
+  "name": "Pauper \u00b7 Local reference pool",
+  "format": "pauper",
+  "source": "Project-authored reference lists for integration testing. Not tournament data or a current metagame.",
+  "selectionMethod": "equal_archetype",
+  "decks": [
+    {
+      "name": "Mono-red Burn",
+      "archetype": "Burn reference",
+      "strategy": "AGGRO",
+      "decklist": "20 Mountain\n4 Lightning Bolt\n4 Chain Lightning\n4 Lava Spike\n4 Rift Bolt\n4 Shock\n4 Incinerate\n4 Lightning Strike\n4 Searing Blaze\n4 Thermo-Alchemist\n4 Kessig Flamebreather"
+    },
+    {
+      "name": "Mono-green Stompy",
+      "archetype": "Stompy reference",
+      "strategy": "AGGRO",
+      "decklist": "20 Forest\n4 Llanowar Elves\n4 Elvish Mystic\n4 Nest Invader\n4 Nettle Sentinel\n4 Quirion Ranger\n4 Rancor\n4 Vines of Vastwood\n4 Hunger of the Howlpack\n4 Savage Swipe\n4 River Boa"
+    }
+  ]
+}

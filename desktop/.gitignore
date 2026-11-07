@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+engine/dist/
+engine/node_modules/
+artifacts/
+tools/
+.nuget/
+*.user
+engine/tests/generated/
