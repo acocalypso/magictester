@@ -13,3 +13,7 @@ try:
 finally:
     with (output/'logcat.txt').open('w') as log:subprocess.run(['adb','logcat','-d'],stdout=log,stderr=subprocess.STDOUT)
     with (output/'acceptance-ui.png').open('wb') as image:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','files/acceptance-ui.png'],stdout=image,stderr=subprocess.DEVNULL)
+
+    # Test fixtures only: retain the app's bounded engine/error logs when instrumentation fails.
+    with (output/'engine-diagnostics.tar').open('wb') as logs:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','tar','-cf','-','files/diagnostics'],stdout=logs,stderr=subprocess.DEVNULL)
+    with (output/'performance-settings.xml').open('wb') as settings:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','shared_prefs/performance.xml'],stdout=settings,stderr=subprocess.DEVNULL)

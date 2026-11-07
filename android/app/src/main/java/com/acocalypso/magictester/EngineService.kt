@@ -40,9 +40,11 @@ open class EngineService : Service() {
                     Diagnostics.event("engine.started","Forge process is preparing the request",runId,details=DiagnosticExporter.device(this@EngineService))
                     var lastProgress=""
                     var lastBucket=-1
+                    var lastSent=0L
                     val home = EngineAssets.install(this@EngineService) { label, fraction ->
-                        send(1,label,fraction ?: -1f)
                         val stage=label.substringBefore('·').trim();val bucket=((fraction ?: -1f)*10).toInt()
+                        val now=SystemClock.elapsedRealtime()
+                        if(stage!=lastProgress || now-lastSent>=250 || fraction==1f) {send(1,label,fraction ?: -1f);lastSent=now}
                         if(stage!=lastProgress || bucket!=lastBucket) { Diagnostics.event("engine.setup_progress",label,runId);lastProgress=stage;lastBucket=bucket }
                     }
                     AndroidForgeBridge.initialize(home.absolutePath) { send(1,it);Diagnostics.event("engine.initialized",it,runId) }

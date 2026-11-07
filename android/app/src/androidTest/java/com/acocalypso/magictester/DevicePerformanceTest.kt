@@ -21,7 +21,7 @@ class DevicePerformanceTest {
                 return withTimeout(700000) {
                     while(true) {
                         val run=store.get(id) ?: error("Acceptance run disappeared")
-                        assertFalse(run.label,run.state in listOf("failed","interrupted"))
+                        assertFalse(run.label+"\n"+run.payload.optJSONObject("benchmarkReport"),run.state in listOf("failed","interrupted"))
                         if(run.state=="complete") return@withTimeout run
                         delay(500)
                     }

@@ -26,10 +26,18 @@ object EngineAssets {
         try {
             val total = context.assets.openFd("forge-data.zip").use { it.length }
             var bytes = 0L
+            var lastProgress = 0L
             val counting = object : java.io.FilterInputStream(context.assets.open("forge-data.zip")) {
                 override fun read(b: ByteArray, off: Int, len: Int): Int {
                     val n = super.read(b, off, len)
-                    if (n > 0) { bytes += n; progress("Installing engine data · ${bytes / 1048576} / ${total / 1048576} MiB", (bytes.toFloat() / total).coerceIn(0f, 1f)) }
+                    if (n > 0) {
+                        bytes += n
+                        val now=android.os.SystemClock.elapsedRealtime()
+                        if(now-lastProgress>=250) {
+                            lastProgress=now
+                            progress("Installing engine data · ${bytes / 1048576} / ${total / 1048576} MiB", (bytes.toFloat() / total).coerceIn(0f, 1f))
+                        }
+                    }
                     return n
                 }
             }

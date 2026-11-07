@@ -48,7 +48,7 @@ class QueueService: Service() {
                     Diagnostics.event("run.started","Starting local work",run.id,details=DiagnosticExporter.device(this))
                     if(run.payload.optString("kind")=="benchmark") {
                         val wake=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MagicTester:benchmark")
-                        try {wake.acquire(35*60000L);BenchmarkRunner.run(this,store,run) {label->progress(label);store.update(run.id,"running",label,onlyIfRunning=true)}} finally {if(wake.isHeld) wake.release()}
+                        try {wake.acquire(90*60000L);BenchmarkRunner.run(this,store,run) {label->progress(label);store.update(run.id,"running",label,onlyIfRunning=true)}} finally {if(wake.isHeld) wake.release()}
                     } else analysis(run)
                 } catch(error:Throwable) {
                     Diagnostics.event("run.exception",error.message ?: "Local work failed",run.id,level=if(store.get(run.id)?.state=="cancelled") "INFO" else "ERROR",error=error)
