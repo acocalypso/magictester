@@ -25,6 +25,7 @@
   "adaptations": [
     "engine.ts: Windows classpath, process-tree cancellation, portable log filenames, Windows CRLF log parsing, explicit UTF-8 Java pipes",
     "runtime.mjs: standalone asset path",
+    "forge-releases.mjs: bounded transient release API retries",
     "source-http.ts: SQLite cache instead of PostgreSQL",
     "observation-review.ts: pure review function only"
   ]

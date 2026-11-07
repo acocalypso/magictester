@@ -1,4 +1,26 @@
 const api = "https://api.github.com/repos/Card-Forge/forge";
+async function releaseJson(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "MagicTester/0.1 (+https://github.com/acocalypso/magictester)",
+        },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (response.ok) return await response.json();
+      await response.body?.cancel();
+      const error = Error("Forge release API HTTP " + response.status);
+      error.transient = response.status >= 500 && response.status <= 599;
+      throw error;
+    } catch (error) {
+      const transient = error.transient || error instanceof TypeError || error.name === "TimeoutError";
+      if (!transient || attempt >= 2) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+}
 export function compareVersions(a, b) {
   if (!/^\d+\.\d+\.\d+$/.test(a) || !/^\d+\.\d+\.\d+$/.test(b))
     throw Error("Unsupported Forge version");
@@ -31,18 +53,7 @@ export function releaseDescriptor(release, sourceCommit) {
   };
 }
 export async function latestStable(
-  get = async (url) => {
-    const r = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent":
-          "MagicTester/0.1 (+https://github.com/acocalypso/magictester)",
-      },
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!r.ok) throw Error("Forge release API HTTP " + r.status);
-    return r.json();
-  },
+  get = releaseJson,
 ) {
   const release = await get(api + "/releases/latest");
   if (
