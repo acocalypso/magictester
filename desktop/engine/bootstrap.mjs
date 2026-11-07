@@ -10,7 +10,7 @@ import {
   mkdtemp,
   chmod,
 } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createGunzip } from "node:zlib";
@@ -67,7 +67,14 @@ if (!existsSync(home + "/build.txt")) {
   for await (const b of createReadStream(archive)) hash.update(b);
   if (hash.digest("hex") !== release.archiveSha256)
     throw new Error("Forge archive checksum mismatch");
-  execFileSync("tar", ["-xjf", archive, "-C", home], { windowsHide: true });
+  // Git/MSYS GNU tar can precede Windows' bsdtar on PATH and interprets D:
+  // archive paths as remote hosts. Use the OS tool and a relative archive name.
+  const tar = process.platform === "win32"
+    ? join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe")
+    : "tar";
+  execFileSync(tar, ["-xjf", "forge.tar.bz2"], {
+    cwd: home, windowsHide: true, encoding: "utf8", stdio: "inherit",
+  });
   await rm(archive);
 }
 const cachedSchema = existsSync(root + "/cards.json")
