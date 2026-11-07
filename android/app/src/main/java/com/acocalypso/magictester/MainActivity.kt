@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
                 Text("MT",Modifier.border(1.dp,accent,RoundedCornerShape(3.dp)).padding(7.dp),fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Bold,color=accent)
                 Spacer(Modifier.width(12.dp));Column { Text("MagicTester",fontSize=21.sp,fontWeight=FontWeight.SemiBold);Text("ON-DEVICE WORKBENCH",fontSize=10.sp,letterSpacing=2.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-                Spacer(Modifier.weight(1f));Text("Forge\n${BuildConfig.FORGE_VERSION}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.weight(1f));Text("App ${BuildConfig.VERSION_NAME}\nForge ${BuildConfig.FORGE_VERSION}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider(color=MaterialTheme.colorScheme.surfaceVariant)
             if(model.busy || model.exportingDiagnostics) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(if(model.exportingDiagnostics) "Collecting diagnostic logs" else model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.exportingDiagnostics || model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
@@ -204,6 +204,8 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         PerformancePanel(model)
         HorizontalDivider();Text("Resource policy",fontSize=19.sp)
         Text("The saved parallel-game limit is shared by all Forge work. Each process has isolated game state. Advisory memory pressure or severe thermal throttling limits work to one process; critical thermal status or insufficient measured free RAM stops startup. Single-engine setup uses a fixed headroom allowance; parallel work reserves additional system memory. Long analyses keep a visible notification and a bounded wake lock. Cancel from Runs. Android may still stop work under memory or battery pressure; completed match evidence is saved.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("App version",fontSize=19.sp)
+        Text("MagicTester ${BuildConfig.VERSION_NAME} · ${BuildConfig.BUILD_TYPE} · build ${BuildConfig.VERSION_CODE}",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Latest stable Forge",fontSize=19.sp)
         Text("Bundled: ${BuildConfig.FORGE_VERSION} · Latest checked: ${model.latest.ifBlank { "not checked" }}. New engine code arrives in a signed app update. Version checks occur hourly when online; cached verification is accepted for 26 hours. New runs stop when a newer stable engine is available.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedButton(onClick={context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/acocalypso/magictester/releases")))}) {Text("App releases")}
