@@ -28,7 +28,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var latest by mutableStateOf(prefs.getString("latest","") ?: "")
     var latestPool by mutableStateOf<JSONObject?>(null)
     init {
-        store.recover(); MetaJobService.schedule(app); loadPool()
+        MetaJobService.schedule(app); loadPool()
         viewModelScope.launch { while(isActive) { runs = withContext(Dispatchers.IO) { store.all() };delay(1000) } }
         viewModelScope.launch { try { latest = withContext(Dispatchers.IO) { ForgeRelease.check(app) } } catch(_:Exception) { } }
     }

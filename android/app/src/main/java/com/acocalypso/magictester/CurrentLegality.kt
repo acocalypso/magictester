@@ -31,6 +31,7 @@ class CurrentLegality(context: Context) {
             val file=files.getValue(name)
             require(file.isFile) { "Could not check $name. Use its full official card name." }
             val legality = JSONObject(file.readText()).getJSONObject("legalities").optString(key)
+            if(legality == "restricted" && texts.any { text -> DeckText.parse(text).cards.filter { it.name.equals(name,true) }.sumOf { it.quantity } > 1 }) problems += "$name is restricted to one copy in $format."
             if(legality !in listOf("legal","restricted")) problems += "$name is ${legality.ifBlank { "not supported" }.replace('_',' ')} in $format."
         }
         require(problems.isEmpty()) { problems.joinToString("\n") }

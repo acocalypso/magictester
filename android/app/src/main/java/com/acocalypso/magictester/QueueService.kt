@@ -86,7 +86,12 @@ class QueueService : Service() {
                     if (store.get(run.id)?.state == "running") store.update(run.id,"failed",error.message ?: "The local engine stopped.")
                 } finally { ForgeClient.cancel(run.id); if(wake.isHeld) wake.release() }
             }
-        } finally { currentId=""; if(wake.isHeld) wake.release(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }
+        } finally { currentId=""; if(wake.isHeld) wake.release()
+            withContext(NonCancellable + Dispatchers.Main) {
+                runner=null
+                if(store.next() != null) runner=scope.launch { processQueue() }
+                else { stopForeground(STOP_FOREGROUND_REMOVE);stopSelf() }
+            } }
     }
     override fun onBind(intent: Intent?) = null
     override fun onDestroy() { if(currentId.isNotEmpty()) { ForgeClient.cancel(currentId); store.get(currentId)?.let { if(it.state == "running") store.update(currentId,"interrupted","Android stopped the analysis. Resume to continue.") } }; scope.cancel();store.close(); super.onDestroy() }

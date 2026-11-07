@@ -25,6 +25,11 @@ object EngineValidation {
             deck.getOrCreate(section).add(card, line.quantity)
         }
         if (problems.isEmpty()) {
+            CompanionRules.problem(ParsedDeck(canonical, emptyList()), DeckText.commander(format))?.let { problems += it }
+            if (DeckText.commander(format) && parsed.cards.any { it.section == "Sideboard" }) problems += "Commander formats do not use a sideboard. Declare an eligible companion under Companion instead."
+            if (!DeckText.commander(format) && parsed.cards.any { it.section == "Commander" }) problems += "The selected format does not use commanders."
+        }
+        if (problems.isEmpty()) {
             val rules = if (DeckText.commander(format)) DeckFormat.Commander else DeckFormat.Constructed
             rules.getDeckConformanceProblem(deck)?.let { problems += it }
             val gameFormat = FModel.getFormats().getFormat(if (format == "cedh") "Commander" else if (format == "duel") "Duel Commander" else format.replaceFirstChar { it.uppercase() })

@@ -93,6 +93,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         if(DeckText.commander(model.format)) Text("Place both eligible commanders under a Commander heading. Use Deck for the other cards. A legal pair counts toward the 100-card total.",fontSize=13.sp,color=accent)
         OutlinedTextField(model.deck,{model.deck=it;model.saveDraft()},label={Text("Decklist")},modifier=Modifier.fillMaxWidth().heightIn(min=230.dp,max=420.dp),textStyle=LocalTextStyle.current.copy(fontFamily=FontFamily.Monospace,fontSize=13.sp))
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) { OutlinedButton(onClick=open) { Text("Open file") };OutlinedButton(onClick={model.validate()},enabled=!model.busy && model.deck.isNotBlank()) {Text("Check deck")} }
+        TextButton(onClick={model.deck=if(DeckText.commander(model.format)) Examples.commander() else Examples.burn;model.title="Local reference";model.saveDraft()}) {Text("Load reference deck")}
         HorizontalDivider()
         Text("Analysis settings",fontSize=19.sp)
         Text("$games matches · ${if(bestOf && !DeckText.commander(model.format)) "best of three" else "single games"}")
@@ -126,6 +127,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         model.latestPool?.let { pool -> Text("${pool.optString("scope")}\nFetched ${DateFormat.getDateTimeInstance().format(Date(pool.optLong("fetchedAt")))}. Source: MTGTop8.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         Text("Android schedules a refresh for all formats daily. The OS may delay it; the fetched date always shows the age of the cached pool.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         model.opponents.forEach { opponent -> val title=opponent.getString("name");OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp)) { Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically) { Checkbox(title in model.selected,{checked -> model.selected=if(checked) model.selected+title else model.selected-title});Column(Modifier.weight(1f)) {Text(title);if(opponent.has("share")) Text("${"%.1f".format(opponent.optDouble("share")*100)}% source share",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};TextButton(onClick={show(title to opponent.getString("text"))}) {Text("Deck")} } } }
+        TextButton(onClick={try {model.addOpponent("Local reference · not tournament data",if(DeckText.commander(model.format)) Examples.commander("Ambassador Laquatus") else Examples.burn)} catch(e:Exception) {model.message=e.message ?: "Could not add reference"}}) {Text("Add local reference opponent")}
         HorizontalDivider();Text("Add your own opponent",fontSize=19.sp)
         OutlinedTextField(link,{link=it},label={Text("Public deck link")},modifier=Modifier.fillMaxWidth(),singleLine=true)
         OutlinedButton(onClick={model.importLink(link,true)},enabled=!model.busy && link.isNotBlank()) {Text("Import opponent")}

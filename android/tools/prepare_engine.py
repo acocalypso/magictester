@@ -64,6 +64,7 @@ for patch in PATCHES:
 # the cards in its decks; preserve Forge's own lazy reader on memory-limited ART.
 fmodel=patchdir/'forge/model/FModel.java'; fmodel.parent.mkdir(parents=True,exist_ok=True)
 download(f"https://raw.githubusercontent.com/Card-Forge/forge/{RELEASE['sourceCommit']}/forge-gui/src/main/java/forge/model/FModel.java",fmodel)
+if digest(fmodel) != "977fcf910d6c74635e618e7d46790a49ff064d9454e9ff33c615d2a069b4737f": raise RuntimeError("Pinned FModel source checksum mismatch")
 content=fmodel.read_text(); find='final boolean loadCardsLazily = GuiBase.isMobile() ? false : getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY);'
 if content.count(find)!=1:raise RuntimeError('Forge lazy-card adapter requires review')
 content=content.replace(find,'final boolean loadCardsLazily = Boolean.getBoolean("magictester.lazyCards") || (!GuiBase.isMobile() && getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY));')
@@ -73,13 +74,13 @@ java=str(java) if java.is_file() else 'java'
 subprocess.run([java,'-Xmx1024m','-m','jdk.compiler/com.sun.tools.javac.Main','--release','17','-encoding','UTF-8','-cp',str(raw),'-d',str(classes),*[str(p) for p in inputs]],check=True)
 overrides={p.relative_to(classes).as_posix():p for p in classes.rglob('*.class')}
 with zipfile.ZipFile(raw) as original,zipfile.ZipFile(BUILD/'forge-engine.jar','w',compression=zipfile.ZIP_DEFLATED) as output:
-    for name in original.namelist():
+    for name in sorted(original.namelist()):
         if name in overrides or name.endswith('/') or name.endswith('module-info.class') or name.startswith('META-INF/versions/') or name.upper().endswith(('.SF','.RSA','.DSA')):continue
-        output.writestr(name,original.read(name))
-    for name,path in overrides.items():output.write(path,name)
+        output.writestr(zipfile.ZipInfo(name,(1980,1,1,0,0,0)),original.read(name),compress_type=zipfile.ZIP_DEFLATED)
+    for name,path in sorted(overrides.items()):output.writestr(zipfile.ZipInfo(name,(1980,1,1,0,0,0)),path.read_bytes(),compress_type=zipfile.ZIP_DEFLATED)
 with zipfile.ZipFile(ASSETS/'forge-data.zip','w',compression=zipfile.ZIP_DEFLATED) as output:
-    for path in data.rglob('*'):
-        if path.is_file():output.write(path,path.relative_to(data).as_posix(),compress_type=zipfile.ZIP_STORED if path.suffix=='.zip' else zipfile.ZIP_DEFLATED)
+    for path in sorted(data.rglob('*')):
+        if path.is_file():output.writestr(zipfile.ZipInfo(path.relative_to(data).as_posix(),(1980,1,1,0,0,0)),path.read_bytes(),compress_type=zipfile.ZIP_STORED if path.suffix=='.zip' else zipfile.ZIP_DEFLATED)
 manifest={**RELEASE,'engineJarSha256':digest(BUILD/'forge-engine.jar'),'dataSha256':digest(ASSETS/'forge-data.zip'),'adapter':'Android headless GUI; isolated process; lazy card reader','source':'https://github.com/acocalypso/magictester'}
 (ASSETS/'engine-manifest.json').write_text(json.dumps(manifest,indent=2))
 shutil.copyfile(ROOT/'LICENSE',ASSETS/'LICENSE.txt')
