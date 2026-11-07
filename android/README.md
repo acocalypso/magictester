@@ -59,7 +59,7 @@ Selected opponents rotate equally. Source shares are shown as context; results a
 
 ### Forge updates
 
-The app checks GitHub's latest **stable** Forge release hourly when online. A successful check can be used offline for at most 26 hours. New games stop if a newer stable release exists. Compiled engine code must be delivered in a signed app update; the app does not execute downloaded desktop JARs. Updating the pinned release requires reviewing patches, passing real Android engine acceptance and publishing a matching APK. Failed patch/checksum checks stop the build.
+The app checks GitHub's latest **stable** Forge release hourly when online. A successful check can be used offline for at most 26 hours. New games stop if a newer stable release exists. Compiled engine code must be delivered in a signed app update; the app does not execute downloaded desktop JARs. Updating the pinned release requires reviewing patches, passing real Android engine acceptance and publishing a matching APK. Failed patch/checksum checks stop the build. A separate daily GitHub workflow audits the pin against the latest stable release and fails with an explicit upgrade instruction when it changes.
 
 ## Production releases
 
@@ -70,7 +70,7 @@ The Android workflow builds the app, runs JVM and real emulator checks, and can 
 - `ANDROID_KEY_ALIAS`: persistent signing alias.
 - `ANDROID_KEY_PASSWORD`: private-key password.
 
-Preserve an offline backup of this keystore. Every upgrade must use the same signing identity. Signing material must never be committed, printed in logs or uploaded as an artifact. The workflow refuses to publish a tag without its signing configuration. Tags are validated; APK version codes are derived monotonically from the semantic version. Release artifacts include APK SHA-256 checksums and certificate verification.
+Preserve an offline backup of this keystore. Every upgrade must use the same signing identity. Signing material must never be committed, printed in logs or uploaded as an artifact. Without production signing secrets, the workflow publishes the tested debug APK as a clearly labeled prerelease. Debug keys may change between CI builds; export results before reinstalling if an update cannot be installed. Tags are validated; APK version codes are derived monotonically from the semantic version. Release artifacts include APK SHA-256 checksums and certificate verification.
 
 ## Privacy and licensing
 

@@ -51,7 +51,7 @@ import kotlin.math.sqrt
                 val index=result.optInt("index")
                 val normal=result.optString("termination") == "normal"
                 Text("Match ${index+1} · ${if(normal) if(result.optInt("winner",-1)==0) "Your deck won" else "Opponent won" else result.optString("termination").replace('_',' ')}",fontWeight=FontWeight.SemiBold)
-                Text("${result.optLong("durationMs")/1000}s · seed ${result.optInt("gameSeed")} · ${result.optString("unit","game")}",fontSize=12.sp)
+                Text("${result.optLong("durationMs")/1000}s · ${result.optInt("clockSeconds",run.payload.optInt("clockSeconds"))}s limit · seed ${result.optInt("gameSeed")} · ${result.optString("unit","game")}",fontSize=12.sp)
                 val opponents=run.payload.getJSONArray("opponents")
                 val seats=if(run.payload.getString("format") in listOf("commander","cedh")) run.payload.optInt("players",4) else 2
                 for(seat in 1 until seats) { val opponent=opponents.getJSONObject((index+seat-1)%opponents.length());Text("Seat ${seat+1}: ${opponent.getString("name")}",fontSize=12.sp) }

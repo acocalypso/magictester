@@ -3,9 +3,9 @@
 import pathlib, subprocess, sys, re
 apk_dir=pathlib.Path(sys.argv[1])
 output=pathlib.Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=True)
-for apk in sorted(apk_dir.rglob('*.apk')):
-    if 'release' not in apk.name: subprocess.run(['adb','install','-r',str(apk)],check=True)
 try:
+    for apk in sorted(apk_dir.rglob('*.apk')):
+        if 'release' not in apk.name: subprocess.run(['adb','install','-r',str(apk)],check=True)
     result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=1500)
     print(result.stdout);print(result.stderr,file=sys.stderr)
     (output/'instrumentation.txt').write_text(result.stdout+result.stderr)

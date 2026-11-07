@@ -22,6 +22,8 @@ object ForgeClient {
         val input = File(directory, UUID.randomUUID().toString() + ".json")
         withContext(Dispatchers.IO) { input.writeText(request.toString()) }
         var connection: ServiceConnection? = null
+        var engineBinder: IBinder? = null
+        val stopped = CompletableDeferred<Unit>()
         try {
             withTimeout(if ((request.has("decks") || request.has("rawDecks"))) (request.optInt("clockSeconds", 120) * (if(request.optInt("bestOf") == 3) 5 else 1) + 180) * 1000L else 600000L) {
                 suspendCancellableCoroutine<File> { continuation ->
@@ -43,6 +45,8 @@ object ForgeClient {
                     })
                     connection = object : ServiceConnection {
                         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                            engineBinder=binder
+                            try { binder.linkToDeath({ stopped.complete(Unit) },0) } catch(_:RemoteException) { stopped.complete(Unit) }
                             try { Messenger(binder).send(Message.obtain(null, 1).apply { replyTo = handler; data = Bundle().apply { putString("path", input.absolutePath) } }) }
                             catch (error: Exception) { if (continuation.isActive) continuation.resumeWith(Result.failure(error)) }
                         }
@@ -56,6 +60,7 @@ object ForgeClient {
             }
         } finally {
             withContext(NonCancellable + Dispatchers.Main) { connection?.let { try { context.unbindService(it) } catch (_: IllegalArgumentException) { } }; ForgeClient.cancel(id); owner = "" }
+            withContext(NonCancellable) { if(engineBinder != null) withTimeoutOrNull(3000) { stopped.await() } }
             input.delete()
             directory.listFiles { file -> file.name.startsWith(input.name + ".") && file.name.endsWith(".dck") }?.forEach { it.delete() }
         }

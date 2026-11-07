@@ -12,7 +12,7 @@ public final class AndroidGui {
         return (IGuiBase) Proxy.newProxyInstance(IGuiBase.class.getClassLoader(), new Class<?>[]{IGuiBase.class}, (proxy, method, args) -> {
             switch (method.getName()) {
                 case "getAssetsDir": return root;
-                case "getCurrentVersion": return "2.0.15";
+                case "getCurrentVersion": return EngineVersion.VALUE;
                 case "isRunningOnDesktop": case "isLibgdxPort": case "isGuiThread": case "hasNetGame": case "isSupportedAudioFormat": return false;
                 case "getAvatarCount": case "getSleevesCount": return 1;
                 case "getScreenScale": return 1f;

@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.plugin.compose") }
+val forgeRelease = groovy.json.JsonSlurper().parse(rootProject.file("engine/release.json")) as Map<*, *>
+val forgeVersion = forgeRelease["version"] as String
 val prepareForge = tasks.register<Exec>("prepareForge") {
     workingDir(rootProject.projectDir)
     commandLine("python3", "tools/prepare_engine.py")
@@ -14,7 +16,7 @@ android {
         versionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
         versionName = providers.gradleProperty("versionName").orElse("0.1.0").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "FORGE_VERSION", "\"2.0.15\"")
+        buildConfigField("String", "FORGE_VERSION", "\"$forgeVersion\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17; isCoreLibraryDesugaringEnabled = true }

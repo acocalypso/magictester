@@ -7,6 +7,11 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 class WorkbenchUiTest {
+    companion object {
+        @JvmStatic @org.junit.BeforeClass fun grantNotifications() {
+            if(android.os.Build.VERSION.SDK_INT >= 33) InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("pm grant com.acocalypso.magictester android.permission.POST_NOTIFICATIONS").close()
+        }
+    }
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     @Test fun firstRunAndNavigationAreReadable() {
         compose.onNodeWithText("MagicTester").assertIsDisplayed()

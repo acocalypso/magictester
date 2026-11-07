@@ -29,7 +29,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var latestPool by mutableStateOf<JSONObject?>(null)
     init {
         MetaJobService.schedule(app); loadPool()
-        viewModelScope.launch { while(isActive) { runs = withContext(Dispatchers.IO) { store.all() };delay(1000) } }
+        viewModelScope.launch { RunEvents.changes.collect { runs = withContext(Dispatchers.IO) { store.all() } } }
         viewModelScope.launch { try { latest = withContext(Dispatchers.IO) { ForgeRelease.check(app) } } catch(_:Exception) { } }
     }
     fun saveDraft() { prefs.edit().putString("deck",deck).putString("title",title).putString("format",format).apply() }
@@ -62,6 +62,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         val source=withContext(Dispatchers.IO) { CurrentLegality(app).check(listOf(deck),format) { status=it } }
         val file=ForgeClient.execute(app,JSONObject().put("operation","validate").put("text",deck).put("format",format),"validation") { label,value -> status=label;fraction=value }
         val result=JSONObject(withContext(Dispatchers.IO) { file.readText() })
+        withContext(Dispatchers.IO) { file.delete() }
         val errors=result.getJSONArray("errors")
         message=if(result.getBoolean("valid")) "Deck passed: card support, deck size, copy limits, format rules and commander pairing/color identity. $source." else (0 until errors.length()).joinToString("\n") { errors.getString(it) }
     }

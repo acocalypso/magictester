@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
             }
             HorizontalDivider(color=MaterialTheme.colorScheme.surfaceVariant)
             if(model.busy) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
-            if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
+            if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
                 0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{tab=2})
                 1 -> if(selectedRun == null) RunsScreen(model) { selectedRun=it } else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")})

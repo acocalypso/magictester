@@ -99,6 +99,7 @@ jobs:
           target: ${{ matrix.target }}
           arch: x86_64
           profile: pixel_6
+          disk-size: 6G
           ram-size: 3072M
           heap-size: 768M
           disable-animations: true
@@ -124,7 +125,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Sign release with persistent private key
+      - name: Prepare debug APK or sign production APK
+        id: sign
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -132,24 +134,35 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Configure the four ANDROID signing secrets listed in android/README.md before publishing.'; exit 1; }
+          mkdir -p release
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            cp artifacts/app-debug.apk "release/MagicTester-${RELEASE_TAG}-debug.apk"
+            java -jar artifacts/apksigner.jar verify --verbose --print-certs "release/MagicTester-${RELEASE_TAG}-debug.apk" > release/signing-certificate.txt
+            echo 'debug=true' >> "$GITHUB_OUTPUT"
+          else
           test -n "$ANDROID_KEYSTORE_PASSWORD" && test -n "$ANDROID_KEY_ALIAS" && test -n "$ANDROID_KEY_PASSWORD"
           umask 077
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.p12"
           mkdir -p release
           java -jar artifacts/apksigner.jar sign --ks "$RUNNER_TEMP/android-release.p12" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --out "release/MagicTester-${RELEASE_TAG}.apk" artifacts/app-release-unsigned.apk
           java -jar artifacts/apksigner.jar verify --verbose --print-certs "release/MagicTester-${RELEASE_TAG}.apk" > release/signing-certificate.txt
+          echo 'debug=false' >> "$GITHUB_OUTPUT"
+          fi
           cd release
           sha256sum *.apk > SHA256SUMS
       - uses: softprops/action-gh-release@v3.0.4
         with:
           name: MagicTester ${{ github.ref_name }} · Android
           generate_release_notes: true
+          prerelease: ${{ steps.sign.outputs.debug == 'true' }}
+          make_latest: false
           files: release/*
           fail_on_unmatched_files: true
           body: |
             Standalone Android app. Forge runs locally on the phone; no server or Docker is required.
             First use: Setup → Set up local engine, then add your deck and opponents.
-            Install the APK manually. Future updates must retain the same signing certificate.
+            Install the APK manually. APKs ending in `-debug.apk` are debug builds, published as prereleases.
+            Debug signing keys may change between CI builds: export results before reinstalling if Android cannot update an existing installation.
+            Production APKs use the persistent signing secrets when configured.
             Android 8+ is the declared minimum; the release passed real engine/UI acceptance on API 26, 35 and 37.2 (16 KiB pages).
             See android/README.md in this tag for resource requirements, update policy and known scope.

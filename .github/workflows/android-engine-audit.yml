@@ -1,0 +1,14 @@
+name: Android · stable Forge freshness
+on:
+  schedule:
+    - cron: '20 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: python3 android/tools/check_engine_release.py

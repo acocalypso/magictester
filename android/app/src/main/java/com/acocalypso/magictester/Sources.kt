@@ -34,7 +34,7 @@ object Http {
     fun sha(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
 }
 object DeckLinks {
-    fun load(link: String): Pair<String,String> {
+    fun load(link: String, fetch: (String) -> String = { Http.request(it) }): Pair<String,String> {
         val uri = URI(if(link.startsWith("https://")) link.trim() else "https://${link.trim()}")
         require(uri.scheme == "https" && uri.userInfo == null && uri.port == -1) { "Use an HTTPS public deck link." }
         val host = uri.host?.removePrefix("www.")
@@ -43,7 +43,7 @@ object DeckLinks {
         val title: String
         if (host == "moxfield.com") {
             val id = Regex("^/decks/([A-Za-z0-9_-]{22})(?:/primer)?/?$").matchEntire(uri.path)?.groupValues?.get(1) ?: error("Invalid Moxfield deck URL")
-            val data = JSONObject(Http.request("https://api2.moxfield.com/v2/decks/all/$id")); title = data.getString("name")
+            val data = JSONObject(fetch("https://api2.moxfield.com/v2/decks/all/$id")); title = data.getString("name")
             for (extra in listOf("signatureSpells","attractions","stickers")) require((data.optJSONObject(extra)?.length() ?: 0) == 0) { "This import contains unsupported $extra." }
             for ((key,section) in listOf("commanders" to "Commander","mainboard" to "Deck","sideboard" to "Sideboard","companions" to "Companion")) {
                 val board = data.optJSONObject(key) ?: continue
@@ -51,7 +51,7 @@ object DeckLinks {
             }
         } else if (host == "archidekt.com") {
             val id = Regex("^/decks/([1-9][0-9]{0,11})(?:/[^/]*)?/?$").matchEntire(uri.path)?.groupValues?.get(1) ?: error("Invalid Archidekt deck URL")
-            val data = JSONObject(Http.request("https://archidekt.com/api/decks/$id/")); title = data.getString("name")
+            val data = JSONObject(fetch("https://archidekt.com/api/decks/$id/")); title = data.getString("name")
             require((data.optJSONArray("customCards")?.length() ?: 0) == 0) { "Custom cards cannot be simulated." }
             val excluded = mutableSetOf<String>(); val categories = data.optJSONArray("categories") ?: JSONArray()
             for(i in 0 until categories.length()) { val c = categories.getJSONObject(i); if(!c.optBoolean("includedInDeck",true)) excluded += c.getString("name").lowercase() }
@@ -125,6 +125,12 @@ class Metagame(private val context: Context) {
                 }
                 val text = sections.filterValues { it.isNotEmpty() }.entries.joinToString("\n\n") { "${it.key}\n${it.value.joinToString("\n")}" }
                 require(DeckText.parse(text).errors.isEmpty() && sections.getValue("Deck").isNotEmpty())
+                val declared=source.select(".S14").map { it.text() }.firstOrNull { Regex("^MD \\d+ SB \\d+$").matches(it) }
+                if(declared != null) {
+                    val match=Regex("^MD (\\d+) SB (\\d+)$").matchEntire(declared)!!
+                    fun count(lines: List<String>)=lines.sumOf { it.substringBefore(' ').toInt() }
+                    require(count(sections.getValue("Deck")) == match.groupValues[1].toInt() && count(sections.getValue("Sideboard")+sections.getValue("Commander")+sections.getValue("Companion")) == match.groupValues[2].toInt()) { "Source deck count mismatch" }
+                }
                 decks.put(JSONObject().put("name",name).put("text",text).put("share",share).put("source",deckUrl).put("fetchedAt",System.currentTimeMillis()))
             } catch (_:Exception) { /* Keep only whole readable decklists, never a fabricated fallback. */ }
         }

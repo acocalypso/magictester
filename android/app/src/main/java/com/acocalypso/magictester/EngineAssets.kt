@@ -19,6 +19,8 @@ object EngineAssets {
             while (true) { val n = input.read(buffer); if (n < 0) break; sha.update(buffer, 0, n) }
         }
         check(sha.digest().joinToString("") { "%02x".format(it) } == digest) { "Engine data checksum mismatch. Reinstall the app." }
+        val required = manifest.optLong("dataUncompressedBytes", 160L*1024*1024) + 32L*1024*1024
+        check(context.filesDir.usableSpace > required) { "Free at least ${required/1048576} MiB of storage, then retry setup." }
         val stage = File(context.filesDir, "engines/$digest.partial")
         stage.deleteRecursively(); check(stage.mkdirs())
         try {

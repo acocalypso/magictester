@@ -28,6 +28,7 @@ public class AndroidForgeBridge {
     static boolean initialized;
     public static synchronized void initialize(String assets, Consumer<String> progress) {
         if (initialized) return;
+        System.setProperty("magictester.engineVersion",EngineVersion.VALUE);
         GuiBase.setInterface(AndroidGui.create(assets));
         GuiBase.setIsAndroid(true);
         System.setProperty("magictester.lazyCards", "true");
@@ -113,8 +114,8 @@ public class AndroidForgeBridge {
         if(!termination.equals("normal")) winner=null;
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("unit","game");result.put("index",resultIndex);result.put("batchIndex",resultIndex);
-        result.put("engine","forge");result.put("engineVersion",System.getProperty("magictester.engineVersion","2.0.15"));result.put("bridgeVersion",VERSION);
-        result.put("mode",request.mode);result.put("mulliganRule","London");result.put("seed",resultSeed);result.put("gameSeed",gameSeed);
+        result.put("engine","forge");result.put("engineVersion",EngineVersion.VALUE);result.put("bridgeVersion",VERSION);
+        result.put("clockSeconds",request.clockSeconds);result.put("mode",request.mode);result.put("mulliganRule","London");result.put("seed",resultSeed);result.put("gameSeed",gameSeed);
         result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started));result.put("termination",termination);result.put("winner",winner);
         result.put("turns",ended?game.getOutcome().getLastTurnNumber():null);result.put("startingPlayer",recorder.startingPlayer);
         result.put("startingLife",new ArrayList<>(recorder.startingLife));result.put("players",players(winner,registered.size(),recorder.placements));
@@ -185,7 +186,7 @@ public class AndroidForgeBridge {
                 for(var game:games) if(game.get("termination").equals("normal")) {int seat=((Number)game.get("winner")).intValue();wins.set(seat,wins.get(seat)+1);}
                 Map<String,Object> result=new LinkedHashMap<>();
                 result.put("unit","match");result.put("bestOf",3);result.put("index",index);result.put("batchIndex",index);
-                result.put("engine","forge");result.put("engineVersion",System.getProperty("magictester.engineVersion","2.0.15"));result.put("bridgeVersion",VERSION);result.put("mode",request.mode);result.put("mulliganRule","London");
+                result.put("engine","forge");result.put("engineVersion",EngineVersion.VALUE);result.put("bridgeVersion",VERSION);result.put("clockSeconds",request.clockSeconds);result.put("mode",request.mode);result.put("mulliganRule","London");
                 result.put("seed",request.seed);result.put("gameSeed",unitSeed);result.put("winner",winner);result.put("termination",termination);
                 result.put("players",players(winner,2,Map.of(0,2,1,2)));result.put("turns",null);result.put("startingPlayer",null);
                 result.put("durationMs",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-matchStarted));result.put("gameWins",wins);result.put("games",games);result.put("sideboarding",request.sideboarding);
