@@ -32,7 +32,7 @@ public class MagicTesterBridge {
         String[] decks,companions;
         int[] indices;
         int games,seed,clockSeconds,startIndex,bestOf,maxMatchGames;
-        boolean sideboarding;
+        boolean sideboarding,captureDecisions;
         String mode;
     }
     public static void configureCommanderColors(Deck deck,int seat) {
@@ -74,6 +74,7 @@ public class MagicTesterBridge {
         ObservedGame game=new ObservedGame(registered,match.getRules(),match);game.setNoGUIUser();
         Recorder recorder=new Recorder(game,registered,previous,request,gameIndex);game.recorder=recorder;game.subscribeToEvents(recorder);
         ActionRecorder actions=new ActionRecorder(game,recorder);game.getGameLog().addObserver(actions);
+        org.magictester.ai.ForgeDecisionTrace.open(game,request.captureDecisions,gameSeed);
         emit(Map.of("type","game_started","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"bridgeVersion",VERSION));
         long started=System.nanoTime();String termination="normal";
         ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"forge-game");t.setDaemon(true);return t;});
@@ -103,6 +104,8 @@ public class MagicTesterBridge {
         result.put("commanderColors",recorder.setupComplete?new ArrayList<>(recorder.commanderColors):null);
         result.put("companionSelections",recorder.setupComplete?new ArrayList<>(recorder.companionSelections):null);
         result.put("actionLog",actions.finish(termination.equals("normal") || termination.equals("rule_draw")));
+        var decisionTrace=org.magictester.ai.ForgeDecisionTrace.close(game,termination.equals("normal") || termination.equals("rule_draw"));
+        if(decisionTrace!=null) result.put("decisionTrace",decisionTrace);
         if(termination.equals("normal") || termination.equals("rule_draw")) {
             var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);pendingLog=log;
         }

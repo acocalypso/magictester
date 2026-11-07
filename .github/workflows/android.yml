@@ -2,10 +2,10 @@ name: Android · standalone engine
 on:
   push:
     branches: [main]
-    paths: ["android/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "engine-ai/**", ".github/workflows/android.yml"]
     tags: ["android-v*"]
   pull_request:
-    paths: ["android/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "engine-ai/**", ".github/workflows/android.yml"]
   workflow_dispatch:
     inputs:
       publish_debug:
@@ -57,6 +57,8 @@ jobs:
       - name: Build native app, unit tests and Android tests
         working-directory: android
         run: ./gradlew --no-daemon -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ steps.version.outputs.code }} assembleDebug assembleDebugAndroidTest assembleRelease testDebugUnitTest lintDebug
+      - name: Check shared AI decision journal
+        run: python3 engine-ai/tools/check.py --forge-jar android/engine/build/upstream.jar
       - name: Collect APKs and signing tool
         run: |
           mkdir -p android/artifacts

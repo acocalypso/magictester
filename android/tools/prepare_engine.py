@@ -52,7 +52,7 @@ classes=BUILD/'classes'
 if classes.exists(): shutil.rmtree(classes)
 classes.mkdir()
 patchdir=BUILD/'sources'; patchdir.mkdir(exist_ok=True)
-inputs=list((ROOT/'engine/src/main/java').rglob('*.java'))
+inputs=list((ROOT/'engine/src/main/java').rglob('*.java'))+list((ROOT.parent/'engine-ai/src/main/java').rglob('*.java'))
 version_source=patchdir/'org/magictester/engine/EngineVersion.java'
 version_source.parent.mkdir(parents=True,exist_ok=True)
 version_source.write_text('package org.magictester.engine; public final class EngineVersion { public static final String VALUE = '+json.dumps(VERSION)+'; }')

@@ -272,6 +272,9 @@ const bridgeSource = new URL(
   import.meta.url,
 );
 const bridgeBytes = await readFile(bridgeSource);
+const aiSourceRoot = new URL(existsSync(new URL("./ai-source/",import.meta.url)) ? "./ai-source/" : "../../engine-ai/src/main/java/", import.meta.url);
+const aiSources = await Promise.all(["org/magictester/ai/DecisionJournal.java", "org/magictester/ai/ForgeDecisionTrace.java"].map(async (path) => ({path,bytes:await readFile(new URL(path,aiSourceRoot))})));
+
 let patchBytes = await readFile(
   new URL("./bridge/patches.json", import.meta.url),
 );
@@ -294,6 +297,7 @@ if (release.sourceCommit !== baseline.sourceCommit) {
 }
 const bridgeHash = createHash("sha256")
   .update(bridgeBytes)
+  .update(Buffer.concat(aiSources.flatMap(({path,bytes})=>[Buffer.from(path+"\0"),bytes])))
   .update(patchBytes)
   .update(JSON.stringify(release))
   .digest("hex");
@@ -321,6 +325,10 @@ if (
   const sourceFile = buildSource + "/MagicTesterBridge.java";
   await writeFile(sourceFile, bridgeBytes);
   const patchedSources = [];
+  for(const source of aiSources) {
+    const path=buildSource+"/"+source.path;
+    await mkdir(dirname(path),{recursive:true});await writeFile(path,source.bytes);patchedSources.push(path);
+  }
   for (const patch of patches) {
     const upstream = Buffer.from(await (await get(patch.url)).arrayBuffer());
     if (createHash("sha256").update(upstream).digest("hex") !== patch.sha256)

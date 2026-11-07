@@ -2,10 +2,10 @@ name: Desktop · Windows and Linux
 on:
   push:
     branches: ["main"]
-    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+    paths: ["desktop/**", "engine-ai/**", ".github/workflows/desktop.yml"]
     tags: ["desktop-v*"]
   pull_request:
-    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+    paths: ["desktop/**", "engine-ai/**", ".github/workflows/desktop.yml"]
   workflow_dispatch:
     inputs:
       engine_check:

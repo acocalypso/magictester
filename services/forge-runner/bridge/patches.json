@@ -31,9 +31,17 @@
     "path": "forge/ai/PlayerControllerAi.java",
     "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/PlayerControllerAi.java",
     "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
-    "find": "if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
-    "replace": "if (lastOutcome.getWinningPlayer() != null && lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
-    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner."
+    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner. Optional bounded actor-visible entity-choice diagnostics, without changing the native decision.",
+    "replacements": [
+      {
+        "find": "if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
+        "replace": "if (lastOutcome.getWinningPlayer() != null && lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())"
+      },
+      {
+        "find": "        return SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);",
+        "replace": "        org.magictester.ai.DecisionJournal.Choice trace = org.magictester.ai.ForgeDecisionTrace.begin(player, optionList, sa, isOptional);\n        try {\n            T selected = SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);\n            org.magictester.ai.ForgeDecisionTrace.complete(trace, selected, player);\n            return selected;\n        } catch (RuntimeException | Error error) {\n            if (trace != null) trace.failed();\n            throw error;\n        }"
+      }
+    ]
   },
   {
     "path": "forge/ai/ability/ChooseCompanionAi.java",

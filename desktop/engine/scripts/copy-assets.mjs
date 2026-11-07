@@ -3,6 +3,7 @@ import ts from "typescript";
 await mkdir("dist", { recursive: true });
 for (const name of ["bridge", "metadata", "contracts"])
   await cp(name, "dist/" + name, { recursive: true });
+await cp("../../engine-ai/src/main/java", "dist/ai-source", {recursive:true});
 await mkdir("tests/generated", { recursive: true });
 for (const name of await readdir("contract-tests")) {
   const source = (await readFile("contract-tests/" + name, "utf8"))
