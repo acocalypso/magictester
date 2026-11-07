@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.*
@@ -46,6 +47,14 @@ class MainActivity : ComponentActivity() {
     var tab by remember { mutableIntStateOf(if(model.firstSetup) 3 else 0) }
     var deletingRun by remember { mutableStateOf<String?>(null) }
     var selectedRun by remember { mutableStateOf<String?>(null) }
+    val tabHistory=remember {mutableStateListOf<Int>()}
+    fun navigateTab(next: Int) {
+        if(next!=tab) {if(tabHistory.size>=20) tabHistory.removeAt(0);tabHistory.add(tab);tab=next}
+        selectedRun=null
+    }
+    BackHandler(enabled=(tab==1 && selectedRun!=null) || tabHistory.isNotEmpty()) {
+        if(tab==1 && selectedRun!=null) selectedRun=null else tab=tabHistory.removeAt(tabHistory.lastIndex)
+    }
     var deckDialog by remember { mutableStateOf<Pair<String,String>?>(null) }
     var exportRun by remember { mutableStateOf<String?>(null) }
     var diagnosticRequest by remember { mutableStateOf<DiagnosticRequest?>(null) }
@@ -67,7 +76,7 @@ class MainActivity : ComponentActivity() {
     }
     LaunchedEffect(Unit) { if(Build.VERSION.SDK_INT >= 33) notification.launch(Manifest.permission.POST_NOTIFICATIONS) }
     Scaffold(containerColor=charcoal,bottomBar={ NavigationBar(containerColor=charcoal,tonalElevation=0.dp) {
-        listOf("Test","Runs","Pools","Setup").forEachIndexed { index,label -> NavigationBarItem(selected=tab==index,onClick={tab=index;selectedRun=null},icon={Text(listOf("＋","≡","▤","○")[index],fontSize=24.sp)},label={Text(label)}) }
+        listOf("Test","Runs","Pools","Setup").forEachIndexed { index,label -> NavigationBarItem(selected=tab==index,onClick={navigateTab(index)},icon={Text(listOf("＋","≡","▤","○")[index],fontSize=24.sp)},label={Text(label)}) }
     } }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -79,7 +88,7 @@ class MainActivity : ComponentActivity() {
             if(model.busy || model.exportingDiagnostics) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(if(model.exportingDiagnostics) "Collecting diagnostic logs" else model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.exportingDiagnostics || model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
             if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
-                0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{tab=2})
+                0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{navigateTab(2)})
                 1 -> if(selectedRun == null) RunsScreen(model,{selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it})
                 2 -> PoolsScreen(model) { deckDialog=it }
                 else -> SetupScreen(model) { includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) }

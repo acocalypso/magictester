@@ -1,8 +1,10 @@
 package com.acocalypso.magictester
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,12 +21,14 @@ import kotlin.math.sqrt
     var results by remember(id) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var selectedGame by remember(id) { mutableStateOf<JSONObject?>(null) }
     var timeout by remember(id) { mutableIntStateOf(run.payload.optInt("clockSeconds",120)) }
+    val listState=rememberLazyListState()
+    BackHandler { if(selectedGame!=null) selectedGame=null else back() }
     LaunchedEffect(run.completed,run.state) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
     selectedGame?.let { game -> GameActions(game) { selectedGame=null };return }
     val completed=results.filter { it.optString("termination") in listOf("normal","rule_draw") }.distinctBy { it.optInt("index") }
     val decisive=completed.filter { it.optString("termination") == "normal" }
     val wins=decisive.count { !it.isNull("winner") && it.optInt("winner",-1) == 0 }
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    LazyColumn(Modifier.fillMaxSize(),state=listState,contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { TextButton(onClick=back) { Text("← All analyses") };Text(run.payload.optString("title"),fontSize=28.sp,fontWeight=FontWeight.Medium);Text("${run.payload.optString("format")} · Forge ${run.payload.optString("engineVersion")} · ${run.state}",fontSize=13.sp);Spacer(Modifier.height(10.dp));Text(run.label,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { LiveGamePanel(run) }
         if(run.payload.optString("kind")=="benchmark") item {run.payload.optJSONObject("benchmarkReport")?.let {report ->

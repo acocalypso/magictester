@@ -31,4 +31,33 @@ class WorkbenchUiTest {
         val destination=File(instrumentation.targetContext.filesDir,"acceptance-ui.png")
         destination.outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) }
     }
+    @Test fun phoneBackReturnsFromGameToRunThenListAndPreviousTab() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val store=RunStore(context)
+        val payload=org.json.JSONObject().put("title","Back navigation fixture").put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().put(org.json.JSONObject().put("name","Navigation opponent").put("text",Examples.burn)))
+        val id=store.create(payload)
+        try {
+            store.update(id,"running","Navigation fixture")
+            val evidence=File(context.cacheDir,"navigation.jsonl").apply {writeText(org.json.JSONObject().put("type","result").put("result",org.json.JSONObject().put("index",0).put("termination","normal").put("winner",0).put("turns",5).put("actionLog",org.json.JSONObject().put("complete",true).put("entries",org.json.JSONArray()))).toString()+"\n")}
+            store.saveAttempt(id,evidence,0);store.update(id,"complete","Navigation fixture",1)
+            compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
+            compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Back navigation fixture").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Back navigation fixture").performScrollTo().performClick()
+            compose.onNodeWithText("View observed game →").performScrollTo().performClick()
+            compose.onNodeWithText("Observed game").assertIsDisplayed()
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithText("View observed game →").assertIsDisplayed()
+            compose.onNodeWithText("Your decklist").performScrollTo().performClick()
+            compose.onNodeWithText("Close").assertIsDisplayed()
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithText("Your decklist").assertIsDisplayed()
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithText("Your analyses").assertExists()
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithText("Put your deck\nto the test.").assertExists()
+        } finally {store.delete(id);store.close()}
+    }
+
 }
