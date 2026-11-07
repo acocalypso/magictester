@@ -14,9 +14,10 @@ object ForgeClient {
     private val mutex = Mutex()
     private val pid = AtomicInteger(0)
     @Volatile private var owner = ""
-    fun cancel(id: String) { if (owner == id) pid.getAndSet(0).takeIf { it > 0 }?.let { Process.killProcess(it) } }
+    @Volatile private var cancelled = false
+    fun cancel(id: String) { if (owner == id) { cancelled=true;pid.getAndSet(0).takeIf { it > 0 }?.let { Process.killProcess(it) } } }
     suspend fun execute(context: Context, request: JSONObject, id: String, progress: (String, Float?) -> Unit): File = mutex.withLock {
-        owner = id
+        owner = id;cancelled=false
         val directory = File(context.filesDir, "ipc").apply { mkdirs() }
         val input = File(directory, UUID.randomUUID().toString() + ".json")
         withContext(Dispatchers.IO) { input.writeText(request.toString()) }
@@ -26,7 +27,9 @@ object ForgeClient {
                 suspendCancellableCoroutine<File> { continuation ->
                     val handler = Messenger(object : Handler(Looper.getMainLooper()) {
                         override fun handleMessage(message: Message) {
+                            if(!continuation.isActive) return
                             pid.set(message.data.getInt("pid"))
+                            if(cancelled) { cancel(id);continuation.resumeWith(Result.failure(IllegalStateException("Operation cancelled")));return }
                             val value = message.data.getString("value") ?: return
                             when (message.what) {
                                 1 -> progress(value, message.data.getFloat("fraction").takeIf { it >= 0 })

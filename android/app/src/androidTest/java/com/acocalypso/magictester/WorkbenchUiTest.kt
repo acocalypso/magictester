@@ -1,0 +1,24 @@
+package com.acocalypso.magictester
+import android.graphics.Bitmap
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Rule
+import org.junit.Test
+import java.io.File
+class WorkbenchUiTest {
+    @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    @Test fun firstRunAndNavigationAreReadable() {
+        compose.onNodeWithText("MagicTester").assertIsDisplayed()
+        compose.onNodeWithText("Setup",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Set up local engine").assertIsDisplayed()
+        compose.onNodeWithText("Pools",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Opponent pools").assertIsDisplayed()
+        compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Put your deck\nto the test.").assertIsDisplayed()
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val screenshot=instrumentation.uiAutomation.takeScreenshot()
+        val destination=File(instrumentation.targetContext.filesDir,"acceptance-ui.png")
+        destination.outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) }
+    }
+}

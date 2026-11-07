@@ -13,9 +13,9 @@ concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 jobs:
-  runtime:
+  build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-java@v5
@@ -26,29 +26,130 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6.4.1
       - name: Install SDK
         run: sdkmanager "platforms;android-37.2" "build-tools;36.0.0"
-      - name: Build app and tests
+      - name: Determine APK version
+        id: version
+        env:
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os,re
+          ref=os.environ['SOURCE_REF']
+          version=ref[9:] if ref.startswith('android-v') else '0.1.0'
+          match=re.fullmatch(r'(\d{1,3})\.(\d{1,2})\.(\d{1,2})',version)
+          if not match:raise ValueError('Android tags must use android-vMAJOR.MINOR.PATCH (minor/patch <100)')
+          major,minor,patch=map(int,match.groups())
+          code=major*10000+minor*100+patch+1
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write(f'version={version}\ncode={code}\n')
+          PY
+      - name: Build native app, unit tests and Android tests
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest testDebugUnitTest
+        run: ./gradlew --no-daemon -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ steps.version.outputs.code }} assembleDebug assembleDebugAndroidTest assembleRelease testDebugUnitTest lintDebug
+      - name: Collect APKs and signing tool
+        run: |
+          mkdir -p android/artifacts
+          cp android/app/build/outputs/apk/debug/app-debug.apk android/artifacts/
+          cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk android/artifacts/
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk android/artifacts/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" android/artifacts/
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: android-apks
+          path: android/artifacts/
+          retention-days: 7
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: android-build-reports
+          path: android/app/build/reports
+          retention-days: 14
+  runtime:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: '26'
+            target: google_apis
+          - api: '35'
+            target: google_apis
+          - api: '37.2'
+            target: google_apis_ps16k
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4.0.4
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: android-apks
+          path: android/artifacts
       - name: Enable hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Play real Forge game on Android
+      - name: Verify real engine and native UI on Android
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
-          api-level: 35
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
           arch: x86_64
           profile: pixel_6
           ram-size: 3072M
           heap-size: 768M
           disable-animations: true
-          script: cd android && ./gradlew --no-daemon connectedDebugAndroidTest
+          script: python3 android/tools/run_instrumentation.py android/artifacts android/artifacts/acceptance
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
-          name: android-engine-reports
-          path: |
-            android/app/build/reports
-            android/app/build/outputs/androidTest-results
+          name: android-runtime-${{ matrix.api }}
+          path: android/artifacts/acceptance
           retention-days: 14
+  release:
+    if: startsWith(github.ref, 'refs/tags/android-v')
+    needs: [build, runtime]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: android-apks
+          path: artifacts
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Sign release with persistent private key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo 'Configure the four ANDROID signing secrets listed in android/README.md before publishing.'; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" && test -n "$ANDROID_KEY_ALIAS" && test -n "$ANDROID_KEY_PASSWORD"
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.p12"
+          mkdir -p release
+          java -jar artifacts/apksigner.jar sign --ks "$RUNNER_TEMP/android-release.p12" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --out "release/MagicTester-${RELEASE_TAG}.apk" artifacts/app-release-unsigned.apk
+          java -jar artifacts/apksigner.jar verify --verbose --print-certs "release/MagicTester-${RELEASE_TAG}.apk" > release/signing-certificate.txt
+          cd release
+          sha256sum *.apk > SHA256SUMS
+      - uses: softprops/action-gh-release@v3.0.4
+        with:
+          name: MagicTester ${{ github.ref_name }} · Android
+          generate_release_notes: true
+          files: release/*
+          fail_on_unmatched_files: true
+          body: |
+            Standalone Android app. Forge runs locally on the phone; no server or Docker is required.
+            First use: Setup → Set up local engine, then add your deck and opponents.
+            Install the APK manually. Future updates must retain the same signing certificate.
+            Android 8+ is the declared minimum; the release passed real engine/UI acceptance on API 26, 35 and 37.2 (16 KiB pages).
+            See android/README.md in this tag for resource requirements, update policy and known scope.
