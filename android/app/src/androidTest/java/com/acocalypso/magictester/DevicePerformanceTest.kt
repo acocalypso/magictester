@@ -49,6 +49,17 @@ class DevicePerformanceTest {
             assertEquals(2,completed.liveGames.size)
             assertTrue(completed.liveGames.none {it.optBoolean("active")})
             assertEquals(2,store.successfulIndices(analysis).size)
+            // Delete while actual engine processes are active; late callbacks must not restore the row.
+            val removed=store.create(payload().put("games",2))
+            ContextCompat.startForegroundService(context,Intent(context,QueueService::class.java))
+            withTimeout(180000) { while(store.get(removed)?.liveGames?.none {it.optBoolean("active")}!=false) {delay(100)} }
+            store.update(removed,"deleting","Removing analysis")
+            ForgeClient.cancel(removed)
+            assertTrue(store.delete(removed))
+            withTimeout(10000) {while(ForgeClient.activePids(context,removed).isNotEmpty()) {delay(100)}}
+            delay(1000)
+            assertNull(store.get(removed))
+            assertFalse(store.file(removed,"anything").parentFile!!.exists())
             store.close()
         }
     }

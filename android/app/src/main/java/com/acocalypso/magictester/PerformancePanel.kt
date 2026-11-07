@@ -18,7 +18,7 @@ import org.json.JSONObject
     val report=remember(model.runs,model.performanceVersion,profile) {PerformanceSettings.report(context,profile)}
     val tested=maxOf(1,report?.optInt("maxStable",1) ?: 1)
     Text("Performance & parallel games",fontSize=20.sp)
-    Text("The benchmark plays two real reference games per engine at each level, up to four isolated processes. It measures throughput, peak process memory, free memory and actual overlap. A foreground notification shows progress.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("The benchmark plays two real games per engine at each level, up to four isolated processes. It measures throughput, peak process memory, free memory and actual overlap. A foreground notification shows progress.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     Row {Checkbox(currentDeck,{currentDeck=it});Text("Use my current deck and selected opponents",Modifier.padding(top=12.dp),fontSize=13.sp)}
     if(currentDeck) {
         Text("Workload: ${model.format}. Use Test and Pools to choose the deck and opponents first.",fontSize=12.sp)

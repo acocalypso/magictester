@@ -110,7 +110,7 @@ object DiagnosticExporter {
                 if(runId!=null && runs.isEmpty()) append("No stored run was available for $runId. Its diagnostic events may still be present.\n")
                 if(runs.isEmpty() && runId==null) append("No analyses were stored. Setup and startup logs are included.\n")
                 for(run in runs) append("Run ${run.id}\n${run.payload.optString("title","Untitled")} · ${run.payload.optString("format")} · ${run.state}\n${run.label}\nSaved matches: ${run.completed}/${run.payload.optInt("games")}; timeout ${run.payload.optInt("clockSeconds")} s; seed ${run.payload.optInt("seed")}.\n\n")
-                for(run in runs) run.liveGame?.let { game ->
+                for(run in runs) for(game in run.liveGames) {
                     val elapsed=GameClock.elapsed(game.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),run.state=="running" && game.optBoolean("active"),game.optLong("elapsedMs"))
                     append("Run ${run.id}: match ${game.optInt("unitIndex")+1}, game ${game.optInt("gameIndex")+1}: ${GameClock.format(elapsed)} elapsed; ${game.optInt("clockSeconds")} s limit.\n")
                 }
@@ -119,6 +119,9 @@ object DiagnosticExporter {
                 databaseError?.let { append("The history database could not be read. Existing logs were exported; see database-error.txt.\n") }
             })
             text("device.json",device.toString(2))
+            text("performance-settings.json",JSONObject().put("selectedParallelLimit",PerformanceSettings.selected(context)).put("mode",if(PerformanceSettings.selected(context)==0) "automatic" else "manual").put("reports",JSONObject().apply {
+                for(profile in listOf("constructed","commander-2","commander-3","commander-4")) PerformanceSettings.report(context,profile)?.let { put(profile,it) }
+            }).toString(2))
             text("errors.txt",timeline.filter { it.optString("level") in listOf("ERROR","WARN") }.joinToString("\n") { readable(it) }.ifBlank { "No warnings or errors were recorded in the retained app events. Check engine stderr, process exits and logcat for additional evidence.\n" })
             text("timeline.txt",timeline.joinToString("\n") { readable(it) }.ifBlank { "No matching app events were retained.\n" })
             databaseError?.let { text("database-error.txt",it) }
@@ -128,7 +131,7 @@ object DiagnosticExporter {
             for(log in logFiles) file("engine-and-crash-logs/${log.name}",log)
             for(run in runs) {
                 val settings=JSONObject().put("runId",run.id).put("state",run.state).put("lastMessage",run.label).put("completed",run.completed)
-                for(key in listOf("title","format","games","clockSeconds","bestOf","players","seed","engineVersion","createdAt","legality")) if(run.payload.has(key)) settings.put(key,run.payload.opt(key))
+                for(key in listOf("title","format","games","clockSeconds","bestOf","players","seed","engineVersion","createdAt","legality","kind","benchmarkReport")) if(run.payload.has(key)) settings.put(key,run.payload.opt(key))
                 run.liveGame?.let { settings.put("liveGame",it) }
                 settings.put("opponentCount",run.payload.optJSONArray("opponents")?.length() ?: 0)
                 text("runs/${run.id}/settings.json",settings.toString(2))
