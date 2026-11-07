@@ -101,3 +101,9 @@ Decks can also be imported from public or unlisted Moxfield and Archidekt links.
 ## Standalone desktop application
 
 The independent [desktop application](desktop/README.md) lives entirely under `desktop/`. It uses a native C#/.NET 10/Avalonia interface, SQLite and a bundled local engine worker, with no Docker or database service required. Windows/Linux builds and tagged desktop releases are defined in [the desktop workflow](.github/workflows/desktop.yml).
+
+## Standalone Android application
+
+The native [Android application](android/README.md) lives under `android/`. Kotlin/Jetpack Compose provides the interface, and Forge runs directly on Android ART in a separate local process. No analysis server, Docker, Node or desktop Java runtime is needed. Deck imports, current legality checks, daily opponent pools, persistent analyses, commander pairs, BO3 and readable game actions are available in the app.
+
+See [Android setup and resource requirements](android/README.md) and [the Android build/release workflow](.github/workflows/android.yml). The workflow builds APKs, checks real games and the native interface on API 26, 35 and 37.2, and publishes `android-v*` tags. Without production signing secrets it publishes the tested debug APK as a prerelease. Debug keys can change between builds, so export saved evidence before reinstalling if Android reports a signing conflict.
