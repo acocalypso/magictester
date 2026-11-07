@@ -65,6 +65,11 @@ test("failed bridge validation never activates a candidate, including a same-ver
       (await resolveRuntime(root)).bridge.sourceHash,
       old.sourceHash,
     );
+    assert.equal(
+      JSON.parse(await readFile(join(home, "magictester-bridge.json"), "utf8")).sourceHash,
+      old.sourceHash,
+      "staging writes must not alter the active manifest through a hard link",
+    );
     const state = JSON.parse(
       await readFile(join(root, "forge-updates.json"), "utf8"),
     );

@@ -114,6 +114,13 @@ export class RuntimeManager {
         await mkdir(to, { recursive: true });
         await this.cloneRuntime(from, to, false);
       } else if (entry.isFile()) {
+        // Manifests and generated card metadata can be rewritten while staging.
+        // Give them separate inodes so a rejected candidate cannot mutate the
+        // active build; large, read-only Forge assets can share disk blocks.
+        if (entry.name.endsWith(".json")) {
+          await copyFile(from, to);
+          continue;
+        }
         try {
           await link(from, to);
         } catch {
