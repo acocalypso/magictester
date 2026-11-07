@@ -153,6 +153,11 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         FormatPicker(model)
         OutlinedButton(onClick={model.refreshMeta()},enabled=!model.busy) { Text("Refresh daily metagame") }
         model.latestPool?.let { pool -> Text("${pool.optString("scope")}\nFetched ${DateFormat.getDateTimeInstance().format(Date(pool.optLong("fetchedAt")))}. Source: MTGTop8.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        model.latestPool?.let { pool ->
+            val count=pool.optJSONArray("decks")?.length() ?: 0
+            Text("Current metagame: $count / ${Metagame.TARGET_DECKS} decks",fontSize=13.sp,color=accent)
+            if(count<Metagame.TARGET_DECKS) Text(if(pool.optInt("targetDeckCount")!=Metagame.TARGET_DECKS) "Refresh the metagame to replace this older cache with the ten-deck pool." else "The source supplied only $count complete decklists. Refresh later to try again; incomplete or invented lists are not added.",fontSize=12.sp,color=MaterialTheme.colorScheme.error)
+        }
         Text("Android schedules a refresh for all formats daily. The OS may delay it; the fetched date always shows the age of the cached pool.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         model.opponents.forEach { opponent -> val title=opponent.getString("name");OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(6.dp)) { Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically) { Checkbox(title in model.selected,{checked -> model.selected=if(checked) model.selected+title else model.selected-title});Column(Modifier.weight(1f)) {Text(title);if(opponent.has("share")) Text("${"%.1f".format(opponent.optDouble("share")*100)}% source share",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};TextButton(onClick={show(title to opponent.getString("text"))}) {Text("Deck")} } } }
         TextButton(onClick={try {model.addOpponent("Local reference · not tournament data",if(DeckText.commander(model.format)) Examples.commander("Ambassador Laquatus") else Examples.burn)} catch(e:Exception) {model.message=e.message ?: "Could not add reference"}}) {Text("Add local reference opponent")}

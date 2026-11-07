@@ -68,12 +68,14 @@ object DeckLinks {
         return title to sections.filterValues { it.isNotEmpty() }.entries.joinToString("\n\n") { (section,cards) -> "$section\n${cards.joinToString("\n")}" }
     }
 }
-class Metagame(private val context: Context) {
+class Metagame(private val context: Context,private val loadPage: ((String)->String)?=null) {
+    companion object {const val TARGET_DECKS=10}
     private val directory = File(context.filesDir,"meta").apply { mkdirs() }
     private val codes = mapOf("standard" to "ST","pioneer" to "PI","modern" to "MO","pauper" to "PAU","legacy" to "LE","vintage" to "VI","commander" to "cEDH","cedh" to "cEDH","duel" to "EDH")
     fun cached(format: String): JSONObject? = File(directory,"$format.json").takeIf { it.isFile }?.let { try { JSONObject(it.readText()) } catch (_:Exception) { null } }
     private fun page(url: String): String {
         val uri = URI(url); require(uri.host == "www.mtgtop8.com")
+        loadPage?.let {return it(url)}
         val robotsFile = File(directory,"robots.txt")
         if(!robotsFile.exists() || System.currentTimeMillis()-robotsFile.lastModified() > 86400000) robotsFile.writeText(Http.request("https://www.mtgtop8.com/robots.txt"))
         // Fail closed on paths disallowed to either the named agent or '*'.
@@ -92,7 +94,7 @@ class Metagame(private val context: Context) {
     @Synchronized fun refresh(format: String, force: Boolean = false, progress: (String) -> Unit = {}): JSONObject {
         require(format in DeckText.formats)
         val old = cached(format)
-        if(!force && old != null && System.currentTimeMillis()-old.getLong("fetchedAt") < 86400000) return old
+        if(!force && old != null && old.optInt("targetDeckCount")==TARGET_DECKS && System.currentTimeMillis()-old.getLong("fetchedAt") < 86400000) return old
         val url = "https://www.mtgtop8.com/format?f=${codes.getValue(format)}"
         progress("Reading $format metagame")
         val html = page(url); var document = Jsoup.parse(html,url)
@@ -105,11 +107,12 @@ class Metagame(private val context: Context) {
             val number = Regex("([0-9.,]+)\\s*([%‰])").find(row.text()) ?: return@mapNotNull null
             val share = number.groupValues[1].replace(',','.').toDoubleOrNull()?.div(if(number.groupValues[2] == "‰") 1000 else 100) ?: return@mapNotNull null
             Triple(link.text(),link.absUrl("href"),share)
-        }.sortedByDescending { it.third }.take(6)
+        }.sortedByDescending { it.third }
         require(archetypes.isNotEmpty()) { "No readable metagame found. Cached decks have been kept." }
         val decks = JSONArray()
         for((name,archetype,share) in archetypes) {
-            progress("Importing $name")
+            if(decks.length()>=TARGET_DECKS) break
+            progress("Importing ${decks.length()+1}/$TARGET_DECKS · $name")
             try {
                 val archetypePage = Jsoup.parse(page(archetype),archetype)
                 val link = archetypePage.select("a[href]").firstOrNull { val target = URI(it.absUrl("href")); target.path == "/event" && target.query?.contains("d=") == true } ?: continue
@@ -135,7 +138,7 @@ class Metagame(private val context: Context) {
             } catch (_:Exception) { /* Keep only whole readable decklists, never a fabricated fallback. */ }
         }
         require(decks.length() > 0) { "No complete public opponent decks could be imported. Cached decks have been kept." }
-        val result = JSONObject().put("format",format).put("source",url).put("fetchedAt",System.currentTimeMillis()).put("scope",if(format == "commander") "Competitive Commander tournament sample; not representative of casual tables" else "Public tournament sample").put("decks",decks)
+        val result = JSONObject().put("targetDeckCount",TARGET_DECKS).put("complete",decks.length()>=TARGET_DECKS).put("format",format).put("source",url).put("fetchedAt",System.currentTimeMillis()).put("scope",if(format == "commander") "Competitive Commander tournament sample; not representative of casual tables" else "Public tournament sample").put("decks",decks)
         val temporary = File(directory,"$format.partial"); temporary.writeText(result.toString());check(temporary.renameTo(File(directory,"$format.json")))
         return result
     }

@@ -45,11 +45,13 @@ class WorkbenchUiTest {
             compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
             compose.waitUntil(10000) {compose.onAllNodesWithText("Back navigation fixture").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Back navigation fixture").performScrollTo().performClick()
-            compose.onNodeWithText("View observed game →").performScrollTo().performClick()
+            compose.waitUntil(10000) {runCatching {compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("View observed game →"));true}.getOrDefault(false)}
+            compose.onNodeWithText("View observed game →").performClick()
             compose.onNodeWithText("Observed game").assertIsDisplayed()
             androidx.test.espresso.Espresso.pressBack()
             compose.onNodeWithText("View observed game →").assertIsDisplayed()
-            compose.onNodeWithText("Your decklist").performScrollTo().performClick()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Your decklist"))
+            compose.onNodeWithText("Your decklist").performClick()
             compose.onNodeWithText("Close").assertIsDisplayed()
             androidx.test.espresso.Espresso.pressBack()
             compose.onNodeWithText("Your decklist").assertIsDisplayed()
