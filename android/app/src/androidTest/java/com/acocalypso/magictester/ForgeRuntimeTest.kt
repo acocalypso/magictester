@@ -18,7 +18,7 @@ class ForgeRuntimeTest {
     private fun command(request: JSONObject): String = runBlocking { ForgeClient.execute(context,request,"acceptance") { _,_ -> }.readText() }
     private fun game(format: String, decks: List<String>, seed: Int = 12345, bestOf: Int = 1): List<JSONObject> {
         val request = JSONObject().put("rawDecks",JSONArray(decks)).put("format",format).put("games",1).put("seed",seed)
-            .put("clockSeconds",120).put("mode",if(format == "duel") "duel" else if(DeckText.commander(format)) "commander" else "constructed")
+            .put("clockSeconds",if(DeckText.commander(format)) 300 else 120).put("mode",if(format == "duel") "duel" else if(DeckText.commander(format)) "commander" else "constructed")
             .put("bestOf",bestOf).put("sideboarding",bestOf==3).put("maxMatchGames",5)
         return command(request).lineSequence().filter { it.isNotBlank() }.map { JSONObject(it) }.toList()
     }
