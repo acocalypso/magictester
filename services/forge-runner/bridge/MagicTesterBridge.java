@@ -17,6 +17,7 @@ import forge.player.GamePlayerUtil;
 import forge.util.MyRandom;
 import java.io.*;
 import java.nio.file.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -72,6 +73,7 @@ public class MagicTesterBridge {
         List<Map<String,Integer>> previous=new ArrayList<>();for(var p:registered) previous.add(main(p));
         ObservedGame game=new ObservedGame(registered,match.getRules(),match);game.setNoGUIUser();
         Recorder recorder=new Recorder(game,registered,previous,request,gameIndex);game.recorder=recorder;game.subscribeToEvents(recorder);
+        ActionRecorder actions=new ActionRecorder(game,recorder);game.getGameLog().addObserver(actions);
         emit(Map.of("type","game_started","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"bridgeVersion",VERSION));
         long started=System.nanoTime();String termination="normal";
         ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"forge-game");t.setDaemon(true);return t;});
@@ -100,6 +102,7 @@ public class MagicTesterBridge {
         result.put("sideboardChanges",recorder.setupComplete?new ArrayList<>(recorder.sideboardChanges):null);
         result.put("commanderColors",recorder.setupComplete?new ArrayList<>(recorder.commanderColors):null);
         result.put("companionSelections",recorder.setupComplete?new ArrayList<>(recorder.companionSelections):null);
+        result.put("actionLog",actions.finish(termination.equals("normal") || termination.equals("rule_draw")));
         if(termination.equals("normal") || termination.equals("rule_draw")) {
             var log=new ArrayList<>(game.getGameLog().getLogEntries(null));Collections.reverse(log);pendingLog=log;
         }
@@ -173,6 +176,40 @@ public class MagicTesterBridge {
             }
             System.exit(0);
         } catch(Throwable error) {error.printStackTrace();System.exit(1);}
+    }
+    // Observe Forge's own formatted log synchronously, including games stopped by the clock.
+    // Recording is bounded and cannot change a game outcome if an entry cannot be captured.
+    @SuppressWarnings("deprecation")
+    public static class ActionRecorder implements Observer {
+        static final int MAX_ENTRIES=5000,MAX_BYTES=262144,MAX_TEXT=4096;
+        final Game game;final Recorder recorder;
+        final List<Map<String,Object>> entries=new ArrayList<>();
+        int total=0,bytes=0;boolean truncated=false,closed=false,full=false;
+        ActionRecorder(Game game,Recorder recorder) {this.game=game;this.recorder=recorder;}
+        @Override public synchronized void update(Observable source,Object ignored) {
+            if(closed) return;
+            int sequence=total++;
+            if(full) return;
+            try {
+                if(entries.size()>=MAX_ENTRIES) {truncated=true;full=true;return;}
+                var nativeEntries=game.getGameLog().getAllEntries();
+                var entry=nativeEntries.get(nativeEntries.size()-1);
+                String text=entry.message();
+                if(text.length()>MAX_TEXT) {text=text.substring(0,MAX_TEXT-1)+"…";truncated=true;}
+                int size=text.getBytes(StandardCharsets.UTF_8).length;
+                if(bytes+size>MAX_BYTES) {truncated=true;full=true;return;}
+                var phase=game.getPhaseHandler();
+                Map<String,Object> value=new LinkedHashMap<>();
+                value.put("sequence",sequence);value.put("kind",entry.type().name());value.put("text",text);
+                value.put("turn",Math.max(0,phase.getTurn()));value.put("phase",phase.getPhase()==null?null:phase.getPhase().name());
+                value.put("activePlayer",phase.getPlayerTurn()==null?null:recorder.seat(phase.getPlayerTurn()));
+                entries.add(value);bytes+=size;
+            } catch(Throwable error) {truncated=true;full=true;}
+        }
+        synchronized Map<String,Object> finish(boolean ended) {
+            closed=true;game.getGameLog().deleteObserver(this);
+            return Map.of("version",1,"entries",new ArrayList<>(entries),"total",total,"complete",ended&&!truncated);
+        }
     }
     public static class ObservedGame extends Game {
         Recorder recorder;

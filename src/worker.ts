@@ -1,3 +1,4 @@
+import { storeActionHistory } from "./action-history.js";
 import { partitionIndices, runParallel, interleave } from "./parallel.js";
 import Fastify from "fastify";
 import { setMaxListeners } from "node:events";
@@ -260,6 +261,13 @@ const worker = new Worker(
                           i === 0 ? job.deck.id : plan.opponents[i - 1].id,
                         seat: i,
                       }));
+                      await storeActionHistory(
+                        game,
+                        id,
+                        plan.key,
+                        matchIndex,
+                        game.index,
+                      );
                       await db.insert(events).values({
                         id: randomUUID(),
                         jobId: id,
@@ -310,6 +318,23 @@ const worker = new Worker(
                           seat: i,
                         })),
                       }));
+                    if (result.unit === "match") {
+                      for (const game of result.games)
+                        await storeActionHistory(
+                          game,
+                          id,
+                          plan.key,
+                          result.index,
+                          game.index,
+                        );
+                    } else
+                      await storeActionHistory(
+                        result,
+                        id,
+                        plan.key,
+                        result.index,
+                        0,
+                      );
                     await db
                       .update(runs)
                       .set({

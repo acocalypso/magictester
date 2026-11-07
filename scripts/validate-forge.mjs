@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
-import { ForgeEngineAdapter } from "../dist/engine.js";
+import { ForgeEngineAdapter, gameResults } from "../dist/engine.js";
 import { resolveRuntime } from "../src/runtime.mjs";
 const home = resolve(process.argv[2]);
 const { bridge } = await resolveRuntime(home);
@@ -56,6 +56,16 @@ for (const c of cases) {
     { ...c, games: 1, seed: 12345, clockSeconds: 120 },
     async (r) => {
       assert.equal(r.termination, "normal", JSON.stringify(r));
+      for (const game of gameResults([r])) {
+        assert.ok(
+          game.actionLog?.complete,
+          "Candidate must preserve complete native game histories",
+        );
+        assert.ok(
+          game.actionLog.entries.length > 0,
+          "Candidate produced no action entries",
+        );
+      }
       result = r;
     },
   );

@@ -1,3 +1,4 @@
+import { GameActionHistory, type HistoryRef } from "./game-action-history";
 export type ObservationReview = {
   number: number;
   total: number;
@@ -7,6 +8,7 @@ export type ObservationReview = {
   matchTermination?: string | null;
 };
 export type RecordedGame = {
+  actionHistory?: HistoryRef;
   index: number;
   unit?: "game" | "match";
   gameWins?: number[];
@@ -93,11 +95,13 @@ export function GameDetails({
   opponentNames = [],
   review,
   recordedAt,
+  jobId,
 }: {
   game: RecordedGame;
   opponentNames?: string[];
   review?: ObservationReview;
   recordedAt?: string;
+  jobId?: string;
 }) {
   const player = (seat: number) =>
     seat === 0 ? "Your deck" : opponentNames[seat - 1] || `Opponent ${seat}`;
@@ -193,6 +197,16 @@ export function GameDetails({
           </div>
         )}
       </dl>
+      <GameActionHistory
+        key={`${jobId}:${game.actionHistory?.id}`}
+        history={game.actionHistory}
+        jobId={jobId}
+        player={(seat) =>
+          game.players.length > 2
+            ? `${player(seat)} (seat ${seat + 1})`
+            : player(seat)
+        }
+      />
       <h3>Sideboard decisions</h3>
       {!changes?.length ? (
         <p>Sideboard changes were not recorded for this game.</p>
@@ -293,10 +307,6 @@ export function GameDetails({
           </ul>
         </>
       )}
-      <p className="muted game-summary-note">
-        This summary shows recorded results and decisions, not a turn-by-turn
-        replay.
-      </p>
     </div>
   );
 }

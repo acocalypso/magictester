@@ -1,3 +1,8 @@
+import {
+  actionLogSchema,
+  type ActionLog,
+  type ActionHistoryRef,
+} from "./game-actions.js";
 import { config } from "./config.js";
 import { resolveRuntime } from "./runtime.mjs";
 import { boundedLog } from "./logs.js";
@@ -11,6 +16,8 @@ import { createInterface } from "node:readline";
 export type Termination =
   "normal" | "rule_draw" | "timeout" | "engine_error" | "cancelled";
 export interface GameResult {
+  actionLog?: ActionLog;
+  actionHistory?: ActionHistoryRef;
   unit?: "game";
   commanderColors?: { player: number; card: string; colors: string[] }[] | null;
   sideboardChanges?:
@@ -64,6 +71,8 @@ export interface GameResult {
 }
 export interface MatchResult extends Omit<
   GameResult,
+  | "actionLog"
+  | "actionHistory"
   | "unit"
   | "termination"
   | "startingLife"
@@ -265,6 +274,7 @@ export class ForgeResultParser {
   }
 }
 const structuredResult = z.object({
+  actionLog: actionLogSchema.optional(),
   unit: z.literal("game").optional(),
   sideboardChanges: z
     .array(
@@ -346,6 +356,7 @@ const structuredResult = z.object({
 });
 const structuredMatch = structuredResult
   .omit({
+    actionLog: true,
     startingLife: true,
     commanderCasts: true,
     eliminations: true,
@@ -373,6 +384,12 @@ const structuredMatch = structuredResult
 export const BRIDGE_PREFIX = "@@MAGICTESTER ";
 function validateGame(result: GameResult) {
   const n = result.players.length;
+  if (
+    result.actionLog?.entries.some(
+      (a) => a.activePlayer !== null && a.activePlayer >= n,
+    )
+  )
+    throw Error("Invalid action history player identity");
   if (
     (result.winner !== null && result.winner >= n) ||
     (result.startingPlayer !== null && result.startingPlayer >= n) ||
@@ -469,6 +486,7 @@ export class ForgeEngineAdapter implements CardGameEngine {
       startingPlayerObserved: true,
       startingPlayerControl: false,
       commanderCastTiming: true,
+      actionHistory: "native per-game log, with bounded partial capture",
       multiplayerPlacements: true,
       maximumPlayers: 4,
     };

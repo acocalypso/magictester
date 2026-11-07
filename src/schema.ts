@@ -10,6 +10,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import type { Card, Opponent } from "./domain.js";
+import type { ActionLog } from "./game-actions.js";
 import type { EngineResult } from "./engine.js";
 const time = (name: string) =>
   timestamp(name, { withTimezone: true, mode: "string" });
@@ -86,3 +87,29 @@ export const events = pgTable("simulation_events", {
   data: jsonb().notNull(),
   createdAt: time("created_at").defaultNow().notNull(),
 });
+
+export const actionHistories = pgTable(
+  "game_action_histories",
+  {
+    id: uuid().primaryKey(),
+    jobId: uuid("job_id")
+      .references(() => jobs.id)
+      .notNull(),
+    opponentId: text("opponent_id").notNull(),
+    unitIndex: integer("unit_index").notNull(),
+    gameIndex: integer("game_index").notNull(),
+    attemptId: text("attempt_id").notNull(),
+    digest: text().notNull(),
+    data: jsonb().$type<ActionLog>().notNull(),
+    createdAt: time("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("game_action_histories_identity_idx").on(
+      t.jobId,
+      t.opponentId,
+      t.unitIndex,
+      t.gameIndex,
+      t.attemptId,
+    ),
+  ],
+);

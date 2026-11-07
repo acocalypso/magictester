@@ -20,3 +20,12 @@ Protocol 2 distinguishes games from first-to-two BO3 matches and streams real ga
 Runtime class directories are immutable and named by the bridge source hash. Bootstrap publishes the completed build and manifest atomically. Optional sorted absolute unit indices allow checkpoint recovery without replaying completed work; each index retains its original seed.
 
 A further pinned Player guard honors pregame wild-color assignments derived from the registered deck, rather than the AI’s empty-hand color guess. Games record the actual chosen colors. `CommanderColorContracts.java` checks required colors, a companion’s identity, Faceless One and insufficient choices separately from real four-player acceptance.
+
+The bridge also observes Forge's native `GameLog` for each game. Its structured
+`actionLog` contains chronological entries with category, text, current turn,
+phase and active seat. The active seat identifies whose turn it is, not
+necessarily who acted. Capture is limited to 5,000 entries and 256 KiB of UTF-8
+message text, with at most 4,096 characters per message. `complete=false` marks
+limits, capture failures or stopped games. Observational failures do not change
+the native game outcome. BO3 observations and final results carry the same frozen
+log; persistence stores it once per game/attempt and replaces it with a reference.

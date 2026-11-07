@@ -13,6 +13,7 @@ try {
     "0003_observation_index.sql",
     "0004_meta_feeds.sql",
     "0005_daily_meta.sql",
+    "0006_game_action_history.sql",
   ]) {
     if (
       !(

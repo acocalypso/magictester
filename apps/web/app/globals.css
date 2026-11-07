@@ -2261,5 +2261,66 @@ td strong,
   font-weight: 400;
 }
 
-.capacity-panel { padding: 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.6; }
-.capacity-panel p { color: var(--muted); margin: 6px 0; }
+.capacity-panel {
+  padding: 20px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.capacity-panel p {
+  color: var(--muted);
+  margin: 6px 0;
+}
+
+.game-action-history {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+.history-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0 0.5rem;
+}
+.history-detail-toggle input {
+  width: auto;
+}
+.action-timeline {
+  max-height: 540px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  margin: 0.75rem 0;
+  padding: 0 1rem;
+  overscroll-behavior: contain;
+}
+.action-turn h4 {
+  margin: 0;
+  padding: 1rem 0 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.action-turn ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.action-turn li {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.action-turn li:last-child {
+  border-bottom: 0;
+}
+.action-kind {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.action-turn li p {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+.history-incomplete {
+  border-left: 2px solid var(--muted);
+  padding-left: 0.75rem;
+}

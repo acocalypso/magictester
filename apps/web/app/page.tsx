@@ -2337,6 +2337,7 @@ export default function Home() {
                               </span>
                             </summary>
                             <GameDetails
+                              jobId={selected ?? undefined}
                               game={o.data.result}
                               review={o.review}
                               recordedAt={o.createdAt}
@@ -2713,6 +2714,7 @@ export default function Home() {
       )}
       {detail && (
         <RunDialog
+          jobId={selected ?? undefined}
           detail={detail}
           opponentNames={
             result?.matchups
@@ -2833,11 +2835,13 @@ function JobTable({
 }
 
 function RunDialog({
+  jobId,
   detail,
   opponentNames,
   onClose,
 }: {
   detail: Run;
+  jobId?: string;
   opponentNames: string[];
   onClose: () => void;
 }) {
@@ -2916,12 +2920,20 @@ function RunDialog({
                 <h3>
                   Game {index + 1} · {gameOutcome(game)}
                 </h3>
-                <GameDetails game={game} opponentNames={opponentNames} />
+                <GameDetails
+                  jobId={jobId}
+                  game={game}
+                  opponentNames={opponentNames}
+                />
               </section>
             ))}
           </>
         ) : (
-          <GameDetails game={detail.result} opponentNames={opponentNames} />
+          <GameDetails
+            jobId={jobId}
+            game={detail.result}
+            opponentNames={opponentNames}
+          />
         )}
       </div>
     </dialog>

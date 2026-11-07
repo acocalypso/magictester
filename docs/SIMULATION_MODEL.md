@@ -63,7 +63,7 @@ The internal bridge supports four-player games, tied elimination placements and 
 
 ## Reading game history
 
-Each recorded game opens a readable summary: its outcome, who played first, turn count, playing time, sideboard moves and any companion or commander decisions that were recorded. Missing measurements are labelled as unavailable; a game summary is not a turn-by-turn replay.
+Each recorded game opens a readable summary: its outcome, who played first, turn count, playing time, sideboard moves and any companion or commander decisions that were recorded. Missing measurements are labelled as unavailable. **View action history** loads Forge’s recorded plays in chronological order, grouped by turn. Phase and mana entries are hidden initially and can be shown with the detail toggle. Longer histories load in pages; opening a results page does not download every game’s actions.
 
 A restarted match can leave more than one attempt in its history. The history gives attempts a readable number and explains whether each game contributes to the results. Earlier attempts remain visible and never count toward win rates. Games from a match still in progress wait for its final result. Normal games and rule draws in the finalized attempt enter game statistics; timed-out or failed games do not. A completed game can count even when the overall match reaches its game limit and is excluded from match statistics. Refresh the history to update the status of a running match.
 
@@ -74,3 +74,11 @@ The observation API adds a derived `review` field based on the complete attempt 
 Open a test's results and choose **View your decklist** to see the submitted list. In matchup results, choose an opponent's **View decklist** link; Commander pods have a separate link for each opponent seat. The viewer reads the saved job and opponent snapshot, so later editor changes and daily source updates do not replace the lists being shown. Lists can be copied or downloaded as text.
 
 These are the registered starting lists, including their saved sideboard/commander/companion sections. BO3 changes between games are shown in the individual game summaries; the starting-list viewer does not claim to show each sideboarded game state.
+
+## Per-game action histories
+
+New bridge builds observe Forge's native formatted game log: opening-hand decisions, turns/phases, land plays, spells and abilities added to/resolved from the stack, combat, damage, life changes, zone changes and other messages the engine records. The UI names your deck and the opponents instead of exposing engine seat identifiers. These are recorded engine messages; unlogged decisions, hidden state and the AI's reasoning are not reconstructed. This is an action history rather than a visual board replay.
+
+Each history belongs to one job, opponent roster, absolute unit index, game within that match and native attempt. BO3 observations and finalized game results share an immutable history reference. Restarted matches retain earlier histories separately; historical actions do not change result eligibility. Histories live in PostgreSQL separately from aggregate results and rotating diagnostic log files. The API reads them at `/api/v1/simulations/{jobId}/games/{historyId}/actions`, with `offset` and `limit` (maximum 200). Histories are scoped to the specified job.
+
+Capture is bounded to 5,000 entries and 256 KiB of UTF-8 message text per game; individual messages are limited to 4,096 characters. The viewer marks incomplete histories when a limit is reached or a game stops early. A time limit during setup may produce no entries. Cancelling/killing a JVM before it emits a game result cannot save that unfinished game's actions; completed BO3 game observations already emitted retain their histories. Older results and jobs pinned to older bridge builds have no action history and are labelled accordingly. Run bootstrap/migrations when upgrading; existing results are not backfilled from raw logs.

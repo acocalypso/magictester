@@ -8,7 +8,7 @@ permissions:
 jobs:
   forge:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,6 +45,8 @@ jobs:
       - run: node scripts/formats-browser.mjs
       - run: node scripts/bo3-smoke.mjs
       - run: node scripts/bo3-browser.mjs
+      - run: node scripts/action-history-smoke.mjs
+      - run: node scripts/action-history-browser.mjs
       - run: node scripts/observations-browser.mjs
       - run: node scripts/feeds-smoke.mjs
       - run: node scripts/feeds-browser.mjs
@@ -76,6 +78,7 @@ jobs:
             data/bo3-engine-smoke.json
             data/companion-smoke.json
             data/bo3-smoke.json
+            data/action-history-smoke.json
             data/feeds-smoke.json
             data/selection-smoke.json
             data/operations-engine.json

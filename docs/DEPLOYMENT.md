@@ -6,7 +6,7 @@ The supported initial boundary is a trusted local/private lab. Compose binds the
 
 `bootstrap` is a one-shot data download, migration and seed step. `web`, `api`, `worker`, `forge-runner`, `maintenance`, `postgres` and `redis` have health checks and restart policies. The runner schedules JVMs against detected CPU and available memory and must remain a single replica to retain its global process bound. Docker CPU/memory limits and Docker Desktop VM allocations bound the detected resources. The queue screen shows current capacity and its limiting resource.
 
-Named volumes preserve PostgreSQL records, Redis AOF, Forge/card cache and game logs. Back up PostgreSQL and runtime metadata before upgrades. Engine stdout/stderr are in `forge-logs`; Docker JSON logs rotate at 10 MB × 3 files. Engine logs have automatic byte/file/age limits; see [operations](OPERATIONS.md) for configuration and metadata refresh.
+Named volumes preserve PostgreSQL records, Redis AOF, Forge/card cache and game logs. Per-game action histories are stored in PostgreSQL, separately from rotating engine log files; include them in database backups and disk sizing. Back up PostgreSQL and runtime metadata before upgrades. Engine stdout/stderr are in `forge-logs`; Docker JSON logs rotate at 10 MB × 3 files. Engine logs have automatic byte/file/age limits; see [operations](OPERATIONS.md) for configuration and metadata refresh.
 
 `docker compose down` preserves volumes. `down -v` deletes them and must not be used for routine restarts. Never commit `.env`, credentials, caches, or generated benchmark artifacts.
 

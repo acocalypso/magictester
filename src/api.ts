@@ -21,11 +21,11 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { CachedCardDataProvider, FORMATS, validateDeck } from "./domain.js";
 import { config } from "./config.js";
 import { db, pool } from "./db.js";
-import { snapshots, runs } from "./schema.js";
+import { snapshots, runs, actionHistories } from "./schema.js";
 import { queue } from "./queue.js";
 import { JsonImportProvider, CsvImportProvider } from "./meta.js";
 import {
@@ -336,6 +336,57 @@ app.get<{
       Number(req.query.limit || 50),
       Number(req.query.offset || 0),
     );
+  },
+);
+app.get<{
+  Params: { id: string; historyId: string };
+  Querystring: { offset?: string; limit?: string };
+}>(
+  "/api/v1/simulations/:id/games/:historyId/actions",
+  {
+    schema: {
+      tags: ["Results"],
+      params: {
+        type: "object",
+        required: ["id", "historyId"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          historyId: { type: "string", format: "uuid" },
+        },
+      },
+      querystring: {
+        type: "object",
+        properties: {
+          offset: { type: "integer", minimum: 0, default: 0 },
+          limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
+        },
+      },
+    },
+  },
+  async (req) => {
+    await getJob(req.params.id);
+    const [history] = await db
+      .select()
+      .from(actionHistories)
+      .where(
+        and(
+          eq(actionHistories.jobId, req.params.id),
+          eq(actionHistories.id, req.params.historyId),
+        ),
+      );
+    if (!history) throw new RequestError(404, "Game action history not found");
+    const offset = Number(req.query.offset || 0),
+      limit = Number(req.query.limit || 100);
+    return {
+      id: history.id,
+      count: history.data.entries.length,
+      total: history.data.total,
+      complete: history.data.complete,
+      offset,
+      entries: history.data.entries.slice(offset, offset + limit),
+      nextOffset:
+        offset + limit < history.data.entries.length ? offset + limit : null,
+    };
   },
 );
 app.get<{
