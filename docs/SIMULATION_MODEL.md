@@ -16,7 +16,7 @@ Each player has a unique seat identity plus a deck identity, even when lists rep
 
 Average placement and placement distributions use only actual completed placements. Simultaneous losses share a competition rank. Commander timing uses observed spells cast by the submitted player and the caster's own turn number; games without a cast have no first-cast turn and are counted separately. Constructed reports do not display Commander metrics. The submitted deck stays in the first displayed seat; Forge chooses the actual first player. This is not randomized or balanced seating.
 
-The default game clock is 120 seconds for Commander-family API jobs, 30 for constructed, configurable from 5–120 seconds. Commander AI can exceed the clock on complex or stalled boards. Reference Commander/cEDH lists are explicitly integration fixtures and are not a competitive cEDH field.
+The default game clock is 300 seconds for Commander-family API jobs, 30 for constructed, configurable from 5–300 seconds. Commander AI can exceed the clock on complex or stalled boards. Reference Commander/cEDH lists are explicitly integration fixtures and are not a competitive cEDH field.
 
 ## Duel Commander
 
@@ -82,3 +82,11 @@ New bridge builds observe Forge's native formatted game log: opening-hand decisi
 Each history belongs to one job, opponent roster, absolute unit index, game within that match and native attempt. BO3 observations and finalized game results share an immutable history reference. Restarted matches retain earlier histories separately; historical actions do not change result eligibility. Histories live in PostgreSQL separately from aggregate results and rotating diagnostic log files. The API reads them at `/api/v1/simulations/{jobId}/games/{historyId}/actions`, with `offset` and `limit` (maximum 200). Histories are scoped to the specified job.
 
 Capture is bounded to 5,000 entries and 256 KiB of UTF-8 message text per game; individual messages are limited to 4,096 characters. The viewer marks incomplete histories when a limit is reached or a game stops early. A time limit during setup may produce no entries. Cancelling/killing a JVM before it emits a game result cannot save that unfinished game's actions; completed BO3 game observations already emitted retain their histories. Older results and jobs pinned to older bridge builds have no action history and are labelled accordingly. Run bootstrap/migrations when upgrading; existing results are not backfilled from raw logs.
+
+## Retry settings and longer games
+
+The queue and results offer **Retry with settings**. Failed or cancelled jobs can **Resume unfinished games**, preserving completed checkpoints and the original clock. To change the clock, choose **Start a new run** and set a whole-number game limit from 5 to 300 seconds. Completed runs, including those with timed-out games, can also start a new run this way. Timeout retries suggest 300 seconds.
+
+A new run replays all planned units using the saved deck version, snapshot, opponent/pod allocation, seeds, rules and pinned Forge build. It has its own results and action histories and links back through `config.retryOf`; the earlier run is unchanged. It does not refresh the opponent pool. The per-job runtime budget remains six hours by default, and longer game clocks can increase total time. A higher limit gives the AI more time but does not guarantee every game can finish.
+
+`POST /api/v1/simulations/{id}/retry` accepts `{}` or `{"mode":"resume"}` for the original recovery behavior. `{"mode":"new","clockSeconds":300}` creates an independent run and returns its new ID; supplying `clockSeconds` alone also selects a new run. Resume rejects setting changes. The endpoint retains current job quotas and game-attempt limits. Active runs must finish or be cancelled before starting a retry with settings.

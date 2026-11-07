@@ -40,7 +40,7 @@ for (const format of ["commander", "cedh"]) {
     },
     201,
   );
-  assert.equal(job.clockSeconds, 120);
+  assert.equal(job.clockSeconds, 300);
   assert.ok(job.config.executionPlan.every((p) => p.opponentIds.length === 3));
   console.log(
     JSON.stringify({ event: "pod_job_started", format, jobId: job.id }),

@@ -1,4 +1,10 @@
-import { updateStatus, runtimeRoot, stableReleaseProblem } from "./runtime.mjs";
+import { retryOptionsSchema, type RetryOptions } from "./retry-options.js";
+import {
+  resolveRuntime,
+  updateStatus,
+  runtimeRoot,
+  stableReleaseProblem,
+} from "./runtime.mjs";
 import { currentMetagame } from "./meta-current.js";
 import { getFormat } from "./formats.js";
 import { randomUUID, createHash } from "node:crypto";
@@ -363,13 +369,97 @@ export async function cancelJob(id: string) {
     .where(and(eq(jobs.id, id), inArray(jobs.state, ACTIVE)));
   return getJob(id);
 }
-export async function retryJob(id: string) {
+export async function retryJob(
+  id: string,
+  options: RetryOptions = {},
+  client = "",
+) {
+  options = retryOptionsSchema.parse(options);
   const job = await getJob(id);
   if (job.config.bridgeVersion !== "2")
     throw new RequestError(
       409,
       "This analysis uses an older engine version. Start a new analysis instead of mixing result contracts.",
     );
+  if (options.mode === "new" || options.clockSeconds !== undefined) {
+    if (!["FAILED", "CANCELLED", "COMPLETED"].includes(job.state))
+      throw new RequestError(
+        409,
+        "Wait for this run to finish or cancel it before retrying with settings",
+      );
+    try {
+      await resolveRuntime(runtimeRoot(), job.config.bridge);
+    } catch {
+      throw new RequestError(
+        409,
+        "The saved Forge build is unavailable. Submit a new analysis instead.",
+      );
+    }
+    if (
+      job.games * Number(job.config.maxMatchGames || 1) >
+      config.MAX_GAMES_PER_JOB
+    )
+      throw new RequestError(
+        422,
+        "This run exceeds the current game-attempt limit. Submit a smaller analysis.",
+      );
+    const nextId = randomUUID(),
+      clientKey = createHash("sha256").update(client).digest("hex");
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(713917)`);
+      const active = await tx
+        .select({ clientKey: jobs.clientKey })
+        .from(jobs)
+        .where(inArray(jobs.state, ACTIVE));
+      if (
+        active.length >= config.MAX_QUEUED_JOBS ||
+        active.filter((j) => j.clientKey === clientKey).length >=
+          config.MAX_ACTIVE_JOBS_PER_CLIENT
+      )
+        throw new RequestError(
+          429,
+          "Active job limit reached. Wait for an existing job to finish.",
+        );
+      await tx
+        .insert(jobs)
+        .values({
+          id: nextId,
+          deckVersionId: job.deckVersionId,
+          snapshotId: job.snapshotId,
+          games: job.games,
+          seed: job.seed,
+          clockSeconds: options.clockSeconds ?? job.clockSeconds,
+          clientKey,
+          config: { ...job.config, retryOf: job.id },
+        });
+      for (const plan of executionPlans(job))
+        await tx
+          .insert(runs)
+          .values(
+            Array.from({ length: plan.games }, (_, batchIndex) => ({
+              id: randomUUID(),
+              jobId: nextId,
+              opponentId: plan.key,
+              batchIndex,
+              seed: plan.seed,
+            })),
+          );
+      await tx
+        .insert(events)
+        .values({
+          id: randomUUID(),
+          jobId: nextId,
+          kind: "QUEUED",
+          data: {
+            games: job.games,
+            retryOf: job.id,
+            clockSeconds: options.clockSeconds ?? job.clockSeconds,
+          },
+        });
+    });
+    await enqueue(nextId).catch(() => {});
+    return getJob(nextId);
+  }
   if (!["FAILED", "CANCELLED"].includes(job.state))
     throw new RequestError(409, "Only failed or cancelled jobs can be retried");
   const queued = await queue.getJob(id);

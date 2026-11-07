@@ -33,7 +33,7 @@ try {
     await page.getByRole("button", { name: "Load example" }).click();
     await page.getByRole("button", { name: "Validate deck" }).click();
     await page.getByText("Deck validated", { exact: false }).waitFor();
-    assert.equal(await page.locator("#clock").inputValue(), "120");
+    assert.equal(await page.locator("#clock").inputValue(), "300");
     assert.ok(
       (await page.locator("#decklist").inputValue()).includes("Commander"),
     );

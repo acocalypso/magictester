@@ -72,7 +72,7 @@ app.post("/games", async (req, reply) => {
         .max(config.MAX_GAMES_PER_JOB)
         .optional(),
       seed: z.number().int().min(0).max(2147483646),
-      clockSeconds: z.number().int().min(1).max(120),
+      clockSeconds: z.number().int().min(1).max(300),
       mode: z.enum(["constructed", "commander", "duel"]).optional(),
       traceId: z
         .string()

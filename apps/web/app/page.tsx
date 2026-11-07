@@ -1,4 +1,5 @@
 "use client";
+import { RetryDialog } from "./retry-dialog";
 import { DecklistDialog, type SavedDecklist } from "./decklist-dialog";
 import { useCallback, useEffect, useState, useRef } from "react";
 import {
@@ -71,6 +72,7 @@ type Job = {
     gameMode?: "BO1" | "BO3";
     maxMatchGames?: number;
     sideboardMode?: string;
+    retryOf?: string;
   };
   actualGames?: number;
   observedGames?: number;
@@ -90,6 +92,7 @@ type Job = {
   snapshot: Snapshot;
   deck: { decklist: string };
   seed: number;
+  clockSeconds: number;
 };
 type Summary = {
   averagePlacement: number | null;
@@ -376,6 +379,7 @@ export default function Home() {
   }
   const [runs, setRuns] = useState<Run[]>([]);
   const [runPage, setRunPage] = useState(0);
+  const [retryingJob, setRetryingJob] = useState<Job | null>(null);
   const [detail, setDetail] = useState<Run | null>(null);
   const [viewedDeck, setViewedDeck] = useState<SavedDecklist | null>(null);
   useEffect(() => setViewedDeck(null), [selected, view]);
@@ -574,6 +578,10 @@ export default function Home() {
     }
   };
   const act = async (job: Job, action: string) => {
+    if (action === "retry") {
+      setRetryingJob(job);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -992,7 +1000,7 @@ export default function Home() {
                           setClockSeconds(
                             formats.find((f) => f.id === event.target.value)
                               ?.commander
-                              ? 120
+                              ? 300
                               : 30,
                           );
                           setSnapshots([]);
@@ -1399,7 +1407,7 @@ export default function Home() {
                         id="clock"
                         type="number"
                         min={5}
-                        max={120}
+                        max={300}
                         value={clockSeconds}
                         onChange={(e) =>
                           setClockSeconds(Number(e.target.value))
@@ -1447,7 +1455,7 @@ export default function Home() {
                           (gameMode === "BO3" &&
                             (maxMatchGames < 3 || maxMatchGames > 9)) ||
                           clockSeconds < 5 ||
-                          clockSeconds > 120
+                          clockSeconds > 300
                         }
                         onClick={() => void submit()}
                       >
@@ -1713,6 +1721,19 @@ export default function Home() {
                     >
                       View your decklist
                     </button>
+                    <span className="muted">
+                      {result.job.clockSeconds} s per game
+                    </span>
+                    {result.job.config?.retryOf && (
+                      <button
+                        className="text-button"
+                        onClick={() =>
+                          navigate("results", result.job.config?.retryOf)
+                        }
+                      >
+                        View previous run →
+                      </button>
+                    )}
                     <Badge state={result.job.state} />
                     {active.includes(result.job.state) && (
                       <button
@@ -1723,13 +1744,15 @@ export default function Home() {
                         Cancel run
                       </button>
                     )}
-                    {["FAILED", "CANCELLED"].includes(result.job.state) && (
+                    {["FAILED", "CANCELLED", "COMPLETED"].includes(
+                      result.job.state,
+                    ) && (
                       <button
                         className="secondary"
                         disabled={busy}
                         onClick={() => void act(result.job, "retry")}
                       >
-                        Resume unfinished games
+                        Retry with settings
                       </button>
                     )}
                   </div>
@@ -2709,6 +2732,27 @@ export default function Home() {
           </footer>
         </main>
       </div>
+      {retryingJob && (
+        <RetryDialog
+          job={retryingJob}
+          onClose={() => setRetryingJob(null)}
+          onRetry={async (options) => {
+            setBusy(true);
+            try {
+              const job = await api<Job>(
+                `/simulations/${retryingJob.id}/retry`,
+                options,
+              );
+              setRetryingJob(null);
+              await refresh();
+              navigate("results", job.id);
+              await loadResults(job.id);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      )}
       {viewedDeck && (
         <DecklistDialog deck={viewedDeck} onClose={() => setViewedDeck(null)} />
       )}
@@ -2811,13 +2855,14 @@ function JobTable({
                       >
                         Cancel
                       </button>
-                    ) : ["FAILED", "CANCELLED"].includes(j.state) ? (
+                    ) : ["FAILED", "CANCELLED"].includes(j.state) ||
+                      (j.state === "COMPLETED" && j.timeouts > 0) ? (
                       <button
                         className="text-button"
                         disabled={busy}
                         onClick={() => void action(j, "retry")}
                       >
-                        Retry
+                        Retry with settings
                       </button>
                     ) : null}
                     <button className="text-button" onClick={() => open(j.id)}>

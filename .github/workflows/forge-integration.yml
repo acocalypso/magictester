@@ -47,6 +47,8 @@ jobs:
       - run: node scripts/bo3-browser.mjs
       - run: node scripts/action-history-smoke.mjs
       - run: node scripts/action-history-browser.mjs
+      - run: node scripts/retry-settings-smoke.mjs
+      - run: node scripts/retry-settings-browser.mjs
       - run: node scripts/observations-browser.mjs
       - run: node scripts/feeds-smoke.mjs
       - run: node scripts/feeds-browser.mjs
@@ -79,6 +81,8 @@ jobs:
             data/companion-smoke.json
             data/bo3-smoke.json
             data/action-history-smoke.json
+            data/retry-settings-smoke.json
+            data/retry-settings-browser.json
             data/feeds-smoke.json
             data/selection-smoke.json
             data/operations-engine.json

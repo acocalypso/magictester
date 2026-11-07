@@ -2324,3 +2324,11 @@ td strong,
   border-left: 2px solid var(--muted);
   padding-left: 0.75rem;
 }
+.retry-dialog {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+}
+.retry-dialog input,
+.retry-dialog select {
+  width: 100%;
+}

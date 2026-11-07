@@ -1,3 +1,4 @@
+import { retryOptionsSchema } from "./retry-options.js";
 import { reviewedObservations } from "./observation-review.js";
 import { importDeckLink, DeckLinkError } from "./deck-links.js";
 import { resolveRuntime, updateStatus } from "./runtime.mjs";
@@ -241,7 +242,7 @@ app.post(
           maxMatchGames: { type: "integer", minimum: 3, maximum: 9 },
           selection: { type: "object", additionalProperties: true },
           sideboardMode: { type: "string", enum: ["none", "forge"] },
-          clockSeconds: { type: "integer", minimum: 5, maximum: 120 },
+          clockSeconds: { type: "integer", minimum: 5, maximum: 300 },
         },
       },
     },
@@ -258,7 +259,7 @@ app.post(
         maxMatchGames: z.number().int().min(3).max(9).optional(),
         sideboardMode: z.enum(["none", "forge"]).optional(),
         selection: selectionSchema.optional(),
-        clockSeconds: z.number().int().min(5).max(120).optional(),
+        clockSeconds: z.number().int().min(5).max(300).optional(),
       })
       .parse(req.body);
     return reply.code(201).send(
@@ -267,7 +268,7 @@ app.post(
           ...input,
           clockSeconds:
             input.clockSeconds ??
-            (getFormat(input.format)?.commander ? 120 : 30),
+            (getFormat(input.format)?.commander ? 300 : 30),
         },
         req.ip,
         cards,
@@ -290,10 +291,43 @@ app.post<{ Params: { id: string } }>(
   { schema: { tags: ["Simulations"], params: idSchema } },
   async (req) => cancelJob(req.params.id),
 );
-app.post<{ Params: { id: string } }>(
+app.post<{ Params: { id: string }; Body: unknown }>(
   "/api/v1/simulations/:id/retry",
-  { schema: { tags: ["Simulations"], params: idSchema } },
-  async (req) => retryJob(req.params.id),
+  {
+    preValidation: async (req) => {
+      req.body ??= {};
+      // Validate before AJV can remove unsupported properties.
+      const options = retryOptionsSchema.safeParse(req.body);
+      if (!options.success)
+        throw new RequestError(
+          400,
+          "Invalid retry settings",
+          options.error.issues,
+        );
+    },
+    schema: {
+      tags: ["Simulations"],
+      params: idSchema,
+      body: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          mode: { type: "string", enum: ["resume", "new"] },
+          clockSeconds: { type: "integer", minimum: 5, maximum: 300 },
+        },
+      },
+    },
+  },
+  async (req) => {
+    const options = retryOptionsSchema.safeParse(req.body ?? {});
+    if (!options.success)
+      throw new RequestError(
+        400,
+        "Invalid retry settings",
+        options.error.issues,
+      );
+    return retryJob(req.params.id, options.data, req.ip);
+  },
 );
 app.get<{ Params: { id: string } }>(
   "/api/v1/simulations/:id/results",
