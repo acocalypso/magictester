@@ -127,3 +127,5 @@ In **Test**, enter a deck name, choose its format and paste/import its list, the
 The library uses private SQLite storage and survives app restarts and compatible app updates. Listing reads only metadata; full card text is loaded on demand. As with other private app data, uninstalling removes the library.
 
 From 0.1.4 onward, release acceptance downloads the published 0.1.3 APK, verifies its checksum and pinned certificate, then checks that installing the new APK over it retains private app data. This uses an actual release as the baseline.
+
+Match cards and observed-game pages label the submitted deck **You**, with distinct **Opponent 1/2/3** labels and a legend containing each actual deck name. Action histories apply the same display aliases to earlier saved games. BO3 game views retain the parent match index when choosing opponent names. Stored engine identities and exported evidence are preserved.

@@ -19,12 +19,12 @@ import kotlin.math.sqrt
 @Composable fun RunDetail(model: Workbench, id: String, back: () -> Unit, deck: (Pair<String,String>) -> Unit, export: (String) -> Unit, diagnostics: (String) -> Unit, delete: (String) -> Unit) {
     val run = model.runs.firstOrNull { it.id == id } ?: return
     var results by remember(id) { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var selectedGame by remember(id) { mutableStateOf<JSONObject?>(null) }
+    var selectedGame by remember(id) { mutableStateOf<Pair<Int,JSONObject>?>(null) }
     var timeout by remember(id) { mutableIntStateOf(run.payload.optInt("clockSeconds",120)) }
     val listState=rememberLazyListState()
     BackHandler { if(selectedGame!=null) selectedGame=null else back() }
     LaunchedEffect(run.completed,run.state) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
-    selectedGame?.let { game -> GameActions(game) { selectedGame=null };return }
+    selectedGame?.let { (unit,game) -> GameActions(game,run.payload,unit) { selectedGame=null };return }
     val completed=results.filter { it.optString("termination") in listOf("normal","rule_draw") }.distinctBy { it.optInt("index") }
     val decisive=completed.filter { it.optString("termination") == "normal" }
     val wins=decisive.count { !it.isNull("winner") && it.optInt("winner",-1) == 0 }
@@ -73,16 +73,17 @@ import kotlin.math.sqrt
                 Text("${result.optLong("durationMs")/1000}s · ${result.optInt("clockSeconds",run.payload.optInt("clockSeconds"))}s limit · seed ${result.optInt("gameSeed")} · ${result.optString("unit","game")}",fontSize=12.sp)
                 val opponents=run.payload.getJSONArray("opponents")
                 val seats=if(run.payload.getString("format") in listOf("commander","cedh")) run.payload.optInt("players",4) else 2
-                for(seat in 1 until seats) { val opponent=opponents.getJSONObject((index+seat-1)%opponents.length());Text("Seat ${seat+1}: ${opponent.getString("name")}",fontSize=12.sp) }
+                Text("You: ${run.payload.optString("title","Your deck")}",fontSize=12.sp)
+                for(seat in 1 until seats) { val opponent=opponents.getJSONObject((index+seat-1)%opponents.length());Text("${PlayerLabels.name(seat)}: ${opponent.getString("name")}",fontSize=12.sp) }
                 if(!normal) Text("This attempt does not contribute a win or loss. You can inspect partial actions and retry with more time.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 val games=result.optJSONArray("games")
-                if(games==null) TextButton(onClick={selectedGame=result}) {Text("View observed game →")}
-                else for(i in 0 until games.length()) { val game=games.getJSONObject(i);TextButton(onClick={selectedGame=game}) {Text("Game ${i+1}: ${game.optString("termination").replace('_',' ')} · view actions →")} }
+                if(games==null) TextButton(onClick={selectedGame=index to result}) {Text("View observed game →")}
+                else for(i in 0 until games.length()) { val game=games.getJSONObject(i);TextButton(onClick={selectedGame=index to game}) {Text("Game ${i+1}: ${game.optString("termination").replace('_',' ')} · view actions →")} }
             } }
         }
     }
 }
-@Composable private fun GameActions(game: JSONObject, back: () -> Unit) {
+@Composable private fun GameActions(game: JSONObject,payload: JSONObject,unit: Int,back: () -> Unit) {
     val log=game.optJSONObject("actionLog")
     val array=log?.optJSONArray("entries")
     val entries=if(array==null) emptyList() else (0 until array.length()).map { array.getJSONObject(it) }
@@ -92,16 +93,22 @@ import kotlin.math.sqrt
         item { TextButton(onClick=back) {Text("← Match evidence")};Text("Observed game",fontSize=28.sp);Text("${game.optInt("turns")} turns · ${game.optString("termination").replace('_',' ')}",fontSize=13.sp)
             Row { Checkbox(keyOnly,{keyOnly=it});Text("Hide phase and mana details",Modifier.padding(top=12.dp),fontSize=13.sp) }
             Text(if(log?.optBoolean("complete") == true) "Complete recorded action history." else "Partial history: the game stopped or reached the log size limit. Omitted actions cannot be reconstructed.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("You: ${payload.optString("title","Your deck")}",fontSize=13.sp,color=MaterialTheme.colorScheme.primary)
+            val opponents=payload.optJSONArray("opponents")
+            val seats=if(payload.optString("format") in listOf("commander","cedh")) payload.optInt("players",4) else 2
+            if(opponents!=null && opponents.length()>0) for(seat in 1 until seats) {
+                Text("${PlayerLabels.name(seat)}: ${opponents.getJSONObject((unit+seat-1)%opponents.length()).optString("name")}",fontSize=12.sp)
+            }
             val placements=game.optJSONArray("players")
             val life=game.optJSONArray("startingLife")
             if(placements != null) for(i in 0 until placements.length()) {
                 val player=placements.getJSONObject(i)
-                Text("Seat ${i+1} · " + (if(player.isNull("placement")) "placement not determined" else "finished ${player.optInt("placement")} of ${placements.length()}") + (if(life != null) " · started at ${life.optInt(i)} life" else ""),fontSize=12.sp)
+                Text("${PlayerLabels.name(i)} · " + (if(player.isNull("placement")) "placement not determined" else "finished ${player.optInt("placement")} of ${placements.length()}") + (if(life != null) " · started at ${life.optInt(i)} life" else ""),fontSize=12.sp)
             }
             val changes=game.optJSONArray("sideboardChanges")
-            if(changes != null) for(i in 0 until changes.length()) {val change=changes.getJSONObject(i);for(key in listOf("added","removed")) {val cards=change.optJSONArray(key) ?: continue;for(j in 0 until cards.length()) {val card=cards.getJSONObject(j);Text("Seat ${change.optInt("player")+1} ${if(key=="added") "brought in" else "took out"} ${card.optInt("quantity")} ${card.optString("name")}",fontSize=12.sp)}}}
+            if(changes != null) for(i in 0 until changes.length()) {val change=changes.getJSONObject(i);for(key in listOf("added","removed")) {val cards=change.optJSONArray(key) ?: continue;for(j in 0 until cards.length()) {val card=cards.getJSONObject(j);Text("${PlayerLabels.name(change.optInt("player"))} ${if(key=="added") "brought in" else "took out"} ${card.optInt("quantity")} ${card.optString("name")}",fontSize=12.sp)}}}
         }
         if(visible.isEmpty()) item {Text("No actions were recorded for this attempt.")}
-        items(visible) { action -> Column {Text("TURN ${action.optInt("turn")} · ${action.optString("kind").replace('_',' ')}",fontSize=10.sp,color=MaterialTheme.colorScheme.primary);Text(action.optString("text"),fontSize=14.sp);HorizontalDivider(Modifier.padding(top=10.dp),color=MaterialTheme.colorScheme.surfaceVariant)} }
+        items(visible) { action -> Column {Text("TURN ${action.optInt("turn")} · ${action.optString("kind").replace('_',' ')}",fontSize=10.sp,color=MaterialTheme.colorScheme.primary);Text(PlayerLabels.readable(action.optString("text")),fontSize=14.sp);HorizontalDivider(Modifier.padding(top=10.dp),color=MaterialTheme.colorScheme.surfaceVariant)} }
     }
 }

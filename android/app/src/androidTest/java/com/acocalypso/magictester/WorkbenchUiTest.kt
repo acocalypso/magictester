@@ -49,7 +49,7 @@ class WorkbenchUiTest {
         val id=store.create(payload)
         try {
             store.update(id,"running","Navigation fixture")
-            val evidence=File(context.cacheDir,"navigation.jsonl").apply {writeText(org.json.JSONObject().put("type","result").put("result",org.json.JSONObject().put("index",0).put("termination","normal").put("winner",0).put("turns",5).put("actionLog",org.json.JSONObject().put("complete",true).put("entries",org.json.JSONArray()))).toString()+"\n")}
+            val evidence=File(context.cacheDir,"navigation.jsonl").apply {writeText(org.json.JSONObject().put("type","result").put("result",org.json.JSONObject().put("index",0).put("termination","normal").put("winner",0).put("turns",5).put("actionLog",org.json.JSONObject().put("complete",true).put("entries",org.json.JSONArray().put(org.json.JSONObject().put("kind","STACK_ADD").put("turn",3).put("text","player-1 cast Cast Down targeting player-0's creature."))))).toString()+"\n")}
             store.saveAttempt(id,evidence,0);store.update(id,"complete","Navigation fixture",1)
             compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
             compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
@@ -58,6 +58,8 @@ class WorkbenchUiTest {
             compose.waitUntil(10000) {runCatching {compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("View observed game →"));true}.getOrDefault(false)}
             compose.onNodeWithText("View observed game →").performClick()
             compose.onNodeWithText("Observed game").assertIsDisplayed()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opponent 1 cast Cast Down targeting Your creature."))
+            compose.onNodeWithText("Opponent 1 cast Cast Down targeting Your creature.").assertIsDisplayed()
             phoneBack()
             compose.onNodeWithText("View observed game →").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Your decklist"))
