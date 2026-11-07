@@ -19,8 +19,9 @@ private class EngineConnection(private val slot: Int) {
     @Volatile private var remote: Messenger?=null
     fun release(id: String) { if(owner==id) runCatching { remote?.send(Message.obtain(null,6)) } }
     fun cancel(id: String) { if (owner == id) { cancelled=true;pid.getAndSet(0).takeIf { it > 0 }?.let { Process.killProcess(it) } } }
-    suspend fun execute(context: Context, request: JSONObject, id: String, onGame: (JSONObject) -> Unit = {}, onMetrics: (JSONObject) -> Unit = {}, onReady: () -> Unit = {}, progress: (String, Float?) -> Unit): File = mutex.withLock {
+    suspend fun execute(context: Context, request: JSONObject, id: String, onGame: (JSONObject) -> Unit = {}, onMetrics: (JSONObject) -> Unit = {}, onReady: () -> Unit = {}, canProceed: () -> Boolean = { true }, progress: (String, Float?) -> Unit): File = mutex.withLock {
         owner = id;cancelled=false
+        if(!canProceed()) {owner="";throw CancellationException("Request cancelled before binding the engine")}
         request.put("diagnosticRunId",id)
         Diagnostics.event("engine.request","Starting a local engine request",id,details=JSONObject().put("operation",request.optString("operation","simulate")).put("clockSeconds",request.optInt("clockSeconds")).put("bestOf",request.optInt("bestOf",1)))
         val directory = File(context.filesDir, "ipc").apply { mkdirs() }
@@ -131,7 +132,7 @@ object ForgeClient {
         }
             if(counter.get()!=generation || !allowed()) throw CancellationException("Request cancelled")
             Diagnostics.event("engine.leased","Allocated an isolated engine process",id,details=JSONObject().put("slot",slot).put("budgetMiB",budget))
-            return connections[slot].execute(context,request,id,onGame,onMetrics,onReady,progress)
+            return connections[slot].execute(context,request,id,onGame,onMetrics,onReady,{counter.get()==generation && allowed()},progress)
         } finally { withContext(NonCancellable) { leaseMutex.withLock { if(slot>=0) {owners[slot]=null;budgets[slot]=0} } } }
     }
 }
