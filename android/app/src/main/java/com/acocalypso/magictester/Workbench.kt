@@ -39,9 +39,18 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         runCatching { MetaJobService.schedule(app) }.onFailure { Diagnostics.event("metadata.schedule_failed","Daily refresh could not be scheduled",level="ERROR",error=it) }
         loadPool()
         viewModelScope.launch {
-            val initialId=savedDeckId
-            val saved=withContext(Dispatchers.IO) {initialId?.let {deckLibrary.get(it)}}
-            if(savedDeckId==initialId) loadedSavedDeck=saved
+            try {
+                val initialId=savedDeckId
+                val saved=withContext(Dispatchers.IO) {initialId?.let {deckLibrary.get(it)}}
+                if(savedDeckId==initialId) {
+                    loadedSavedDeck=saved
+                    if(initialId!=null && saved==null) {savedDeckId=null;saveDraft()}
+                }
+            } catch(error:Exception) {
+                if(error is CancellationException) throw error
+                Diagnostics.event("decks.draft_reference_failed","Could not open the draft's saved copy",level="ERROR",error=error)
+                message="The saved copy could not be opened. Your current draft is still available."
+            }
         }
         viewModelScope.launch {DeckLibraryEvents.changes.collect {
             try {savedDecks=withContext(Dispatchers.IO) {deckLibrary.all()}}

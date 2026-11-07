@@ -93,7 +93,7 @@ class WorkbenchUiTest {
             compose.onNodeWithTag("load-saved-deck-${saved.id}").performScrollTo().performClick()
             compose.onNodeWithText("Replace current draft?").assertIsDisplayed()
             compose.onNodeWithText("Load deck").performClick()
-            compose.waitUntil(10000) {compose.onAllNodesWithText("Replace current draft?").fetchSemanticsNodes().isEmpty()}
+            compose.waitUntil(10000) {compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Decklist").performScrollTo().assertTextContains(text)
             compose.onNodeWithText("Saved decks").performScrollTo().performClick()
             compose.onNodeWithTag("delete-saved-deck-${saved.id}").performScrollTo().performClick()

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
     var newName by remember {mutableStateOf("")}
     AlertDialog(onDismissRequest=onDismiss,title={Text("Saved decks")},text={Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text("Stored on this device. Loading restores the list and format; checking or running a deck is a separate action.",fontSize=12.sp)
+        if(model.message.isNotEmpty()) Text(model.message,fontSize=12.sp,color=MaterialTheme.colorScheme.primary)
         if(model.savedDecks.isEmpty()) Text("No saved decks yet. Add a name and decklist in Test, then choose Save deck.")
         LazyColumn(Modifier.fillMaxWidth().heightIn(max=440.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             items(model.savedDecks,key={it.id}) {deck ->
