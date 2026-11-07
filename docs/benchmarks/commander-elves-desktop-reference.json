@@ -1,0 +1,91 @@
+{
+  "runtime": "Desktop JVM reference using the actual Android bridge and pinned overrides; not Android ART or a physical phone",
+  "host": {
+    "machine": "x86_64",
+    "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "logicalCores": 3,
+    "javaHeapMiB": 512,
+    "cpuQuota": "200000 100000",
+    "effectiveCpuQuotaCores": 2,
+    "java": "OpenJDK 21.0.13"
+  },
+  "workload": {
+    "fetchedAt": "2026-11-07T20:08:45.039Z",
+    "deck": {
+      "name": "Elves",
+      "source": "https://moxfield.com/decks/1Xc10ml5hEiqnmXGBjGYQg",
+      "text": "Commander\n1 High Perfect Morcant\n\nDeck\n20 Forest\n9 Swamp\n1 Arcane Signet\n1 Command Tower\n1 Wildborn Preserver\n1 Arbor Elf\n1 Fierce Empath\n1 Llanowar Elves\n1 Ochran Assassin\n1 Priest of Titania\n1 Shamanic Revelation\n1 Skullclamp\n1 Sol Ring\n1 Llanowar Visionary\n1 Primal Might\n1 Sylvan Library\n1 Golgari Signet\n1 Bayou\n1 Patriarch's Bidding\n1 Kodama's Reach\n1 Fyndhorn Elves\n1 Elvish Promenade\n1 Elvish Mystic\n1 Nissa, Vastwood Seer // Nissa, Sage Animist\n1 Shaman of the Pack\n1 Victimize\n1 Wirewood Symbiote\n1 Elvish Archdruid\n1 Emerald Medallion\n1 Reclamation Sage\n1 Viridian Zealot\n1 Beast Whisperer\n1 Overgrown Tomb\n1 Rishkar, Peema Renegade\n1 Craterhoof Behemoth\n1 Verdant Catacombs\n1 Hero's Downfall\n1 Chord of Calling\n1 Genesis Wave\n1 Elvish Piper\n1 Vitalize\n1 Dwynen's Elite\n1 Stoneforge Masterwork\n1 Nullpriest of Oblivion\n1 Realmwalker\n1 Lathril, Blade of the Elves\n1 Elvish Warmaster\n1 Tyvar Kell\n1 Snakeskin Veil\n1 Grist, the Hunger Tide\n1 Llanowar Loamspeaker\n1 Leaf-Crowned Visionary\n1 Haunted Mire\n1 Primeval Herald\n1 Tyvar, Jubilant Brawler\n1 Glissa Sunslayer\n1 Tender Wildguide\n1 Keen-Eyed Curator\n1 Dionus, Elvish Archdruid\n1 Ouroboroid\n1 Shared Roots\n1 Great Divide Guide\n1 Unbury\n1 Twilight Diviner\n1 Trystan's Command\n1 Eclipsed Elf\n1 Scarblade's Malice\n1 Witherbloom, the Balancer\n1 Germination Practicum\n1 Marwyn, the Preserver\n1 Imperious Perfect\n1 Freyalise, Llanowar's Fury"
+    },
+    "opponents": [
+      {
+        "name": "Partner WUBR",
+        "url": "https://www.mtgtop8.com/archetype?a=1158&meta=327&f=cEDH&color_id=&show=pop",
+        "share": 0.0935,
+        "source": "https://www.mtgtop8.com/event?e=93330&d=909110&f=cEDH",
+        "text": "Commander\n1 Kraum, Ludevic's Opus\n1 Tymna the Weaver\n\nDeck\n1 Ancient Tomb\n1 Arid Mesa\n1 Badlands\n1 Blood Crypt\n1 Bloodstained Mire\n1 City of Brass\n1 Command Tower\n1 Exotic Orchard\n1 Flooded Strand\n1 Gemstone Caverns\n1 Hallowed Fountain\n1 Mana Confluence\n1 Marsh Flats\n1 Misty Rainforest\n1 Otawara, Soaring City\n1 Plateau\n1 Polluted Delta\n1 Scalding Tarn\n1 Scrubland\n1 Steam Vents\n1 Tundra\n1 Underground Sea\n1 Verdant Catacombs\n1 Volcanic Island\n1 Watery Grave\n1 Windswept Heath\n1 Wooded Foothills\n1 Birgi, God of Storytelling\n1 Dragon's Rage Channeler\n1 Drannith Magistrate\n1 Esper Sentinel\n1 Faerie Mastermind\n1 Grand Abolisher\n1 Hexing Squelcher\n1 Lotho, Corrupt Shirriff\n1 Mockingbird\n1 Opposition Agent\n1 Orcish Bowmasters\n1 Ragavan, Nimble Pilferer\n1 Ranger-Captain of Eos\n1 Samut, Tyrant of Naktamun\n1 Simian Spirit Guide\n1 Thassa's Oracle\n1 Voice of Victory\n1 Ad Nauseam\n1 An Offer You Can't Refuse\n1 Borne Upon a Wind\n1 Brain Freeze\n1 Cabal Ritual\n1 Chain of Vapor\n1 Dark Ritual\n1 Deflecting Swat\n1 Demonic Consultation\n1 Demonic Tutor\n1 Diabolic Intent\n1 Enlightened Tutor\n1 Fierce Guardianship\n1 Flusterstorm\n1 Force of Negation\n1 Force of Will\n1 Gamble\n1 Imperial Seal\n1 Intuition\n1 Jeska's Will\n1 Mental Misstep\n1 Mindbreak Trap\n1 Mystical Tutor\n1 Pact of Negation\n1 Pyroblast\n1 Rite of Flame\n1 Sevinne's Reclamation\n1 Silence\n1 Swan Song\n1 Swords to Plowshares\n1 Tainted Pact\n1 Vampiric Tutor\n1 Wheel of Fortune\n1 Windfall\n1 Arcane Signet\n1 Chrome Mox\n1 Fellwar Stone\n1 Gleaming Splendor\n1 Lion's Eye Diamond\n1 Lotus Petal\n1 Mana Vault\n1 Mirrormade\n1 Mox Amber\n1 Mox Diamond\n1 Mox Opal\n1 Mystic Remora\n1 Necropotence\n1 Rhystic Study\n1 Smothering Tithe\n1 Sol Ring\n1 Talisman of Dominance\n1 The One Ring\n1 Underworld Breach\n1 Wishclaw Talisman"
+      },
+      {
+        "name": "Kinnan, Bonder Prodigy",
+        "url": "https://www.mtgtop8.com/archetype?a=1246&meta=327&f=cEDH&color_id=&show=pop",
+        "share": 0.085,
+        "source": "https://www.mtgtop8.com/event?e=93297&d=908911&f=cEDH",
+        "text": "Commander\n1 Kinnan, Bonder Prodigy\n\nDeck\n1 Barkchannel Pathway\n1 Boseiju, Who Endures\n1 Botanical Sanctum\n1 Breeding Pool\n1 City of Brass\n1 Command Tower\n1 Flooded Strand\n1 Forest\n1 Gaea's Cradle\n1 Gemstone Caverns\n1 Island\n1 Mana Confluence\n1 Misty Rainforest\n1 Otawara, Soaring City\n1 Polluted Delta\n1 Rejuvenating Springs\n1 Scalding Tarn\n1 Tropical Island\n1 Verdant Catacombs\n1 Waterlogged Grove\n1 Windswept Heath\n1 Wooded Foothills\n1 Yavimaya Coast\n1 Altered Ego\n1 Archetype of Endurance\n1 Badgermole Cub\n1 Biomancer's Familiar\n1 Birds of Paradise\n1 Bloom Tender\n1 Circle of Dreams Druid\n1 Citanul Stalwart\n1 Clever Impersonator\n1 Collector Ouphe\n1 Deadeye Navigator\n1 Elvish Mystic\n1 Elvish Spirit Guide\n1 Endurance\n1 Enduring Vitality\n1 Flesh Duplicate\n1 Formidable Speaker\n1 Fyndhorn Elves\n1 Gene Pollinator\n1 Gigantoplasm\n1 Glasspool Mimic\n1 Glen Elendra Archmage\n1 Great Oak Guardian\n1 Hydroelectric Specimen\n1 Incubation Druid\n1 Jaspera Sentinel\n1 Knacksaw Clique\n1 Llanowar Elves\n1 Loam Dryad\n1 Manglehorn\n1 Marvin, Murderous Mimic\n1 Mirror Image\n1 Mockingbird\n1 Murkfiend Liege\n1 Nyxbloom Ancient\n1 Oboro Breezecaller\n1 Phantasmal Image\n1 Phyrexian Metamorph\n1 Pili-Pala\n1 Prime Speaker Vannifar\n1 Riptide Shapeshifter\n1 Saruli Caretaker\n1 Seedborn Muse\n1 Shang-Chi, Master of Kung Fu\n1 Spark Double\n1 Sylvan Caryatid\n1 The Notary Hobbits\n1 Thorn Mammoth\n1 Thrasios, Triton Hero\n1 Woodland Bellower\n1 Bridgeworks Battle\n1 Chain of Vapor\n1 Chord of Calling\n1 Fierce Guardianship\n1 Finale of Devastation\n1 Flusterstorm\n1 Force of Will\n1 Green Sun's Zenith\n1 Into the Flood Maw\n1 Mental Misstep\n1 Mindbreak Trap\n1 Nature's Rhythm\n1 Pact of Negation\n1 Worldly Tutor\n1 Chrome Mox\n1 Cryptolith Rite\n1 Defense of the Heart\n1 Elven Chorus\n1 Lotus Petal\n1 Mox Amber\n1 Mox Diamond\n1 Root Maze\n1 Sol Ring\n1 Springleaf Drum\n1 Thousand-Year Elixir\n1 Training Grounds"
+      },
+      {
+        "name": "Partner URG",
+        "url": "https://www.mtgtop8.com/archetype?a=1190&meta=327&f=cEDH&color_id=&show=pop",
+        "share": 0.08220000000000001,
+        "source": "https://www.mtgtop8.com/event?e=93290&d=908866&f=cEDH",
+        "text": "Commander\n1 Rograkh, Son of Rohgahh\n1 Thrasios, Triton Hero\n\nDeck\n1 Ancient Tomb\n1 Boseiju, Who Endures\n1 Breeding Pool\n1 Command Tower\n1 Deserted Temple\n1 Dryad Arbor\n1 Emergence Zone\n1 Flooded Strand\n1 Forest\n1 Gaea's Cradle\n1 Gemstone Caverns\n1 Island\n1 Minamo, School at Water's Edge\n1 Mistrise Village\n1 Misty Rainforest\n1 Nykthos, Shrine to Nyx\n1 Otawara, Soaring City\n1 Polluted Delta\n1 Prismatic Vista\n1 Scalding Tarn\n1 Shifting Woodland\n1 Talon Gates of Madara\n1 Tropical Island\n1 Urza's Saga\n1 Verdant Catacombs\n1 Volcanic Island\n1 Windswept Heath\n1 Wooded Foothills\n1 Badgermole Cub\n1 Biomancer's Familiar\n1 Birds of Paradise\n1 Clever Impersonator\n1 Cloud of Faeries\n1 Collector Ouphe\n1 Elvish Spirit Guide\n1 Enduring Vitality\n1 Eternal Witness\n1 Faerie Mastermind\n1 Flesh Duplicate\n1 Formidable Speaker\n1 Gene Pollinator\n1 Gilded Drake\n1 Hexing Squelcher\n1 Kinnan, Bonder Prodigy\n1 Llanowar Elves\n1 Magus of the Candelabra\n1 Mockingbird\n1 Oboro Breezecaller\n1 Phantasmal Image\n1 Pia, Aether Ascetic\n1 Samut, Tyrant of Naktamun\n1 Shang-Chi, Master of Kung Fu\n1 Sowing Mycospawn\n1 Spellseeker\n1 Springheart Nantuko\n1 The Unbeatable Squirrel Girl\n1 Valley Floodcaller\n1 Vibrance\n1 Borne Upon a Wind\n1 Chain of Vapor\n1 Chatterstorm\n1 Chord of Calling\n1 Commandeer\n1 Crop Rotation\n1 Deflecting Swat\n1 Fierce Guardianship\n1 Finale of Devastation\n1 Flare of Duplication\n1 Flash Photography\n1 Flusterstorm\n1 Force of Negation\n1 Force of Will\n1 Green Sun's Zenith\n1 Hidden Strings\n1 Mental Misstep\n1 Mindbreak Trap\n1 Nature's Rhythm\n1 Noxious Revival\n1 Pact of Negation\n1 Snap\n1 This Town Ain't Big Enough\n1 Veil of Summer\n1 Worldly Tutor\n1 Candelabra of Tawnos\n1 Chrome Mox\n1 Cryptolith Rite\n1 Earthcraft\n1 Expedition Map\n1 Invasion of Ikoria\n1 Lotus Petal\n1 Mox Amber\n1 Mox Diamond\n1 Mystic Remora\n1 Rhystic Study\n1 Sol Ring\n1 Springleaf Drum\n1 Training Grounds\n1 Wild Growth"
+      }
+    ]
+  },
+  "clockSeconds": 1800,
+  "parallelism": 1,
+  "observations": [
+    {
+      "termination": "normal",
+      "durationMs": 472741,
+      "turns": 34,
+      "winner": 2,
+      "gameSeed": 24681357,
+      "sample": 1,
+      "wallWithInitializationMs": null,
+      "internalAiTimeouts": 18
+    },
+    {
+      "termination": "normal",
+      "durationMs": 163924,
+      "turns": 42,
+      "winner": 0,
+      "gameSeed": 24682366,
+      "sample": 2,
+      "wallWithInitializationMs": 168433,
+      "internalAiTimeouts": 0
+    },
+    {
+      "termination": "normal",
+      "durationMs": 119713,
+      "turns": 44,
+      "winner": 2,
+      "gameSeed": 24683375,
+      "sample": 3,
+      "wallWithInitializationMs": 124185,
+      "internalAiTimeouts": 0
+    }
+  ],
+  "completedGames": 3,
+  "timeouts": 0,
+  "averageCompletedMs": 252126.0,
+  "bridgeSourceSha256": "ce3c8bf5b49dbdf839ca343872ef6e7d92e0e5a4dc5c0d2c1bc5eb12495d36ac",
+  "medianCompletedMs": 163924,
+  "maximumCompletedMs": 472741,
+  "minimumCompletedMs": 119713,
+  "fiveMinuteCutoffWouldInterrupt": 1,
+  "limitations": [
+    "Only three games at one table; not a population estimate.",
+    "Desktop JVM timings cannot establish a OnePlus 8T or Android ART average.",
+    "Internal AI evaluation timeouts were recorded; every observed game nevertheless completed normally."
+  ],
+  "evidence": "commander-elves-reference-evidence.jsonl.gz"
+}
