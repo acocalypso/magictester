@@ -13,6 +13,15 @@ class WorkbenchUiTest {
         }
     }
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    private fun phoneBack() {
+        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        val now=android.os.SystemClock.uptimeMillis()
+        for(action in listOf(android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.ACTION_UP)) {
+            val event=android.view.KeyEvent(now,android.os.SystemClock.uptimeMillis(),action,android.view.KeyEvent.KEYCODE_BACK,0,0,android.view.KeyCharacterMap.VIRTUAL_KEYBOARD,0,0,android.view.InputDevice.SOURCE_KEYBOARD)
+            org.junit.Assert.assertTrue("System Back key injection failed",automation.injectInputEvent(event,true))
+        }
+        compose.waitForIdle()
+    }
     @Test fun firstRunAndNavigationAreReadable() {
         compose.onNodeWithText("MagicTester").assertIsDisplayed()
         compose.onNodeWithText("Setup",useUnmergedTree=true).performClick()
@@ -49,16 +58,16 @@ class WorkbenchUiTest {
             compose.waitUntil(10000) {runCatching {compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("View observed game →"));true}.getOrDefault(false)}
             compose.onNodeWithText("View observed game →").performClick()
             compose.onNodeWithText("Observed game").assertIsDisplayed()
-            androidx.test.espresso.Espresso.pressBack()
+            phoneBack()
             compose.onNodeWithText("View observed game →").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Your decklist"))
             compose.onNodeWithText("Your decklist").performClick()
             compose.onNodeWithText("Close").assertIsDisplayed()
-            androidx.test.espresso.Espresso.pressBack()
+            phoneBack()
             compose.onNodeWithText("Your decklist").assertIsDisplayed()
-            androidx.test.espresso.Espresso.pressBack()
+            phoneBack()
             compose.onNodeWithText("Your analyses").assertExists()
-            androidx.test.espresso.Espresso.pressBack()
+            phoneBack()
             compose.onNodeWithText("Put your deck\nto the test.").assertExists()
         } finally {store.delete(id);store.close()}
     }
