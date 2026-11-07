@@ -23,7 +23,7 @@ object CapacityMath {
         if(!canStart(availableMiB,totalMiB,processMiB,0)) return 0
         return startLimit(minOf(cpuLimit(cores),memoryLimit(availableMiB,totalMiB,processMiB).coerceAtLeast(1)),lowMemory,thermal)
     }
-    fun stopBenchmark(level: Int,availableMiB: Long,lowMemory: Boolean,thermal: Int)=thermal>=4 || availableMiB<SINGLE_RESERVE_MIB || (level>1 && (lowMemory || thermal>=3))
+    fun stopBenchmark(level: Int,availableMiB: Long,lowMemory: Boolean,thermal: Int)=thermal>=4 || availableMiB<SINGLE_RESERVE_MIB || (level>1 && lowMemory)
     fun recommendation(samples: List<Pair<Int,Double>>): Int {
         var count=1;var best=0.0
         for((level,rate) in samples.sortedBy { it.first }) if(rate>best*1.05) { count=level;best=rate }

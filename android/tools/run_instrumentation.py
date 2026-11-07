@@ -20,7 +20,7 @@ try:
     sdk=int(subprocess.check_output(['adb','shell','getprop','ro.build.version.sdk'],text=True).strip())
     if sdk>=33:subprocess.run(['adb','shell','pm','grant','com.acocalypso.magictester','android.permission.POST_NOTIFICATIONS'],check=True)
     reports=[]
-    for label,selection,timeout in [('ui',['-e','class','com.acocalypso.magictester.WorkbenchUiTest'],180),('engine',['-e','notClass','com.acocalypso.magictester.WorkbenchUiTest'],1500)]:
+    for label,selection,timeout in [('ui',['-e','class','com.acocalypso.magictester.WorkbenchUiTest'],180),('engine',['-e','notClass','com.acocalypso.magictester.WorkbenchUiTest'],1800)]:
         result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000',*selection,'com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=timeout)
         print(result.stdout,flush=True);print(result.stderr,file=sys.stderr,flush=True)
         report=result.stdout+result.stderr;reports.append(report)

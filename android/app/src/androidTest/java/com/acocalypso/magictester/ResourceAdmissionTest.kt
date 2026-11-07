@@ -28,22 +28,24 @@ class ResourceAdmissionTest {
         }
         assertTrue(ForgeClient.activePids(context,id).isEmpty())
     }
-    @Test fun realBaselineBenchmarkFinishesBothGamesUnderAdvisoryReports() = runBlocking {
+    @Test fun realCalibrationFinishesStartedParallelTrialsAndRecordsSevereThermalReports() = runBlocking {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val store=RunStore(context)
         // Reproduce the display total saved by the failed 0.1.2 benchmark in the device ZIP.
-        val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",1).put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
+        val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",2).put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",org.json.JSONArray().put(JSONObject().put("name","Reference burn").put("text",Examples.burn)))
         val id=store.create(payload,"importing")
         try {
             store.update(id,"running","Advisory benchmark regression")
-            BenchmarkRunner.run(context,store,store.get(id)!!,resourceSnapshot={PerformanceSettings.resources(context).put("lowMemory",true).put("thermal",3)}) {}
+            BenchmarkRunner.run(context,store,store.get(id)!!,monitorSnapshot={PerformanceSettings.resources(context).put("lowMemory",false).put("thermal",3)}) {}
             val restored=store.get(id)!!
             assertEquals(restored.label,"complete",restored.state)
             val report=restored.payload.getJSONObject("benchmarkReport")
-            assertEquals(1,report.getInt("maxStable"));assertEquals(2,report.getInt("completedGames"))
-            assertEquals(2,store.successfulIndices(id).size)
-            assertTrue(report.getJSONArray("samples").getJSONObject(0).getBoolean("stable"))
+            assertEquals(2,report.getInt("maxStable"));assertEquals(6,report.getInt("completedGames"))
+            assertEquals(6,store.successfulIndices(id).size)
+            val parallel=report.getJSONArray("samples").getJSONObject(1)
+            assertTrue(parallel.getBoolean("stable"));assertEquals(2,parallel.getInt("peakSimultaneousGames"))
+            assertEquals(3,parallel.getInt("peakThermalStatus"));assertTrue(parallel.getBoolean("thermalThrottlingObserved"))
         } finally {ForgeClient.cancel(id);store.delete(id);store.close()}
     }
 

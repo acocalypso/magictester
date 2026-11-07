@@ -32,7 +32,7 @@ import org.json.JSONObject
         if(samples!=null) for(i in 0 until samples.length()) {
             val sample=samples.getJSONObject(i)
             Text("${sample.optInt("parallelism")} engines · ${"%.2f".format(sample.optDouble("gamesPerMinute"))} games/min · ${sample.optLong("peakProcessPssMiB")} MiB peak/engine · ${if(sample.optBoolean("stable")) "passed" else "not validated"}",fontSize=12.sp)
-            if(!sample.optBoolean("stable")) Text(sample.optString("reason"),fontSize=12.sp,color=MaterialTheme.colorScheme.error)
+            if(!sample.optBoolean("stable") || sample.optBoolean("thermalThrottlingObserved")) Text(sample.optString("reason"),fontSize=12.sp,color=if(sample.optBoolean("stable")) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
         }
         if(data.has("stoppedReason")) Text(data.optString("stoppedReason"),fontSize=12.sp)
     }

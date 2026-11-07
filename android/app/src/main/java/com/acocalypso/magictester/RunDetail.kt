@@ -38,7 +38,7 @@ import kotlin.math.sqrt
             if(samples!=null) for(i in 0 until samples.length()) {
                 val sample=samples.getJSONObject(i)
                 Text("${sample.optInt("parallelism")} engines · ${sample.optInt("completed")}/${sample.optInt("expected")} games · ${"%.2f".format(sample.optDouble("gamesPerMinute"))} games/min · ${if(sample.optBoolean("stable")) "validated" else "not validated"}",fontSize=13.sp)
-                if(!sample.optBoolean("stable")) Text(sample.optString("reason"),fontSize=12.sp,color=MaterialTheme.colorScheme.error)
+                if(!sample.optBoolean("stable") || sample.optBoolean("thermalThrottlingObserved")) Text(sample.optString("reason"),fontSize=12.sp,color=if(sample.optBoolean("stable")) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
             }
             if(report.has("stoppedReason")) Text(report.getString("stoppedReason"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }}

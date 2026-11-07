@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 object BenchmarkRunner {
-    suspend fun run(context: Context,store: RunStore,run: Run,resourceSnapshot: ()->JSONObject={PerformanceSettings.resources(context)},progress: (String)->Unit) {
+    suspend fun run(context: Context,store: RunStore,run: Run,resourceSnapshot: ()->JSONObject={PerformanceSettings.resources(context)},monitorSnapshot: ()->JSONObject=resourceSnapshot,progress: (String)->Unit) {
         // A failed older benchmark may have reduced its display total to one saved game.
         // Every fresh calibration still needs all possible trial indices.
         val payload=JSONObject(run.payload.toString()).put("games",CapacityMath.MAX_ENGINES*(CapacityMath.MAX_ENGINES+1))
@@ -37,6 +37,8 @@ object BenchmarkRunner {
             val peakActive=AtomicInteger(0)
             val pids=ConcurrentHashMap.newKeySet<Int>()
             val peakPss=java.util.concurrent.atomic.AtomicLong()
+            val peakThermal=AtomicInteger(resources.getInt("thermal"))
+            val reportedThrottle=java.util.concurrent.atomic.AtomicBoolean(false)
             val minimumFree=java.util.concurrent.atomic.AtomicLong(resources.getLong("availableMiB"))
             var failure: String?=null
             var stopResources: JSONObject?=null
@@ -47,7 +49,10 @@ object BenchmarkRunner {
                 val outcomes=supervisorScope {
                     val monitor=launch {
                         while(isActive) {
-                            val sample=resourceSnapshot()
+                            val sample=monitorSnapshot()
+                            val thermal=sample.getInt("thermal")
+                            peakThermal.updateAndGet {maxOf(it,thermal)}
+                            if(thermal==3 && reportedThrottle.compareAndSet(false,true)) Diagnostics.event("benchmark.thermal_throttling","Android reports severe thermal throttling. Already-started trials will finish; throughput includes throttling. Additional parallel processes wait until the advisory clears.",run.id,level="WARN",details=sample)
                             minimumFree.updateAndGet { minOf(it,sample.getLong("availableMiB")) }
                             if(CapacityMath.stopBenchmark(level,sample.getLong("availableMiB"),sample.getBoolean("lowMemory"),sample.getInt("thermal"))) {
                                 failure="Android resource pressure: ${sample.getLong("availableMiB")} MiB available; thermal ${PerformanceSettings.thermalLabel(sample.getInt("thermal"))}; memory-pressure flag ${sample.getBoolean("lowMemory")}."
@@ -90,7 +95,8 @@ object BenchmarkRunner {
             val rate=if(elapsed>0) finished*60000.0/elapsed else 0.0
             val sample=JSONObject().put("parallelism",level).put("completed",finished).put("expected",expected).put("elapsedMs",elapsed).put("gamesPerMinute",rate)
                 .put("peakSimultaneousGames",peakActive.get()).put("processIds",JSONArray(pids.toList())).put("peakProcessPssMiB",peakPss.get()).put("minimumFreeMemoryMiB",minimumFree.get()).put("stable",stable)
-                .put("reason",failure ?: if(!stable) "The requested games did not overlap; this concurrency level was not validated." else "All real games completed with overlapping engine processes.")
+                .put("reason",failure ?: if(!stable) "The requested games did not overlap; this concurrency level was not validated." else "All real games completed with overlapping engine processes."+if(peakThermal.get()>=3) " Android reported ${PerformanceSettings.thermalLabel(peakThermal.get())}; measured throughput includes throttling." else "")
+                .put("peakThermalStatus",peakThermal.get()).put("thermalThrottlingObserved",peakThermal.get()>=3)
             stopResources?.let {sample.put("stopResources",it)}
             samples.put(sample)
             if(stable) { successful+=level to rate;report.put("maxStable",level);report.put("processBudgetMiB",maxOf(384L,(peakPss.get()*1.3).toLong())) }
