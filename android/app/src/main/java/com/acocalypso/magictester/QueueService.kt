@@ -48,6 +48,7 @@ class QueueService : Service() {
                     require(!memory.lowMemory && memory.availMem > 350L*1024*1024) { "Not enough free memory for Forge. Close other apps, then resume this run." }
                     val maxHeap = getSystemService(ActivityManager::class.java).largeMemoryClass
                     require(maxHeap >= 384) { "This device allows only $maxHeap MiB for Forge. At least 384 MiB is required." }
+                    ForgeRelease.requireCurrent(this)
                     val payload = run.payload
                     val count = payload.getInt("games")
                     val completed = store.successfulIndices(run.id).toMutableSet()

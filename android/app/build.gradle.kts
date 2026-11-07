@@ -8,9 +8,9 @@ val prepareForge = tasks.register<Exec>("prepareForge") {
 }
 android {
     namespace = "com.acocalypso.magictester"
-    compileSdk = 36
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig {
-        applicationId = "com.acocalypso.magictester"; minSdk = 26; targetSdk = 36
+        applicationId = "com.acocalypso.magictester"; minSdk = 26; targetSdk = 37
         versionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
         versionName = providers.gradleProperty("versionName").orElse("0.1.0").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -26,6 +26,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 tasks.named("preBuild") { dependsOn(prepareForge) }
 dependencies {
+    implementation("org.jsoup:jsoup:1.24.1")
     implementation(files(rootProject.file("engine/build/forge-engine.jar")).builtBy(prepareForge))
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
