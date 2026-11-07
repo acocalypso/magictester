@@ -20,6 +20,14 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17; isCoreLibraryDesugaringEnabled = true }
+    signingConfigs {
+        getByName("debug") {
+            // Intentionally public development identity, stable across debug releases.
+            storeFile = rootProject.file("signing/magictester-debug.p12")
+            storeType = "PKCS12"; storePassword = "android"
+            keyAlias = "androiddebugkey"; keyPassword = "android"
+        }
+    }
     buildTypes { release { isMinifyEnabled = false } }
     androidResources { noCompress += "zip" }
     packaging { resources { excludes += setOf("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/versions/**"); merges += setOf("META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/DEPENDENCIES") } }

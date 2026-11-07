@@ -4,8 +4,17 @@ import pathlib, subprocess, sys, re
 apk_dir=pathlib.Path(sys.argv[1])
 output=pathlib.Path(sys.argv[2]);output.mkdir(parents=True,exist_ok=True)
 try:
+    probe=apk_dir/'upgrade-probe.apk'
+    if probe.is_file():
+        subprocess.run(['adb','install',str(probe)],check=True)
+        subprocess.run(['adb','shell','run-as','com.acocalypso.magictester','mkdir','-p','files'],check=True)
+        subprocess.run(['adb','shell','run-as','com.acocalypso.magictester','sh','-c',"'echo retained-across-update > files/upgrade-probe.txt'"],check=True)
     for apk in sorted(apk_dir.rglob('*.apk'),key=lambda p: ('androidTest' in p.name,p.name)):
-        if 'release' not in apk.name: subprocess.run(['adb','install','-r',str(apk)],check=True)
+        if 'release' not in apk.name and apk.name!='upgrade-probe.apk': subprocess.run(['adb','install','-r',str(apk)],check=True)
+    if probe.is_file():
+        retained=subprocess.check_output(['adb','shell','run-as','com.acocalypso.magictester','cat','files/upgrade-probe.txt'],text=True).strip()
+        if retained!='retained-across-update':raise RuntimeError('An in-place update lost private app data')
+        (output/'upgrade-check.txt').write_text('PASS: older-version APK updated in place; private app data retained.\n')
     result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000','com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=1500)
     print(result.stdout);print(result.stderr,file=sys.stderr)
     (output/'instrumentation.txt').write_text(result.stdout+result.stderr)

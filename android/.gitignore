@@ -1,7 +1,7 @@
 .gradle/
 **/build/
 local.properties
-signing/
+signing/*
 *.jks
 *.keystore
 *.p12
@@ -13,3 +13,7 @@ app/src/main/assets/LICENSE.txt
 
 __pycache__/
 *.py[cod]
+
+!signing/README.md
+!signing/certificate.sha256
+!signing/magictester-debug.p12
