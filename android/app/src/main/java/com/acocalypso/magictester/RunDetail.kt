@@ -35,7 +35,12 @@ import kotlin.math.sqrt
             Text("Device performance result",fontSize=20.sp)
             Text("Recommended ${report.optInt("recommended",1)} · Highest validated ${report.optInt("maxStable")} parallel engines")
             val samples=report.optJSONArray("samples")
-            if(samples!=null) for(i in 0 until samples.length()) {val sample=samples.getJSONObject(i);Text("${sample.optInt("parallelism")} engines · ${sample.optInt("completed")}/${sample.optInt("expected")} games · ${"%.2f".format(sample.optDouble("gamesPerMinute"))} games/min",fontSize=13.sp)}
+            if(samples!=null) for(i in 0 until samples.length()) {
+                val sample=samples.getJSONObject(i)
+                Text("${sample.optInt("parallelism")} engines · ${sample.optInt("completed")}/${sample.optInt("expected")} games · ${"%.2f".format(sample.optDouble("gamesPerMinute"))} games/min · ${if(sample.optBoolean("stable")) "validated" else "not validated"}",fontSize=13.sp)
+                if(!sample.optBoolean("stable")) Text(sample.optString("reason"),fontSize=12.sp,color=MaterialTheme.colorScheme.error)
+            }
+            if(report.has("stoppedReason")) Text(report.getString("stoppedReason"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }}
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(24.dp)) { Column { Text("${completed.size}",fontSize=36.sp);Text("finished matches",fontSize=12.sp) };Column { Text(if(decisive.isEmpty()) "—" else "${wins*100/decisive.size}%",fontSize=36.sp);Text("observed wins",fontSize=12.sp) } }

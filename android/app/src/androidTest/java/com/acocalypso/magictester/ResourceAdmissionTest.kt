@@ -33,9 +33,9 @@ class ResourceAdmissionTest {
         val store=RunStore(context)
         val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",1).put("format","pauper").put("deck",Examples.burn).put("games",20).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",org.json.JSONArray().put(JSONObject().put("name","Reference burn").put("text",Examples.burn)))
-        val id=store.create(payload)
+        val id=store.create(payload,"importing")
         try {
-            assertTrue(store.claim(id))
+            store.update(id,"running","Advisory benchmark regression")
             BenchmarkRunner.run(context,store,store.get(id)!!,resourceSnapshot={PerformanceSettings.resources(context).put("lowMemory",true).put("thermal",3)}) {}
             val restored=store.get(id)!!
             assertEquals(restored.label,"complete",restored.state)
