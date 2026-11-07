@@ -60,6 +60,15 @@ class ForgeRuntimeTest {
             assertTrue(result.getJSONArray("commanderCasts").length() > 0)
         }
     }
+    @Test fun standardColorIdentityRejectsColoredBasicsWithAColorlessCommander() {
+        val result=JSONObject(command(JSONObject().put("operation","validate").put("text","Commander\n1 Kozilek, the Great Distortion\nDeck\n99 Plains\n").put("format","commander")))
+        assertFalse(result.toString(),result.getBoolean("valid"))
+        assertTrue(result.toString(),result.getJSONArray("errors").toString().contains("color identity"))
+    }
+    @Test fun duelStructuralCheckDoesNotApplyMultiplayerCommanderBans() {
+        val result=JSONObject(command(JSONObject().put("operation","validate").put("text","Commander\n1 Golos, Tireless Pilgrim\nDeck\n99 Plains\n").put("format","duel")))
+        assertTrue(result.toString(),result.getBoolean("valid"))
+    }
     @Test fun companionRestrictionRejectsInvalidStartingDeck() {
         val result=JSONObject(command(JSONObject().put("operation","validate").put("text",Examples.burn.replace("4 Thermo-Alchemist","4 Goblin Chieftain")+"\nCompanion\n1 Lurrus of the Dream-Den\n").put("format","legacy")))
         assertFalse(result.toString(),result.getBoolean("valid"))

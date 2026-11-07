@@ -4,7 +4,6 @@ import forge.StaticData
 import forge.deck.Deck
 import forge.deck.DeckSection
 import forge.deck.DeckFormat
-import forge.model.FModel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -31,9 +30,25 @@ object EngineValidation {
         }
         if (problems.isEmpty()) {
             val rules = if (DeckText.commander(format)) DeckFormat.Commander else DeckFormat.Constructed
-            rules.getDeckConformanceProblem(deck)?.let { problems += it }
-            val gameFormat = FModel.getFormats().getFormat(if (format == "cedh") "Commander" else if (format == "duel") "Duel Commander" else format.replaceFirstChar { it.uppercase() })
-            if (gameFormat != null) gameFormat.getDeckConformanceProblem(deck)?.let { problems += it }
+            // CurrentLegality owns today's format/role bans. The Forge release's
+            // multiplayer ban snapshot must not reject a legal Duel list or an unban.
+            val data=StaticData.instance(); val previous=data.commanderPredicate
+            try {
+                data.setCommanderPredicate { true }
+                rules.getDeckConformanceProblem(deck)?.let { problems += it }
+            } finally { data.setCommanderPredicate(previous) }
+            if(DeckText.commander(format)) {
+                val commanders=deck.commanders
+                if(commanders.size == 1) {
+                    val commander=commanders.first().rules
+                    if(commander.canBeBackground() && !commander.canBeCreature() && !commander.oracleText.contains("can be your commander")) problems += "A Background needs a compatible commander; it cannot lead this deck alone."
+                }
+                // Forge allows a colored basic in a colorless deck as a house rule.
+                // Standard Commander color identity does not permit that exception.
+                if(commanders.isNotEmpty() && commanders.all { it.rules.colorIdentity.color.toInt() == 0 && !it.rules.addsWildCardColor }) {
+                    for(entry in deck.main) if(entry.key.rules.type.isBasicLand && entry.key.rules.colorIdentity.color.toInt() != 0) problems += "${entry.key.name} is outside the commanders' color identity."
+                }
+            }
         }
         val output = ParsedDeck(canonical, emptyList())
         if (problems.isEmpty()) destination.writeText(output.forgeText())
