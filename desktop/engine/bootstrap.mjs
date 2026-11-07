@@ -67,7 +67,7 @@ if (!existsSync(home + "/build.txt")) {
   for await (const b of createReadStream(archive)) hash.update(b);
   if (hash.digest("hex") !== release.archiveSha256)
     throw new Error("Forge archive checksum mismatch");
-  execFileSync("tar", ["-xjf", archive, "-C", home]);
+  execFileSync("tar", ["-xjf", archive, "-C", home], { windowsHide: true });
   await rm(archive);
 }
 const cachedSchema = existsSync(root + "/cards.json")
@@ -169,9 +169,10 @@ if (!existsSync(metadataRoot + "/forge-cards.json")) {
   // Source launch requires a JDK. Bootstrap image carries one; the runner uses a JRE.
   const names = execFileSync(
     "java",
-    ["-Xmx128m", root + "/CardNames.java", archive],
+    ["-Xmx128m", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8", root + "/CardNames.java", archive],
     {
       maxBuffer: 16 * 1024 * 1024,
+      windowsHide: true,
     },
   )
     .toString()
@@ -202,13 +203,16 @@ if (
     "java",
     [
       "-Xmx1024m",
+      "-Dfile.encoding=UTF-8",
+      "-Dstdout.encoding=UTF-8",
+      "-Dstderr.encoding=UTF-8",
       "-cp",
       jarPath,
       sourceFile,
       home + "/res/cardsfolder/cardsfolder.zip",
       metadataRoot + "/forge-facts.json.tmp",
     ],
-    { cwd: home, maxBuffer: 16 * 1024 * 1024 },
+    { cwd: home, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
   );
   const facts = JSON.parse(
     await readFile(metadataRoot + "/forge-facts.json.tmp", "utf8"),
@@ -318,6 +322,9 @@ if (
     "java",
     [
       "-Xmx1024m",
+      "-Dfile.encoding=UTF-8",
+      "-Dstdout.encoding=UTF-8",
+      "-Dstderr.encoding=UTF-8",
       "-m",
       "jdk.compiler/com.sun.tools.javac.Main",
       "-cp",
@@ -327,7 +334,7 @@ if (
       sourceFile,
       ...patchedSources,
     ],
-    { cwd: home, stdio: "inherit" },
+    { cwd: home, stdio: "inherit", windowsHide: true },
   );
   await chmod(buildClasses, 0o755);
   if (!existsSync(classPath)) await rename(buildClasses, classPath);

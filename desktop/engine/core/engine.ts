@@ -582,6 +582,8 @@ export class ForgeEngineAdapter implements CardGameEngine {
             "-Djava.awt.headless=true",
             "-Dmagictester.engineVersion=" + bridge.engineVersion,
             "-Dfile.encoding=UTF-8",
+            "-Dstdout.encoding=UTF-8",
+            "-Dstderr.encoding=UTF-8",
             "-cp",
             join(home, bridge.classDirectory || "magictester-bridge") +
               delimiter +

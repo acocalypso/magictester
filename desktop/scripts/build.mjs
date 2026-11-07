@@ -51,6 +51,7 @@ function run(file, args, cwd = root, env = process.env) {
     }
     throw Error(command + " failed (" + r.status + ")");
   }
+  return r.stdout || "";
 }
 await fs.mkdir(output, { recursive: true });
 await fs.rm(app, { recursive: true, force: true });
@@ -214,6 +215,10 @@ run(
   join(app, "tools", "java", "bin", rid === "win-x64" ? "javac.exe" : "javac"),
   ["--version"],
 );
+const encodingCheck = join(work, "EncodingCheck.java");
+await fs.writeFile(encodingCheck, 'class EncodingCheck { public static void main(String[] args) { System.out.print("Éowyn, Shieldmaiden"); } }', "utf8");
+const encoded = run(join(app, "tools", "java", "bin", rid === "win-x64" ? "java.exe" : "java"), ["-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8", encodingCheck]);
+if (encoded !== "Éowyn, Shieldmaiden") throw Error("Bundled Java did not preserve UTF-8 card names");
 // Verify the package using only its own runtimes and an isolated empty user directory.
 const checkEnv = { ...process.env, MAGICTESTER_DATA: join(work, "smoke-data") };
 delete checkEnv.MAGICTESTER_ENGINE;

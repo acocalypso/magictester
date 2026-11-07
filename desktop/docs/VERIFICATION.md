@@ -26,6 +26,6 @@ The release packages contain their runtime source URLs/checksums and SHA-256 arc
 
 The UI is native, with no browser engine. One long-lived private worker uses SQLite WAL transactions. Queue polling reads cached counters and compact summaries; action histories are fetched in pages of 100 entries. Forge jobs share a CPU/RAM admission budget instead of starting an unbounded JVM per request. Closing the application drains child processes and saves unfinished work for recovery.
 
-Local acceptance used a 768 MB JVM heap, one CPU per JVM and one concurrent Forge process because the shared development machine also held SDK/build caches. Release defaults use a 1 GB heap and two CPUs per JVM, reserve memory for the OS and calculate the process cap from detected CPU/memory resources. Parallelism and timeout settings do not guarantee a complex Commander game finishes.
+The shared development machine also held SDK/build caches, so its timings are not a performance benchmark. Release defaults use a 1 GB heap and two CPUs per JVM, reserve memory for the OS and calculate the process cap from detected CPU/memory resources. Parallelism and timeout settings do not guarantee a complex Commander game finishes.
 
 Windows 10/11 x64 and graphical Linux x64 are the supported package targets. No ARM, macOS, installer integration or code signing is claimed. No claim of bit-for-bit reproducible builds is made: official stable Java and Forge updates are intentionally discovered and verified at build/setup time.

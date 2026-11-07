@@ -266,6 +266,9 @@ export class RuntimeManager {
           [
             "-Xmx1024m",
             "-Djava.awt.headless=true",
+            "-Dfile.encoding=UTF-8",
+            "-Dstdout.encoding=UTF-8",
+            "-Dstderr.encoding=UTF-8",
             "-cp",
             join(runtime.home, runtime.bridge.classDirectory) +
               delimiter +

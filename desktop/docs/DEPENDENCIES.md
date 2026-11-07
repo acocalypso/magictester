@@ -16,6 +16,8 @@ Context7 references:
 - https://context7.com/avaloniaui/avalonia-docs — desktop platform and UI architecture guidance.
 - https://context7.com/dotnet/docs — self-contained publishing and asynchronous process IO guidance.
 
+Java pipe encoding follows the [Java 21 System stream contract](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/System.html): redirected output uses `stdout.encoding` / `stderr.encoding`. All engine/bootstrap JVMs explicitly select UTF-8, and packaging verifies an accented card-name round trip.
+
 Official manifests used by the build:
 
 - https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json

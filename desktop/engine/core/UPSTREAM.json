@@ -23,7 +23,7 @@
     "retry-options.ts": "a2f515b63c4a351285081a8a276d8f7fcc8c9057f0b6455b5c4bee9579047d71"
   },
   "adaptations": [
-    "engine.ts: Windows classpath, process-tree cancellation, portable log filenames, Windows CRLF log parsing",
+    "engine.ts: Windows classpath, process-tree cancellation, portable log filenames, Windows CRLF log parsing, explicit UTF-8 Java pipes",
     "runtime.mjs: standalone asset path",
     "source-http.ts: SQLite cache instead of PostgreSQL",
     "observation-review.ts: pure review function only"
