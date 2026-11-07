@@ -14,6 +14,7 @@ import org.json.JSONObject
     var players by remember {mutableIntStateOf(4)}
     var selected by remember {mutableIntStateOf(PerformanceSettings.selected(context))}
     val format=if(currentDeck) model.format else "pauper"
+    var clock by remember(format) {mutableIntStateOf(GameTimeouts.defaultSeconds(format))}
     val profile=PerformanceSettings.profile(format,players)
     val report=remember(model.runs,model.performanceVersion,profile) {PerformanceSettings.report(context,profile)}
     val tested=maxOf(1,report?.optInt("maxStable",1) ?: 1)
@@ -25,7 +26,8 @@ import org.json.JSONObject
         Text("${model.selected.size} opponents selected. Use Test to change the deck or format, and Pools to change opponents. All decks must pass structure and legality checks before the benchmark is queued.",fontSize=12.sp)
         if(model.format in listOf("commander","cedh")) {Text("Benchmark table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1)}
     } else Text("Quick workload: Pauper reference burn decks. Benchmark your Commander setup separately for a representative limit.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-    OutlinedButton(onClick={model.benchmark(currentDeck,players)},enabled=!model.busy && !model.firstSetup) {Text("Run device performance test")}
+    GameTimeoutControl(format,clock) {clock=it}
+    OutlinedButton(onClick={model.benchmark(currentDeck,players,clock)},enabled=!model.busy && !model.firstSetup) {Text("Run device performance test")}
     if(report==null) Text("No benchmark for this workload yet. Parallel play remains limited to one engine.",fontSize=12.sp)
     report?.let { data ->
         Text("Recommended: ${data.optInt("recommended",1)} · Highest validated: ${data.optInt("maxStable")}",fontSize=14.sp,color=MaterialTheme.colorScheme.primary)

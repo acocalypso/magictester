@@ -49,7 +49,7 @@ Android 8.0 / API 26 is the declared minimum; the CI emulator matrix defines tes
 
 A pool of up to four isolated Forge processes runs independent matches. The saved performance setting is shared across queued analyses; each BO3 match keeps its games sequential. Each match checks free RAM and thermal state. Devices must allow a large heap of at least 384 MiB and have more than 350 MiB currently available. Android and device manufacturers may stop work under memory/battery pressure. A visible foreground-service notification and a bounded wake lock support user-started long runs.
 
-Evidence is committed to private app storage after every match. Unfinished work can be resumed after cancellation, failure or process loss, with a 5–300 second per-game timeout. Completed matches keep their original evidence; failed attempts remain visible. A timeout or engine error never becomes an invented loss. Completed jobs are not silently rerun after an engine update.
+Evidence is committed to private app storage after every match. Unfinished work can be resumed after cancellation, failure or process loss, with a 5–1,800 second per-game timeout for Commander/cEDH/Duel, or 5–300 seconds for constructed formats. New Commander runs start at 15 minutes; the limit is adjustable up to 30 minutes, including on retries and performance tests. Existing saved limits are preserved. Completed matches keep their original evidence; failed attempts remain visible. A timeout or engine error never becomes an invented loss. Completed jobs are not silently rerun after an engine update.
 
 ### Opponent sampling and freshness
 

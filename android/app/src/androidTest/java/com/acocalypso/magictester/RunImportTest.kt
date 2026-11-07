@@ -35,6 +35,24 @@ class RunImportTest {
             assertNull(store.next());assertEquals(2,store.all().size)
         } finally {store.close()}
     }
+    @Test fun longCommanderTimeoutSurvivesImportAndRetryWithFormatBoundaries() {
+        val store=RunStore(isolated())
+        try {
+            val payload=JSONObject().put("title","Long Commander game").put("format","commander").put("deck",Examples.commander()).put("games",1).put("clockSeconds",1800).put("seed",12345).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray().put(JSONObject().put("name","Opponent").put("text",Examples.commander())))
+            val archive=JSONObject().put("schemaVersion",1).put("application","MagicTester Android").put("state","interrupted").put("settings",payload).put("results",JSONArray())
+            val id=store.importExport(archive.toString())
+            assertEquals(1800,store.get(id)!!.payload.getInt("clockSeconds"))
+            store.resume(id,1800)
+            assertEquals("queued",store.get(id)!!.state)
+            assertEquals(1800,SimulationRequest.unit(store.get(id)!!.payload,0).getInt("clockSeconds"))
+            store.update(id,"interrupted","Test retry")
+            try {store.resume(id,1801);fail("Above-ceiling retry must fail")} catch(_:IllegalArgumentException) {}
+            assertEquals("interrupted",store.get(id)!!.state)
+            payload.put("format","pauper")
+            try {store.importExport(archive.toString());fail("Constructed clock must keep its limit")} catch(_:IllegalArgumentException) {}
+            assertEquals(1,store.all().size)
+        } finally {store.close()}
+    }
     @Test fun unrelatedOrMalformedJsonDoesNotCreateAnAnalysis() {
         val store=RunStore(isolated())
         try {

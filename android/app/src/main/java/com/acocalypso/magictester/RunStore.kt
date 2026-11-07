@@ -119,7 +119,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
     }
     fun resume(id: String, clock: Int) {
         val run = get(id) ?: return
-        require(run.state !in listOf("running", "queued", "complete")); require(clock in 5..300)
+        require(run.state !in listOf("running", "queued", "complete")); require(GameTimeouts.accepts(run.payload.getString("format"),clock))
         val payload = run.payload.put("clockSeconds",clock)
         writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label",if(payload.optString("kind")=="benchmark") "Rerunning device performance measurements" else "Resuming unfinished matches") },"id=?",arrayOf(id))
         Diagnostics.event("run.resumed","Unfinished matches requeued",id,details=JSONObject().put("clockSeconds",clock))
@@ -151,7 +151,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         val payload=JSONObject(archive.getJSONObject("settings").toString())
         require(payload.optString("format") in DeckText.formats && payload.opt("deck") is String && payload.optString("deck").isNotBlank()) {"The export has no readable deck/format settings."}
         val total=payload.optInt("games")
-        require(total in 1..100 && payload.optInt("clockSeconds") in 5..300 && payload.optString("engineVersion").isNotBlank()) {"The export has invalid analysis settings."}
+        require(total in 1..100 && GameTimeouts.accepts(payload.optString("format"),payload.optInt("clockSeconds")) && payload.optString("engineVersion").isNotBlank()) {"The export has invalid analysis settings."}
         require(payload.has("seed") && payload.optInt("players",4) in 2..4 && payload.optInt("bestOf",1) in listOf(1,3)) {"The export has invalid seed/player/match settings."}
         val opponents=payload.optJSONArray("opponents")
         require(opponents!=null && opponents.length()>0) {"The export has no saved opponent decks."}

@@ -117,8 +117,8 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
 @Composable private fun PageTitle(kicker: String, title: String, description: String) { Column { Text(kicker.uppercase(),color=accent,fontSize=10.sp,letterSpacing=2.sp);Spacer(Modifier.height(8.dp));Text(title,fontSize=30.sp,fontWeight=FontWeight.Medium,lineHeight=34.sp);Spacer(Modifier.height(8.dp));Text(description,color=MaterialTheme.colorScheme.onSurfaceVariant,fontSize=14.sp,lineHeight=20.sp) } }
 @Composable private fun FormatPicker(model: Workbench) { var expanded by remember { mutableStateOf(false) };Box { OutlinedButton(onClick={expanded=true},enabled=!model.busy) { Text("Format: ${model.format.replaceFirstChar { it.uppercase() }} ▾") };DropdownMenu(expanded,onDismissRequest={expanded=false}) { DeckText.formats.forEach { format -> DropdownMenuItem(text={Text(format)},onClick={model.chooseFormat(format);expanded=false}) } } } }
 @Composable private fun TestScreen(model: Workbench, open: () -> Unit, pools: () -> Unit, library: () -> Unit, newDeck: () -> Unit) {
-    var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(if(DeckText.commander(model.format)) 300 else 120) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
-    LaunchedEffect(model.format) { timeout=if(DeckText.commander(model.format)) 300 else 120 }
+    var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(GameTimeouts.defaultSeconds(model.format)) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
+    LaunchedEffect(model.format) { timeout=GameTimeouts.defaultSeconds(model.format) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageTitle("01 / Prepare","Put your deck\nto the test.","Real Forge AI games, saved locally. Compare your list with selected opponents and inspect every recorded turn.")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -143,8 +143,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         Text("Analysis settings",fontSize=19.sp)
         Text("$games matches · ${if(bestOf && !DeckText.commander(model.format)) "best of three" else "single games"}")
         Slider(games.toFloat(),{games=it.toInt().coerceIn(1,100)},valueRange=1f..100f,steps=98)
-        Text("Game timeout: $timeout seconds")
-        Slider(timeout.toFloat(),{timeout=(it.toInt()/5*5).coerceIn(5,300)},valueRange=5f..300f,steps=58)
+        GameTimeoutControl(model.format,timeout) {timeout=it}
         if(!DeckText.commander(model.format)) Row(verticalAlignment=Alignment.CenterVertically) { Switch(bestOf,{bestOf=it});Spacer(Modifier.width(10.dp));Text("Best of three · native AI sideboarding") }
         if(model.format in listOf("commander","cedh")) { Text("Commander table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1) }
         OutlinedTextField(seed,{seed=it.filter(Char::isDigit).take(10)},label={Text("Random seed")},supportingText={Text("Saved with the run for reproducibility.")},singleLine=true,modifier=Modifier.fillMaxWidth())

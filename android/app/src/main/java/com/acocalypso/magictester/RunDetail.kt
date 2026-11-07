@@ -55,7 +55,7 @@ import kotlin.math.sqrt
             if(run.state in listOf("failed","interrupted","cancelled")) {
                 val benchmark=run.payload.optString("kind")=="benchmark"
                 Text(if(benchmark) "Rerun performance test · $timeout seconds per game" else "Resume unfinished matches · $timeout seconds per game")
-                Slider(timeout.toFloat(),{timeout=(it.toInt()/5*5).coerceIn(5,300)},valueRange=5f..300f,steps=58)
+                GameTimeoutControl(run.payload.getString("format"),timeout) {timeout=it}
                 Button(onClick={model.resume(id,timeout)}) { Text(if(benchmark) "Rerun performance test" else "Resume with these settings") }
                 Text(if(benchmark) "A new benchmark repeats complete measurement levels. Earlier game evidence is preserved; the recommendation uses the new measured rounds." else "Completed matches are preserved. Failed attempts remain visible. The new timeout applies only to unfinished matches.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }

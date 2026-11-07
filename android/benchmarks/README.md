@@ -18,4 +18,4 @@ Emulator and desktop JVM timings are reference measurements. They do not establi
 python3 android/tools/run_commander_timing.py /path/to/apks /path/to/results 5 1800
 ```
 
-The runner installs the debug APK and matching test APK. Use a disposable test installation or export your data first if its signing identity differs. The diagnostic ceiling belongs to this experiment; it does not silently change saved analyses or the production app's limits.
+The runner installs the debug APK and matching test APK. Use a disposable test installation or export your data first if its signing identity differs. The diagnostic ceiling belongs to this experiment; it does not silently change the timeout on saved analyses.
