@@ -1,5 +1,5 @@
 const api = "https://api.github.com/repos/Card-Forge/forge";
-async function releaseJson(url) {
+async function releaseJson(url, signal) {
   for (let attempt = 0; ; attempt++) {
     try {
       const response = await fetch(url, {
@@ -7,7 +7,7 @@ async function releaseJson(url) {
           Accept: "application/vnd.github+json",
           "User-Agent": "MagicTester/0.1 (+https://github.com/acocalypso/magictester)",
         },
-        signal: AbortSignal.timeout(20000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
       });
       if (response.ok) return await response.json();
       await response.body?.cancel();
@@ -17,7 +17,7 @@ async function releaseJson(url) {
     } catch (error) {
       const transient = error.transient || error instanceof TypeError || error.name === "TimeoutError";
       if (!transient || attempt >= 2) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      await (await import("node:timers/promises")).setTimeout(1000 * (attempt + 1), undefined, { signal });
     }
   }
 }
@@ -54,18 +54,19 @@ export function releaseDescriptor(release, sourceCommit) {
 }
 export async function latestStable(
   get = releaseJson,
+  signal,
 ) {
-  const release = await get(api + "/releases/latest");
+  const release = await get(api + "/releases/latest", signal);
   if (
     !/^forge-\d+\.\d+\.\d+$/.test(release.tag_name) ||
     release.draft ||
     release.prerelease
   )
     throw Error("Expected latest stable Forge release");
-  let ref = (await get(api + "/git/ref/tags/" + release.tag_name)).object;
+  let ref = (await get(api + "/git/ref/tags/" + release.tag_name, signal)).object;
   for (let n = 0; ref?.type === "tag" && n < 5; n++) {
     if (!/^[a-f0-9]{40}$/.test(ref.sha)) throw Error("Invalid annotated tag");
-    ref = (await get(api + "/git/tags/" + ref.sha)).object;
+    ref = (await get(api + "/git/tags/" + ref.sha, signal)).object;
   }
   if (ref?.type !== "commit")
     throw Error("Forge release tag did not resolve to a commit");

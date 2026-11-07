@@ -14,7 +14,9 @@ static class ArchiveChecks
         {
             string sample = Path.Combine(temp, "sample.tar.bz2"), output = Path.Combine(temp, "output");
             Make(sample, "res/Éowyn.txt");
-            ForgeArchive.Extract(sample, output);
+            var read = new List<(long Bytes, long Total)>();
+            ForgeArchive.Extract(sample, output, (bytes, total) => read.Add((bytes, total)));
+            if (read.Count == 0 || read.Any(p => p.Bytes <= 0 || p.Bytes > p.Total || p.Total != new FileInfo(sample).Length)) throw new Exception("Archive progress did not count compressed bytes correctly");
             if (File.ReadAllText(Path.Combine(output, "res", "Éowyn.txt")) != "Local card rules") throw new Exception("Archive extraction changed Unicode paths or file data");
             string malicious = Path.Combine(temp, "escape.tar.bz2");
             Make(malicious, "../escaped.txt");

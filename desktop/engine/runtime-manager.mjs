@@ -14,6 +14,8 @@ import {
 } from "node:fs/promises";
 import { join, delimiter } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline";
+import { SetupProgress } from "./setup-progress.mjs";
 import { latestStable, compareVersions } from "./core/forge-releases.mjs";
 import { resolveRuntime, registerRuntime } from "./core/runtime.mjs";
 import { ForgeEngineAdapter, gameResults } from "./core/engine.js";
@@ -22,7 +24,8 @@ export class RuntimeManager {
   constructor(data, emit) {
     this.data = data;
     this.root = join(data, "forge");
-    this.emit = emit;
+    this.progress = new SetupProgress((state) => emit("setup-progress", state));
+    this.emit = (event, payload) => { if (event === "setup") this.progress.event(payload); emit(event, payload); };
     this.operation = null;
     this.child = null;
     this.controller = null;
@@ -56,7 +59,10 @@ export class RuntimeManager {
           logged += bounded.length;
           logWork = logWork.then(() => appendFile(log, bounded)).catch(() => {});
         }
-        for (const line of chunk.toString().split("\n")) {
+      };
+      const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+      lines.on("line", (line) => {
+        if (line.length > 65536) return;
           try {
             const e = JSON.parse(line);
             if (e.event)
@@ -65,8 +71,7 @@ export class RuntimeManager {
                 ...e,
               });
           } catch {}
-        }
-      };
+      });
       child.stdout.on("data", capture);
       child.stderr.on("data", capture);
       const abort = () => {
@@ -148,10 +153,11 @@ export class RuntimeManager {
   async refreshCards() {
     if (this.operation) return this.operation;
     this.controller = new AbortController();
+    this.progress.begin();
     this.operation = this.run("bootstrap.mjs", [
       "--metadata-only",
       "--refresh-cards",
-    ]).finally(() => {
+    ]).then(() => this.progress.finish("complete", "Card data is ready.")).catch((error) => { this.progress.finish(this.controller.signal.aborted ? "cancelled" : "error", error.message); throw error; }).finally(() => {
       this.operation = null;
     });
     return this.operation;
@@ -159,9 +165,12 @@ export class RuntimeManager {
   async setup(refreshCards = false) {
     if (this.operation) return this.operation;
     this.controller = new AbortController();
+    this.progress.begin();
     this.operation = this.install(refreshCards)
+      .then((result) => { this.progress.finish("complete", "Your local engine is ready."); return result; })
       .catch(async (error) => {
-        await this.saveState({
+        this.progress.finish(this.controller.signal.aborted ? "cancelled" : "error", this.controller.signal.aborted ? "Setup cancelled. You can retry when ready." : error.message);
+        if (!this.controller.signal.aborted) await this.saveState({
           status: "error",
           error: error.message,
           checkedAt: new Date().toISOString(),
@@ -176,9 +185,10 @@ export class RuntimeManager {
   async install(refreshCards) {
     await mkdir(this.root, { recursive: true });
     this.emit("setup", {
+      event: "checking_release",
       message: "Checking the latest stable Forge release…",
     });
-    const release = await latestStable();
+    const release = await latestStable(undefined, this.controller?.signal);
     let active;
     try {
       active = await resolveRuntime(this.root);
@@ -235,10 +245,11 @@ export class RuntimeManager {
       await rm(stage, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch((cleanup) => {
         this.emit("warning", { message: "Staging cleanup will need to be retried: " + cleanup.message });
       });
+      const cancelled = this.controller?.signal.aborted;
       await this.saveState({
-        status: "error",
+        status: cancelled ? "cancelled" : "error",
         error: error.message,
-        checkedAt: new Date().toISOString(),
+        ...(cancelled ? {} : { checkedAt: new Date().toISOString() }),
       });
       throw error;
     }
@@ -269,8 +280,11 @@ export class RuntimeManager {
   }
   async validate(runtime) {
     this.emit("setup", {
+      event: "validating_engine",
       message: "Checking engine contracts and playing real validation games…",
     });
+    let completed = 0;
+    const checked = () => this.emit("setup", { event: "validation_progress", completed: ++completed, total: 8, message: `${completed} of 8 engine checks completed` });
     // Public-contract checks use Java source-launch mode from the bundled JDK.
     for (const name of [
       "DuelContracts",
@@ -280,7 +294,7 @@ export class RuntimeManager {
     ]) {
       this.controller?.signal.throwIfAborted();
       const labels = { DuelContracts: "Duel Commander rules", MatchContracts: "match rules", CommanderColorContracts: "Commander color rules", DeckNameContracts: "card-name handling" };
-      this.emit("setup", { message: "Checking " + labels[name] + "…" });
+      this.emit("setup", { event: "validation_progress", completed, total: 8, message: "Checking " + labels[name] + "…" });
       await new Promise((resolve, reject) => {
         const c = spawn(
           "java",
@@ -324,6 +338,7 @@ export class RuntimeManager {
           code === 0 ? resolve() : reject(Error(name + " failed: " + tail));
         });
       });
+      checked();
     }
     const deck =
       "[metadata]\nName=Validation\n[Main]\n24 Mountain\n4 Lightning Bolt\n4 Shock\n4 Incinerate\n4 Lightning Strike\n4 Thermo-Alchemist\n4 Kessig Flamebreather\n4 Lava Spike\n4 Chain Lightning\n4 Rift Bolt\n";
@@ -339,7 +354,7 @@ export class RuntimeManager {
       { decks: [commander, commander], mode: "duel" },
     ]) {
       this.controller?.signal.throwIfAborted();
-      this.emit("setup", { message: "Playing a " + (request.mode === "commander" ? "four-player Commander" : request.mode === "duel" ? "Duel Commander" : request.bestOf === 3 ? "BO3" : "BO1") + " validation game…" });
+      this.emit("setup", { event: "validation_progress", completed, total: 8, message: "Playing a " + (request.mode === "commander" ? "four-player Commander" : request.mode === "duel" ? "Duel Commander" : request.bestOf === 3 ? "BO3" : "BO1") + " validation game…" });
       // Resolve directly against the candidate's standalone manifest before activation.
       const adapter = new ForgeEngineAdapter(
         runtime.home,
@@ -358,6 +373,7 @@ export class RuntimeManager {
         },
         this.controller?.signal,
       );
+      checked();
     }
   }
   killCurrent() {
@@ -376,12 +392,21 @@ export class RuntimeManager {
     this.killCurrent();
     await this.operation?.catch(() => {});
   }
+  async cancel() {
+    if (!this.operation) return;
+    this.controller?.abort();
+    this.killCurrent();
+    await this.operation.catch(() => {});
+  }
   async check() {
     if (this.operation) return this.operation;
     this.controller = new AbortController();
+    this.progress.begin();
     this.operation = this.checkCurrent()
+      .then((result) => { this.progress.finish("complete", "Your local engine is ready."); return result; })
       .catch(async (error) => {
-        await this.saveState({
+        this.progress.finish(this.controller.signal.aborted ? "cancelled" : "error", error.message);
+        if (!this.controller.signal.aborted) await this.saveState({
           status: "error",
           error: error.message,
           checkedAt: new Date().toISOString(),
@@ -409,7 +434,7 @@ export class RuntimeManager {
       "utf8",
     ).catch(() => null);
     if (source !== installed) return this.install(false);
-    const release = await latestStable();
+    const release = await latestStable(undefined, this.controller?.signal);
     if (release.version !== active.bridge.engineVersion)
       return this.install(false);
     const state = {

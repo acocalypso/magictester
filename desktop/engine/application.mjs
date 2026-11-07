@@ -208,6 +208,7 @@ export class DesktopApplication {
     return {
       ready: !!this.cards,
       setupBusy: !!this.runtime.operation,
+      setupProgress: this.runtime.progress.snapshot(),
       setupError: this.setupError,
       forge: runtime?.bridge || null,
       updates: await updateStatus().catch(() => null),
@@ -834,8 +835,18 @@ export class DesktopApplication {
       case "setup":
         if (this.active.size)
           throw Error("Finish or cancel active runs before engine setup");
-        await this.runtime.setup(!!p.refreshCards);
-        await this.loadCards();
+        try {
+          await this.runtime.setup(!!p.refreshCards);
+          await this.loadCards();
+        } catch (error) {
+          const cancelled = this.runtime.controller?.signal.aborted;
+          this.setupError = error.message;
+          this.runtime.progress.finish(cancelled ? "cancelled" : "error", cancelled ? "Setup cancelled. Restart when you are ready." : error.message);
+          throw error;
+        }
+        return this.status();
+      case "cancelSetup":
+        await this.runtime.cancel();
         return this.status();
       case "validate":
         this.requireReady();

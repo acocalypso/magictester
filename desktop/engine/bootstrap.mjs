@@ -18,6 +18,7 @@ import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
+import { monitorDownload } from "./setup-progress.mjs";
 const root = process.env.DATA_DIR || "/data";
 const { baseline, resolveRuntime, registerRuntime, runtimeRoot } =
   await import("./core/runtime.mjs");
@@ -48,10 +49,10 @@ const headers = {
   "User-Agent": "MagicTester/0.1 (https://github.com/acocalypso/magictester)",
   Accept: "application/json",
 };
-async function get(url) {
+async function get(url, target) {
   const r = await fetch(url, { headers, signal: AbortSignal.timeout(600000) });
   if (!r.ok) throw new Error(`Download failed ${r.status}: ${url}`);
-  return r;
+  return target ? monitorDownload(r, target, (event) => console.log(JSON.stringify(event))) : r;
 }
 await mkdir(root, { recursive: true });
 await mkdir(home, { recursive: true });
@@ -60,9 +61,10 @@ if (!existsSync(home + "/build.txt")) {
   const url = release.archiveUrl;
   console.log(JSON.stringify({ event: "downloading_forge", url }));
   await pipeline(
-    Readable.fromWeb((await get(url)).body),
+    Readable.fromWeb((await get(url, "forge")).body),
     createWriteStream(archive),
   );
+  console.log(JSON.stringify({ event: "verifying_forge", message: "Verifying the engine download…" }));
   const hash = createHash("sha256");
   for await (const b of createReadStream(archive)) hash.update(b);
   if (hash.digest("hex") !== release.archiveSha256)
@@ -83,7 +85,7 @@ if (!existsSync(home + "/build.txt")) {
   });
   console.log(JSON.stringify({ event: "forge_extracted" }));
   await rm(archive);
-}
+} else console.log(JSON.stringify({ event: "using_cached_forge", message: "Reusing existing engine files" }));
 const cachedSchema = existsSync(root + "/cards.json")
   ? JSON.parse(await readFile(root + "/cards.json", "utf8")).schemaVersion
   : 0;
@@ -127,12 +129,12 @@ if (cachedSchema !== 2 || process.argv.includes("--refresh-cards")) {
       });
   };
   if (bulk.jsonl_download_uri) {
-    const stream = Readable.fromWeb((await get(url)).body);
+    const stream = Readable.fromWeb((await get(url, "cards")).body);
     const input = url.endsWith(".gz") ? stream.pipe(createGunzip()) : stream;
     for await (const line of createInterface({ input }))
       if (line.trim()) add(JSON.parse(line));
   } else {
-    for (const c of await (await get(url)).json()) add(c);
+    for (const c of await (await get(url, "cards")).json()) add(c);
   }
   await writeFile(
     root + "/cards.json.tmp",
@@ -146,7 +148,7 @@ if (cachedSchema !== 2 || process.argv.includes("--refresh-cards")) {
   );
   await rename(root + "/cards.json.tmp", root + "/cards.json");
   console.log(JSON.stringify({ event: "cards_cached", count: cards.length }));
-}
+} else console.log(JSON.stringify({ event: "using_cached_cards", message: "Using downloaded card data" }));
 // Oracle bulk selects one printing, so cache alternate printed names separately.
 const cardCache = JSON.parse(await readFile(root + "/cards.json", "utf8"));
 if (
