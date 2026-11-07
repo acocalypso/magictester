@@ -63,7 +63,7 @@ The app checks GitHub's latest **stable** Forge release hourly when online. A su
 
 ## Production releases
 
-The Android workflow builds the app, runs JVM and real emulator checks, and can publish `android-vX.Y.Z` releases. Production APK signing uses these repository secrets:
+The Android workflow builds the app, runs JVM and real emulator checks, and can publish `android-vX.Y.Z` releases. Push a release tag, or run the workflow manually with **publish_debug** checked and a validated **release_tag**. Publication waits for all three emulator suites. Production APK signing uses these repository secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: base64 of a dedicated PKCS#12/JKS release keystore.
 - `ANDROID_KEYSTORE_PASSWORD`: keystore password.
