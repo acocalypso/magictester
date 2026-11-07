@@ -20,6 +20,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var opponents by mutableStateOf<List<JSONObject>>(emptyList())
     var selected by mutableStateOf<Set<String>>(emptySet())
     var runs by mutableStateOf<List<Run>>(emptyList())
+    var performanceVersion by mutableIntStateOf(0)
     var busy by mutableStateOf(false)
     var exportingDiagnostics by mutableStateOf(false)
     var status by mutableStateOf("")
@@ -120,6 +121,17 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             } catch(error:Exception) { Diagnostics.event("diagnostics.failed","Could not save diagnostic ZIP",runId,level="ERROR",error=error);message=error.message ?: "Diagnostic export failed." }
             finally { exportingDiagnostics=false }
         }
+    }
+    fun benchmark(useCurrent: Boolean,players: Int) = launchWork {
+        val benchmarkFormat=if(useCurrent) format else "pauper"
+        val benchmarkDeck=if(useCurrent) deck else Examples.burn
+        val chosen=if(useCurrent) opponents.filter {it.getString("name") in selected}.map {JSONObject(it.toString())} else listOf(JSONObject().put("name","Reference burn").put("text",Examples.burn))
+        require(chosen.isNotEmpty()) {"Select opponent decks in Pools first."}
+        require(DeckText.parse(benchmarkDeck).errors.isEmpty()) {DeckText.parse(benchmarkDeck).errors.joinToString("\n")}
+        status="Checking the benchmark workload"
+        val legality=withContext(Dispatchers.IO) {ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(benchmarkDeck)+chosen.map {it.getString("text")},benchmarkFormat) {status=it}}
+        val payload=JSONObject().put("kind","benchmark").put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",if(DeckText.commander(benchmarkFormat)) 300 else 120).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)
+        withContext(Dispatchers.IO) {store.create(payload)};startQueue();message="Performance test queued. Follow its real games in Runs; settings update after each measured stage."
     }
     fun deleteRun(id: String) {
         viewModelScope.launch(Dispatchers.IO) {

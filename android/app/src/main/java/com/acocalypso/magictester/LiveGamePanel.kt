@@ -14,11 +14,17 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable fun LiveGamePanel(run: Run, compact: Boolean=false) {
-    val game=run.liveGame
-    if(game==null) {
+    val all=run.liveGames
+    val active=all.filter { run.state=="running" && it.optBoolean("active") }
+    val visible=if(active.isNotEmpty()) active else all.takeLast(1)
+    if(visible.isEmpty()) {
         if(run.state=="running" && !compact) Text("Preparing the engine. The game clock starts when play begins.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
+    if(active.size>1) Text("${active.size} games running in parallel",fontSize=12.sp,color=MaterialTheme.colorScheme.primary)
+    for(game in visible) key(game.optInt("unitIndex")) { GameTimeItem(run,game,compact) }
+}
+@Composable private fun GameTimeItem(run: Run,game: org.json.JSONObject,compact: Boolean) {
     val active=run.state=="running" && game.optBoolean("active")
     val started=game.optLong("startedElapsedMs")
     var now by remember(run.id,started,active) { mutableLongStateOf(SystemClock.elapsedRealtime()) }

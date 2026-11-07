@@ -11,6 +11,9 @@
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
         <service android:name=".EngineService" android:process=":forge" android:exported="false" />
+        <service android:name=".EngineService1" android:process=":forge1" android:exported="false" />
+        <service android:name=".EngineService2" android:process=":forge2" android:exported="false" />
+        <service android:name=".EngineService3" android:process=":forge3" android:exported="false" />
         <service android:name=".QueueService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started offline deck simulation; CPU-bound on-device Forge games with visible progress and cancellation" />
         </service>

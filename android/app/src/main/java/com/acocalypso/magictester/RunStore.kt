@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
 object RunEvents { val changes=MutableStateFlow(0L);fun changed() { changes.update { it+1 } } }
-data class Run(val id: String, val state: String, val label: String, val completed: Int, val payload: JSONObject, val liveGame: JSONObject?=null)
+data class Run(val id: String, val state: String, val label: String, val completed: Int, val payload: JSONObject, val liveGame: JSONObject?=null) {
+    val liveGames: List<JSONObject> get() { val group=liveGame?.optJSONObject("parallelGames") ?: return listOfNotNull(liveGame);return group.keys().asSequence().map { group.getJSONObject(it) }.toList().sortedBy { it.optInt("unitIndex") } }
+}
 class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "runs.db", null, 2) {
     companion object { private val evidenceLock=Any() }
     private val directory = File(appContext.filesDir, "runs").apply { mkdirs() }
@@ -34,11 +36,17 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         Diagnostics.event("run.queued","Analysis added to the local queue",id,details=JSONObject().put("format",payload.optString("format")).put("games",payload.optInt("games")).put("clockSeconds",payload.optInt("clockSeconds")).put("seed",payload.optInt("seed")))
         RunEvents.changed();return id
     }
+    fun claim(id: String): Boolean {
+        val updated=writableDatabase.update("runs",ContentValues().apply {put("state","running");put("label","Checking device resources")},"id=? AND state='queued'",arrayOf(id))>0
+        if(updated) RunEvents.changed()
+        return updated
+    }
     fun next(): Run? = readableDatabase.rawQuery("SELECT id,state,label,completed,payload,live_game FROM runs WHERE state='queued' ORDER BY created,rowid LIMIT 1",null).use { if(it.moveToFirst()) row(it) else null }
-    fun update(id: String, state: String, label: String, completed: Int? = null) {
+    fun update(id: String, state: String, label: String, completed: Int? = null, onlyIfRunning: Boolean=false) {
         val db=writableDatabase
         db.beginTransaction()
         try {
+            if(onlyIfRunning && get(id)?.state!="running") { db.setTransactionSuccessful();return }
             if(state!="running") stopGame(id,state)
             db.update("runs", ContentValues().apply { put("state", state);put("label",label);completed?.let { put("completed",it) } },"id=?",arrayOf(id))
             db.setTransactionSuccessful()
@@ -46,6 +54,17 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         Diagnostics.event("run.$state",label,id,level=if(state=="failed") "ERROR" else "INFO",details=JSONObject().put("completed",completed ?: JSONObject.NULL))
         RunEvents.changed()
     }
+    private fun games(value: JSONObject?): MutableMap<String,JSONObject> {
+        if(value==null) return linkedMapOf()
+        val group=value.optJSONObject("parallelGames")
+        if(group!=null) return group.keys().asSequence().associateWith { JSONObject(group.getJSONObject(it).toString()) }.toMutableMap()
+        return linkedMapOf(value.optInt("unitIndex").toString() to JSONObject(value.toString()).apply { remove("parallelGames") })
+    }
+    private fun grouped(values: Map<String,JSONObject>): JSONObject {
+        val primary=values.values.firstOrNull { it.optBoolean("active") } ?: values.values.last()
+        return JSONObject(primary.toString()).put("parallelGames",JSONObject().apply { values.forEach { (key,value) -> put(key,value) } })
+    }
+    fun updatePayload(id: String,payload: JSONObject) { writableDatabase.update("runs",ContentValues().apply {put("payload",payload.toString())},"id=?",arrayOf(id));RunEvents.changed() }
     fun recover() {
         val db=writableDatabase
         db.beginTransaction()
@@ -53,43 +72,49 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
             db.rawQuery("SELECT id,live_game FROM runs WHERE state='running'",null).use { cursor ->
                 while(cursor.moveToNext()) {
                     val live=if(cursor.isNull(1)) null else JSONObject(cursor.getString(1))
-                    if(live?.optBoolean("active")==true) live.put("active",false).put("estimated",true).put("termination","interrupted")
-                    db.update("runs",ContentValues().apply {put("state","interrupted");put("label","Android stopped this run. Resume to continue from saved results.");if(live!=null) put("live_game",live.toString())},"id=?",arrayOf(cursor.getString(0)))
+                    val values=games(live)
+                    values.values.filter { it.optBoolean("active") }.forEach { it.put("active",false).put("estimated",true).put("termination","interrupted") }
+                    db.update("runs",ContentValues().apply {put("state","interrupted");put("label","Android stopped this run. Resume to continue from saved results.");if(values.isNotEmpty()) put("live_game",grouped(values).toString())},"id=?",arrayOf(cursor.getString(0)))
                 }
             }
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
     }
-    fun gameEvent(id: String, event: JSONObject) {
-        val run=get(id) ?: return
-        if(run.state!="running") return
-        val value=when(event.optString("type")) {
-            "game_started" -> JSONObject().put("active",true).put("unitIndex",event.optInt("index")).put("gameIndex",event.optInt("gameIndex")).put("gameSeed",event.optInt("gameSeed"))
-                .put("startedAtEpochMs",event.getLong("startedAtEpochMs")).put("startedElapsedMs",event.getLong("startedElapsedMs")).put("clockSeconds",event.getInt("clockSeconds")).put("elapsedMs",0).put("estimated",false)
-            "game_finished" -> {
-                val current=run.liveGame ?: return
-                if(current.optInt("unitIndex")!=event.optInt("index") || current.optInt("gameIndex")!=event.optInt("gameIndex")) return
-                JSONObject(current.toString()).put("active",false).put("elapsedMs",event.optLong("durationMs")).put("termination",event.optString("termination")).put("estimated",false)
+    fun gameEvent(id: String,event: JSONObject) {
+        val db=writableDatabase;db.beginTransaction()
+        try {
+            val run=get(id) ?: return
+            if(run.state!="running") return
+            val values=games(run.liveGame);val key=event.optInt("index").toString()
+            val value=when(event.optString("type")) {
+                "game_started" -> JSONObject().put("active",true).put("unitIndex",event.optInt("index")).put("gameIndex",event.optInt("gameIndex")).put("gameSeed",event.optInt("gameSeed"))
+                    .put("startedAtEpochMs",event.getLong("startedAtEpochMs")).put("startedElapsedMs",event.getLong("startedElapsedMs")).put("clockSeconds",event.getInt("clockSeconds")).put("elapsedMs",0).put("estimated",false)
+                "game_finished" -> {
+                    val current=values[key] ?: return
+                    if(current.optInt("gameIndex")!=event.optInt("gameIndex")) return
+                    JSONObject(current.toString()).put("active",false).put("elapsedMs",event.optLong("durationMs")).put("termination",event.optString("termination")).put("estimated",false)
+                }
+                else -> return
             }
-            else -> return
-        }
-        writableDatabase.update("runs",ContentValues().apply {put("live_game",value.toString())},"id=? AND state='running'",arrayOf(id))
+            values[key]=value
+            db.update("runs",ContentValues().apply {put("live_game",grouped(values).toString())},"id=? AND state='running'",arrayOf(id))
+            db.setTransactionSuccessful()
+        } finally {db.endTransaction()}
         RunEvents.changed()
     }
     fun checkpointGame(id: String) {
         val run=get(id) ?: return
-        val current=run.liveGame ?: return
-        if(run.state!="running" || !current.optBoolean("active")) return
-        val original=current.toString()
-        val updated=JSONObject(original).put("elapsedMs",GameClock.elapsed(current.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),true,current.optLong("elapsedMs")))
-        writableDatabase.update("runs",ContentValues().apply {put("live_game",updated.toString())},"id=? AND state='running' AND live_game=?",arrayOf(id,original))
+        if(run.state!="running" || run.liveGames.none { it.optBoolean("active") }) return
+        val original=run.liveGame!!.toString();val values=games(run.liveGame)
+        for(game in values.values) if(game.optBoolean("active")) game.put("elapsedMs",GameClock.elapsed(game.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),true,game.optLong("elapsedMs")))
+        writableDatabase.update("runs",ContentValues().apply {put("live_game",grouped(values).toString())},"id=? AND state='running' AND live_game=?",arrayOf(id,original))
     }
-    private fun stopGame(id: String, reason: String) {
-        val current=get(id)?.liveGame ?: return
-        if(!current.optBoolean("active")) return
-        val original=current.toString()
-        val value=JSONObject(original).put("active",false).put("termination",reason).put("elapsedMs",GameClock.elapsed(current.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),true,current.optLong("elapsedMs")))
-        writableDatabase.update("runs",ContentValues().apply {put("live_game",value.toString())},"id=? AND live_game=?",arrayOf(id,original))
+    private fun stopGame(id: String,reason: String) {
+        val run=get(id) ?: return
+        val current=run.liveGame ?: return
+        val original=current.toString();val values=games(current)
+        for(game in values.values) if(game.optBoolean("active")) game.put("active",false).put("termination",reason).put("elapsedMs",GameClock.elapsed(game.optLong("startedElapsedMs"),android.os.SystemClock.elapsedRealtime(),true,game.optLong("elapsedMs")))
+        writableDatabase.update("runs",ContentValues().apply {put("live_game",grouped(values).toString())},"id=? AND live_game=?",arrayOf(id,original))
     }
     fun resume(id: String, clock: Int) {
         val run = get(id) ?: return

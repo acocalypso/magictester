@@ -9,10 +9,12 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /** Forge owns a disposable ART process. IPC carries paths, never large action logs. */
-class EngineService : Service() {
+open class EngineService : Service() {
+    @Volatile private var startGate: java.util.concurrent.CountDownLatch?=null
     private val executor = Executors.newSingleThreadExecutor()
     private val messenger = Messenger(object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(message: Message) {
+            if(message.what==6) { startGate?.countDown();return }
             if (message.what == 9) { Process.killProcess(Process.myPid()); return }
             val reply = message.replyTo ?: return
             val path = message.data.getString("path") ?: return
@@ -25,6 +27,11 @@ class EngineService : Service() {
                 val resultFile = File(path + ".result")
                 var runId: String?=null
                 var console: Diagnostics.ConsoleCapture?=null
+                val peakPss=java.util.concurrent.atomic.AtomicLong()
+                val sampler=java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+                fun sample() { runCatching { val pss=Debug.getPss();peakPss.updateAndGet { maxOf(it,pss) } } }
+                sampler.scheduleAtFixedRate({sample()},0,1,java.util.concurrent.TimeUnit.SECONDS)
+                fun metrics() { sample();send(5,JSONObject().put("pid",Process.myPid()).put("peakPssKiB",peakPss.get()).put("heapUsedMiB",(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/1048576).toString()) }
                 try {
                     val request = JSONObject(requestFile.readText())
                     val requestRunId=request.optString("diagnosticRunId","engine")
@@ -39,6 +46,11 @@ class EngineService : Service() {
                         if(stage!=lastProgress || bucket!=lastBucket) { Diagnostics.event("engine.setup_progress",label,runId);lastProgress=stage;lastBucket=bucket }
                     }
                     AndroidForgeBridge.initialize(home.absolutePath) { send(1,it);Diagnostics.event("engine.initialized",it,runId) }
+                    if(request.optBoolean("benchmarkBarrier")) {
+                        startGate=java.util.concurrent.CountDownLatch(1)
+                        send(6,"Engine ready for benchmark")
+                        check(startGate!!.await(120,java.util.concurrent.TimeUnit.SECONDS)) { "Other benchmark engines could not become ready within the resource budget." }
+                    }
                     if (request.optString("operation") == "validate") {
                         val result = EngineValidation.validate(request.getString("text"), request.getString("format"), File(path + ".dck"))
                         resultFile.writeText(result.toString())
@@ -71,16 +83,25 @@ class EngineService : Service() {
                                 if (json.optString("type") == "game_started") send(1, "Playing game ${json.optInt("gameIndex") + 1}") }
                         }
                     }
+                    metrics()
                     send(2, resultFile.absolutePath)
                 } catch (error: Throwable) {
                     Diagnostics.event("engine.error",error.message ?: "Forge process failed",runId,level="ERROR",error=error)
                     error.printStackTrace()
                     resultFile.writeText(JSONObject().put("error", error.stackTraceToString().take(16000)).toString())
+                    metrics()
                     send(3, resultFile.absolutePath)
-                } finally { console?.restore() }
+                } finally { startGate=null;sampler.shutdownNow();console?.restore() }
             }
         }
     })
     override fun onBind(intent: Intent) = messenger.binder
     override fun onDestroy() { executor.shutdownNow(); super.onDestroy() }
+}
+
+class EngineService1: EngineService()
+class EngineService2: EngineService()
+class EngineService3: EngineService()
+object EngineSlots {
+    val classes=listOf(EngineService::class.java,EngineService1::class.java,EngineService2::class.java,EngineService3::class.java)
 }
