@@ -105,3 +105,11 @@ Benchmark results describe the chosen deck workload on this device at the measur
 Phone Back navigation returns from observed actions to the same match evidence position, then the analysis list and previous tab. Decklist/confirmation dialogs close before leaving the underlying screen.
 
 Daily metagame refreshes target ten complete decks per format, ordered by source share. Unreadable archetypes are skipped while the importer continues down the ranking. Older six-deck caches are refreshed even inside the daily cache window. The pool screen displays the imported count and explicitly flags a source shortage.
+
+## Updates and restoring older installations
+
+Debug builds from 0.1.3 onward use the fixed, public development certificate described in [signing/README.md](signing/README.md). CI pins that certificate and tests an older-version APK → current APK upgrade while checking that private app data survives. Production signing remains separate.
+
+The 0.1.0–0.1.2 CI builds used ephemeral keys that were not retained. Android cannot update those installations to a different certificate. Before uninstalling one of those versions, export each analysis through **Runs → select run → Export results and game evidence** and verify the JSON files are saved outside the app. You can also export diagnostic ZIPs for troubleshooting; they are not a complete history backup. After the one-time reinstall, use **Setup → Import exported analyses** to select one or more saved JSON files. The importer preserves decklists, opponents and recorded game actions, uses new run IDs, and does not start simulations. Exports captured while queued/running return as interrupted. An empty draft is populated from the imported settings. Setup/metadata caches and global preferences are not part of the old analysis export. Each input is limited to 32 MiB; up to 100 files can be selected together.
+
+Two-faced card names imported from deck hosts retain both official face names. Current legality uses Scryfall's front-face collection identifier and verifies the returned whole-card name before caching its complete legality information. A different or misspelled back face is rejected.

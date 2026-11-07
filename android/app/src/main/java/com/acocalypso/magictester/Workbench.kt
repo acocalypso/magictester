@@ -108,6 +108,31 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
         withContext(Dispatchers.IO) { store.create(payload) };startQueue();message="Analysis queued. Follow it in Runs; completed evidence is saved after every match."
     }
+    fun importAnalyses(uris: List<android.net.Uri>) = launchWork {
+        require(uris.size in 1..100) {"Choose up to 100 analysis JSON exports at a time."}
+        var imported=0;var draft: JSONObject?=null
+        val errors=mutableListOf<String>()
+        for((index,uri) in uris.withIndex()) {
+            status="Restoring saved analysis ${index+1}/${uris.size}"
+            try {
+                val payload=withContext(Dispatchers.IO) {
+                    val bytes=app.contentResolver.openInputStream(uri)?.use {input ->
+                        val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(32768)
+                        while(true) {val count=input.read(buffer);if(count<0) break;require(output.size()+count<=32*1024*1024) {"Analysis export exceeds the 32 MiB import limit."};output.write(buffer,0,count)}
+                        output.toString("UTF-8")
+                    } ?: error("Could not open the selected export.")
+                    store.get(store.importExport(bytes))!!.payload
+                }
+                draft=payload;imported++
+            } catch(error:Exception) {
+                if(error is CancellationException) throw error
+                errors+="File ${index+1}: ${error.message ?: "Import failed"}"
+                Diagnostics.event("run.import_failed","Could not restore a selected analysis export",level="ERROR",error=error)
+            }
+        }
+        if(deck.isBlank()) draft?.let {payload ->deck=payload.getString("deck");title=payload.optString("title","My deck");format=payload.getString("format");saveDraft();loadPool()}
+        message="Restored $imported analysis exports. Open Runs to inspect them. No games were started."+if(errors.isEmpty()) "" else "\n"+errors.joinToString("\n")
+    }
     fun exportDiagnostics(uri: android.net.Uri, runId: String?, includeDecklists: Boolean) {
         if(exportingDiagnostics) return
         exportingDiagnostics=true

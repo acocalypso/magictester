@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
         val id=exportRun
         if(uri != null && id != null) scope.launchIO(model) { context.contentResolver.openOutputStream(uri)!!.bufferedWriter().use { it.write(model.store.export(id)) } }
     }
+    val restoreRuns=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> if(uris.isNotEmpty()) model.importAnalyses(uris) }
     val exportLogs=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if(uri!=null) model.exportDiagnostics(uri,pendingDiagnosticRun,pendingDiagnosticDecks)
     }
@@ -91,7 +92,7 @@ class MainActivity : ComponentActivity() {
                 0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{navigateTab(2)})
                 1 -> if(selectedRun == null) RunsScreen(model,{selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it})
                 2 -> PoolsScreen(model) { deckDialog=it }
-                else -> SetupScreen(model) { includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) }
+                else -> SetupScreen(model,diagnostics={ includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) },restore={restoreRuns.launch(arrayOf("application/json","text/plain","application/octet-stream"))})
             }
         }
     }
@@ -170,7 +171,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         TextButton(onClick={model.clearCustom()}) {Text("Clear custom opponents for this format")}
     }
 }
-@Composable private fun SetupScreen(model: Workbench, diagnostics: () -> Unit) {
+@Composable private fun SetupScreen(model: Workbench, diagnostics: () -> Unit, restore: () -> Unit) {
     val context=androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         PageTitle("04 / Local engine",if(model.firstSetup) "Welcome to\nyour workbench." else "Ready on\nyour device.","Forge runs directly on Android. No Docker, desktop Java, Node, account, or analysis server is required.")
@@ -180,6 +181,8 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         if(model.busy) TextButton(onClick={ForgeClient.cancel("setup")}) {Text("Cancel setup")}
         OutlinedButton(onClick=diagnostics,enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}
         Text("Save a readable summary, engine errors, setup events and Android process-exit reasons. Logs stay on this device until you choose where to save the ZIP.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick=restore,enabled=!model.busy) {Text("Import exported analyses")}
+        Text("Restore analysis JSON files saved through Runs → Export results and game evidence, including exports from 0.1.1. Decklists, opponent lists and observed actions are preserved; imported runs never start automatically. Diagnostic ZIP files cannot restore full analysis history.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider()
         PerformancePanel(model)
         HorizontalDivider();Text("Resource policy",fontSize=19.sp)

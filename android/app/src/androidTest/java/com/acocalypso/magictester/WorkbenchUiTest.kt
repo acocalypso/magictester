@@ -20,6 +20,7 @@ class WorkbenchUiTest {
         compose.onNodeWithText("Export diagnostic logs").performScrollTo().performClick()
         compose.onNodeWithText("Include complete decklists").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Import exported analyses").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Performance & parallel games").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Run device performance test").assertExists()
         compose.onNodeWithText("Pools",useUnmergedTree=true).performClick()

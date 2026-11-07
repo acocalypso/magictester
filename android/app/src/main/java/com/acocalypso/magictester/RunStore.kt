@@ -28,12 +28,13 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
     fun all(): List<Run> = readableDatabase.rawQuery("SELECT id,state,label,completed,payload,live_game FROM runs ORDER BY created DESC,rowid DESC", null).use { c -> buildList { while(c.moveToNext()) add(row(c)) } }
     fun recent(limit: Int): List<Run> = readableDatabase.rawQuery("SELECT id,state,label,completed,payload,live_game FROM runs ORDER BY created DESC,rowid DESC LIMIT ?",arrayOf(limit.coerceIn(1,100).toString())).use { c -> buildList { while(c.moveToNext()) add(row(c)) } }
     fun get(id: String): Run? = readableDatabase.rawQuery("SELECT id,state,label,completed,payload,live_game FROM runs WHERE id=?",arrayOf(id)).use { if(it.moveToFirst()) row(it) else null }
-    fun create(payload: JSONObject): String {
+    fun create(payload: JSONObject,initialState: String="queued"): String {
+        require(initialState in listOf("queued","importing"))
         require(payload.toString().toByteArray().size <= 1000000) { "The frozen deck pool exceeds 1 MB. Select fewer opponents." }
         val id = UUID.randomUUID().toString()
-        writableDatabase.insertOrThrow("runs", null, ContentValues().apply { put("id",id);put("state","queued");put("label","Waiting for the local engine");put("payload",payload.toString());put("created",System.currentTimeMillis()) })
+        writableDatabase.insertOrThrow("runs", null, ContentValues().apply { put("id",id);put("state",initialState);put("label",if(initialState=="queued") "Waiting for the local engine" else "Importing saved analysis");put("payload",payload.toString());put("created",System.currentTimeMillis()) })
         File(directory,id).mkdirs()
-        Diagnostics.event("run.queued","Analysis added to the local queue",id,details=JSONObject().put("format",payload.optString("format")).put("games",payload.optInt("games")).put("clockSeconds",payload.optInt("clockSeconds")).put("seed",payload.optInt("seed")))
+        Diagnostics.event("run.$initialState",if(initialState=="queued") "Analysis added to the local queue" else "Restoring an exported analysis",id,details=JSONObject().put("format",payload.optString("format")).put("games",payload.optInt("games")).put("clockSeconds",payload.optInt("clockSeconds")).put("seed",payload.optInt("seed")))
         RunEvents.changed();return id
     }
     fun claim(id: String): Boolean {
@@ -142,6 +143,42 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
     fun file(id: String, name: String) = File(File(directory,id),name)
     fun results(id: String): List<JSONObject> = File(directory,id).listFiles().orEmpty().filter { it.name.endsWith(".jsonl") }.sortedBy { it.name }.flatMap { file -> file.useLines { lines -> lines.mapNotNull { line -> try { JSONObject(line).takeIf { it.optString("type") == "result" }?.getJSONObject("result") } catch (_: Exception) { null } }.toList() } }
     fun successfulIndices(id: String) = results(id).filter { it.optString("termination") in listOf("normal", "rule_draw") }.map { it.optInt("index") }.toSet()
+    /** Restore a v1 export under a fresh ID, without scheduling any engine work. */
+    fun importExport(text: String): String {
+        require(text.toByteArray().size<=32*1024*1024) {"Analysis export exceeds the 32 MiB import limit."}
+        val archive=JSONObject(text)
+        require(archive.optInt("schemaVersion")==1 && archive.optString("application")=="MagicTester Android") {"Choose an analysis JSON from Runs → Export results and game evidence, not a diagnostic ZIP."}
+        val payload=JSONObject(archive.getJSONObject("settings").toString())
+        require(payload.optString("format") in DeckText.formats && payload.optString("deck").isNotBlank()) {"The export has no readable deck/format settings."}
+        val total=payload.optInt("games")
+        require(total in 1..100 && payload.optInt("clockSeconds") in 5..300 && payload.optString("engineVersion").isNotBlank()) {"The export has invalid analysis settings."}
+        val opponents=payload.optJSONArray("opponents")
+        require(opponents!=null && opponents.length()>0) {"The export has no saved opponent decks."}
+        for(i in 0 until opponents.length()) require(opponents.getJSONObject(i).optString("text").isNotBlank()) {"The export contains an empty opponent deck."}
+        val results=archive.getJSONArray("results")
+        require(results.length()<=10000) {"Too many attempts in one export."}
+        for(i in 0 until results.length()) {
+            val result=results.getJSONObject(i)
+            require(result.optString("engine")=="forge" && result.has("index") && result.optInt("index") in 0 until total && result.optString("termination").isNotBlank()) {"The export contains an invalid game result."}
+        }
+        payload.put("importedFromRunId",archive.optString("runId")).put("importedAt",java.time.Instant.now().toString())
+        val sourceState=archive.optString("state")
+        val restoredState=if(sourceState in listOf("complete","failed","cancelled","interrupted")) sourceState else "interrupted"
+        val db=writableDatabase
+        var id: String?=null;var committed=false
+        db.beginTransaction()
+        try {
+            val imported=create(payload,"importing");id=imported
+            for(i in 0 until results.length()) file(imported,"import-${i.toString().padStart(5,'0')}.jsonl").writeText(JSONObject().put("type","result").put("result",results.getJSONObject(i)).toString()+"\n")
+            val completed=successfulIndices(imported).size
+            update(imported,restoredState,"Imported saved analysis. Engine work has not been started.",completed)
+            db.setTransactionSuccessful();committed=true
+            return imported
+        } finally {
+            db.endTransaction()
+            if(!committed && id!=null) File(directory,id).deleteRecursively()
+        }
+    }
     fun export(id: String): String {
         val run = get(id) ?: error("Run not found")
         return JSONObject().put("schemaVersion",1).put("application","MagicTester Android").put("runId",id).put("state",run.state).put("settings",run.payload).put("results",JSONArray(results(id))).toString(2)

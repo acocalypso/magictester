@@ -36,6 +36,12 @@ class QueueAcceptanceTest {
                 assertEquals(Examples.burn,exported.getJSONObject("settings").getString("deck"))
                 assertEquals("normal",exported.getJSONArray("results").getJSONObject(0).getString("termination"))
                 assertTrue(exported.getJSONArray("results").getJSONObject(0).getJSONObject("actionLog").getJSONArray("entries").length()>20)
+                val restored=store.importExport(exported.toString())
+                assertNotEquals(id,restored)
+                assertEquals("complete",store.get(restored)!!.state)
+                assertEquals(exported.getJSONObject("settings").getString("deck"),store.get(restored)!!.payload.getString("deck"))
+                assertEquals(exported.getJSONArray("results").toString(),JSONArray(store.results(restored)).toString())
+                assertEquals(1,store.get(restored)!!.completed)
             }
             store.close()
         }
