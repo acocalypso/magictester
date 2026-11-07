@@ -57,13 +57,15 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         withContext(Dispatchers.IO) { result.delete() }
     }
     fun validate() = launchWork {
+        val checkedDeck=deck;val checkedFormat=format
         saveDraft();status="Checking deck structure and current legality"
-        val parsed=DeckText.parse(deck);require(parsed.errors.isEmpty()) { parsed.errors.joinToString("\n") }
-        val source=withContext(Dispatchers.IO) { CurrentLegality(app).check(listOf(deck),format) { status=it } }
-        val file=ForgeClient.execute(app,JSONObject().put("operation","validate").put("text",deck).put("format",format),"validation") { label,value -> status=label;fraction=value }
+        val parsed=DeckText.parse(checkedDeck);require(parsed.errors.isEmpty()) { parsed.errors.joinToString("\n") }
+        val source=withContext(Dispatchers.IO) { CurrentLegality(app).check(listOf(checkedDeck),checkedFormat) { status=it } }
+        val file=ForgeClient.execute(app,JSONObject().put("operation","validate").put("text",checkedDeck).put("format",checkedFormat),"validation") { label,value -> status=label;fraction=value }
         val result=JSONObject(withContext(Dispatchers.IO) { file.readText() })
         withContext(Dispatchers.IO) { file.delete() }
         val errors=result.getJSONArray("errors")
+        if(deck != checkedDeck || format != checkedFormat) { message="Your draft changed during the check. Check the current text again before using the result.";return@launchWork }
         message=if(result.getBoolean("valid")) "Deck passed: card support, deck size, copy limits, format rules and commander pairing/color identity. $source." else (0 until errors.length()).joinToString("\n") { errors.getString(it) }
     }
     fun importLink(link: String, opponent: Boolean = false) = launchWork {
@@ -86,14 +88,15 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     }
     fun enqueue(games: Int, clock: Int, bestOf: Int, players: Int, seed: Int) = launchWork {
         require(games in 1..100 && clock in 5..300 && players in 2..4)
-        val chosen=opponents.filter { it.getString("name") in selected }
+        val submittedDeck=deck;val submittedTitle=title;val submittedFormat=format
+        val chosen=opponents.filter { it.getString("name") in selected }.map { JSONObject(it.toString()) }
         require(chosen.isNotEmpty()) { "Add and select an opponent deck in Pools." }
-        require(DeckText.parse(deck).errors.isEmpty()) { DeckText.parse(deck).errors.joinToString("\n") }
+        require(DeckText.parse(submittedDeck).errors.isEmpty()) { DeckText.parse(submittedDeck).errors.joinToString("\n") }
         status="Verifying stable Forge and current legality"
-        val legality=withContext(Dispatchers.IO) { ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(deck)+chosen.map { it.getString("text") },format) { status=it } }
+        val legality=withContext(Dispatchers.IO) { ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(submittedDeck)+chosen.map { it.getString("text") },submittedFormat) { status=it } }
         saveDraft()
-        val payload=JSONObject().put("title",title).put("deck",deck).put("format",format).put("games",games).put("clockSeconds",clock)
-            .put("bestOf",if(DeckText.commander(format)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
+        val payload=JSONObject().put("title",submittedTitle).put("deck",submittedDeck).put("format",submittedFormat).put("games",games).put("clockSeconds",clock)
+            .put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
         withContext(Dispatchers.IO) { store.create(payload) };startQueue();message="Analysis queued. Follow it in Runs; completed evidence is saved after every match."
     }
