@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { collectNotices } from "./notices.mjs";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const args = process.argv.slice(2);
 const option = (key, fallback) =>
@@ -74,6 +75,10 @@ run("dotnet", [
   "-o",
   app,
 ]);
+await collectNotices(
+  join(root, "MagicTester.Desktop", "obj", "project.assets.json"),
+  join(app, "licenses", "nuget"),
+);
 await fs.mkdir(join(app, "engine"), { recursive: true });
 await fs.cp(join(engine, "dist"), join(app, "engine"), { recursive: true });
 for (const name of ["package.json", "package-lock.json"])

@@ -22,6 +22,8 @@ The desktop workflow compiles and packages on both Windows x64 and Linux x64. Ea
 
 The release packages contain their runtime source URLs/checksums and SHA-256 archive files. Packaging does not sign executables. First setup and daily source refresh require network access; playing against downloaded pools uses local Forge processes.
 
+Packaging collects license and component notices from all resolved NuGet dependencies and .NET runtime packs. A local audit verified 29 package entries, including complete Avalonia/MicroCom/D-Bus MIT grants and .NET's third-party notices. Node, npm dependencies and linked Java retain their own notice files.
+
 ## Efficiency and scope
 
 The UI is native, with no browser engine. One long-lived private worker uses SQLite WAL transactions. Queue polling reads cached counters and compact summaries; action histories are fetched in pages of 100 entries. Forge jobs share a CPU/RAM admission budget instead of starting an unbounded JVM per request. Closing the application drains child processes and saves unfinished work for recovery.
