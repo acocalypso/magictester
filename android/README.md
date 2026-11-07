@@ -13,7 +13,7 @@ cd android
 ./gradlew connectedDebugAndroidTest
 ```
 
-Windows uses `gradlew.bat`. Python must be callable as `python3` (or adjust the `prepareForge` command for your environment). The wrapper pins Gradle 9.9.0 and verifies its distribution checksum. AGP 9.5.1 supplies Kotlin support; do not also apply `org.jetbrains.kotlin.android`.
+Windows uses `gradlew.bat`. Python must be callable as `python3` (or adjust the `prepareForge` command for your environment). The wrapper pins Gradle 9.9.0 and verifies its distribution checksum. The test harness pins AndroidX Test 1.8/1.4 and Espresso 3.8 alpha fixes for Android 17's removed input-injection API; these are test-only dependencies and are not shipped in the app. AGP 9.5.1 supplies Kotlin support; do not also apply `org.jetbrains.kotlin.android`.
 
 The engine preparation task downloads the SHA-256-pinned official Forge archive and source overrides. It compiles the real engine bridge for Java 17 and packages its dex-compatible classes plus headless resources. Fonts, pictures, adventure assets and desktop GUI backends are not needed by the headless adapter. The APK contains engine data, so setup itself works offline. Imports, initial/current legality checks, metagame refreshes, and release checks require internet access.
 

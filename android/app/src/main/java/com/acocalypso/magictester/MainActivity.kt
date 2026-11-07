@@ -33,7 +33,7 @@ import java.util.Date
 private val charcoal = Color(0xFF141719)
 private val paper = Color(0xFFF2F2EE)
 private val accent = Color(0xFFB3CAD7)
-private val palette = darkColorScheme(primary=accent,onPrimary=charcoal,background=charcoal,onBackground=paper,surface=Color(0xFF1E2225),onSurface=paper,surfaceVariant=Color(0xFF292F33),onSurfaceVariant=Color(0xFFB3B9BC),outline=Color(0xFF596269),error=Color(0xFFFFB4AB))
+private val palette = darkColorScheme(primary=accent,onPrimary=charcoal,secondary=accent,onSecondary=charcoal,secondaryContainer=Color(0xFF2A3941),onSecondaryContainer=paper,tertiary=accent,onTertiary=charcoal,outlineVariant=Color(0xFF3D464C),background=charcoal,onBackground=paper,surface=Color(0xFF1E2225),onSurface=paper,surfaceVariant=Color(0xFF292F33),onSurfaceVariant=Color(0xFFB3B9BC),outline=Color(0xFF596269),error=Color(0xFFFFB4AB))
 class MainActivity : ComponentActivity() {
     private val model: Workbench by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {

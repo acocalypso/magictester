@@ -73,6 +73,12 @@ import kotlin.math.sqrt
         item { TextButton(onClick=back) {Text("← Match evidence")};Text("Observed game",fontSize=28.sp);Text("${game.optInt("turns")} turns · ${game.optString("termination").replace('_',' ')}",fontSize=13.sp)
             Row { Checkbox(keyOnly,{keyOnly=it});Text("Hide phase and mana details",Modifier.padding(top=12.dp),fontSize=13.sp) }
             Text(if(log?.optBoolean("complete") == true) "Complete recorded action history." else "Partial history: the game stopped or reached the log size limit. Omitted actions cannot be reconstructed.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            val placements=game.optJSONArray("players")
+            val life=game.optJSONArray("startingLife")
+            if(placements != null) for(i in 0 until placements.length()) {
+                val player=placements.getJSONObject(i)
+                Text("Seat ${i+1} · " + (if(player.isNull("placement")) "placement not determined" else "finished ${player.optInt("placement")} of ${placements.length()}") + (if(life != null) " · started at ${life.optInt(i)} life" else ""),fontSize=12.sp)
+            }
             val changes=game.optJSONArray("sideboardChanges")
             if(changes != null) for(i in 0 until changes.length()) {val change=changes.getJSONObject(i);for(key in listOf("added","removed")) {val cards=change.optJSONArray(key) ?: continue;for(j in 0 until cards.length()) {val card=cards.getJSONObject(j);Text("Seat ${change.optInt("player")+1} ${if(key=="added") "brought in" else "took out"} ${card.optInt("quantity")} ${card.optString("name")}",fontSize=12.sp)}}}
         }

@@ -39,9 +39,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test:rules:1.7.0")
+    androidTestImplementation("androidx.test:runner:1.8.0-alpha03")
+    androidTestImplementation("androidx.test.ext:junit:1.4.0-alpha03")
+    androidTestImplementation("androidx.test:rules:1.8.0-alpha03")
+    // Android 17 removed Espresso 3.7's hidden InputManager.getInstance API.
+    // Test-only 3.8 uses the public Context service; production dependencies stay stable.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.8.0-alpha03")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -39,7 +39,7 @@ class EngineService : Service() {
                             for (index in 0 until rawDecks.length()) {
                                 val deckFile = File(path + ".$index.dck")
                                 val validation = EngineValidation.validate(rawDecks.getString(index), request.getString("format"), deckFile)
-                                require(validation.getBoolean("valid")) { "Deck ${index+1}: ${validation.getJSONArray("errors")}" }
+                                require(validation.getBoolean("valid")) { val errors=validation.getJSONArray("errors");"Deck ${index+1}: " + (0 until errors.length()).joinToString("; ") { errors.getString(it) } }
                                 paths.put(deckFile.absolutePath); companions.put(validation.opt("companion"))
                             }
                             request.put("decks", paths).put("companions", companions)
