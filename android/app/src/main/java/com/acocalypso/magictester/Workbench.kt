@@ -212,9 +212,26 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     fun benchmark(useCurrent: Boolean,players: Int) = launchWork {
         val benchmarkFormat=if(useCurrent) format else "pauper"
         val benchmarkDeck=if(useCurrent) deck else Examples.burn
+        val benchmarkName=if(useCurrent) title.ifBlank { "Untitled deck" } else "Reference burn"
         val chosen=if(useCurrent) opponents.filter {it.getString("name") in selected}.map {JSONObject(it.toString())} else listOf(JSONObject().put("name","Reference burn").put("text",Examples.burn))
         require(chosen.isNotEmpty()) {"Select opponent decks in Pools first."}
-        require(DeckText.parse(benchmarkDeck).errors.isEmpty()) {DeckText.parse(benchmarkDeck).errors.joinToString("\n")}
+        val workloads=listOf("Your deck ‘$benchmarkName’" to benchmarkDeck)+chosen.map { "Opponent ‘${it.getString("name")}’" to it.getString("text") }
+        for((label,text) in workloads) {
+            val problems=BenchmarkDeckCheck.problems(text,benchmarkFormat)
+            require(problems.isEmpty()) { "$label · $benchmarkFormat\n${problems.joinToString("\n")}\nCheck the selected format and deck in Test, and opponents in Pools. No performance test was queued." }
+        }
+        status="Checking benchmark deck structure"
+        // One disposable engine initializes Forge once for the whole frozen workload.
+        val texts=workloads.map {it.second}.distinct()
+        val validationFile=ForgeClient.execute(app,JSONObject().put("operation","validate").put("texts",JSONArray(texts)).put("format",benchmarkFormat),"validation") {label,value -> status=label;fraction=value}
+        val results=withContext(Dispatchers.IO) {try {JSONObject(validationFile.readText()).getJSONArray("results")} finally {validationFile.delete()}}
+        for((label,text) in workloads) {
+            val result=results.getJSONObject(texts.indexOf(text))
+            require(result.getBoolean("valid")) {
+                val errors=result.getJSONArray("errors")
+                "$label · $benchmarkFormat\n"+(0 until errors.length()).joinToString("\n") {errors.getString(it)}+"\nNo performance test was queued. Correct the deck or selected format first."
+            }
+        }
         status="Checking the benchmark workload"
         val legality=withContext(Dispatchers.IO) {ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(benchmarkDeck)+chosen.map {it.getString("text")},benchmarkFormat) {status=it}}
         val payload=JSONObject().put("kind","benchmark").put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",if(DeckText.commander(benchmarkFormat)) 300 else 120).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)

@@ -21,7 +21,8 @@ import org.json.JSONObject
     Text("The benchmark plays two real games per engine at each level, up to four isolated processes. It measures throughput, peak process memory, free memory and actual overlap. A foreground notification shows progress.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     Row {Checkbox(currentDeck,{currentDeck=it});Text("Use my current deck and selected opponents",Modifier.padding(top=12.dp),fontSize=13.sp)}
     if(currentDeck) {
-        Text("Workload: ${model.format}. Use Test and Pools to choose the deck and opponents first.",fontSize=12.sp)
+        Text("Deck: ${model.title.ifBlank { "Untitled deck" }} · Format: ${model.format}",fontSize=14.sp)
+        Text("${model.selected.size} opponents selected. Use Test to change the deck or format, and Pools to change opponents. All decks must pass structure and legality checks before the benchmark is queued.",fontSize=12.sp)
         if(model.format in listOf("commander","cedh")) {Text("Benchmark table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1)}
     } else Text("Quick workload: Pauper reference burn decks. Benchmark your Commander setup separately for a representative limit.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedButton(onClick={model.benchmark(currentDeck,players)},enabled=!model.busy && !model.firstSetup) {Text("Run device performance test")}

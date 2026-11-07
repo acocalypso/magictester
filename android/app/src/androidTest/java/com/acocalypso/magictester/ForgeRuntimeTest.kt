@@ -61,6 +61,18 @@ class ForgeRuntimeTest {
         assertEquals((0 until starts.size).toList(),starts.map { it.getInt("gameIndex") })
         assertTrue(starts.zipWithNext().all { (a,b) -> b.getLong("startedElapsedMs")>a.getLong("startedElapsedMs") })
     }
+    @Test fun batchValidationChecksEveryDeckBeforeAnyGames() {
+        val request=JSONObject().put("operation","validate").put("format","commander").put("texts",JSONArray(listOf(
+            Examples.commander(),Examples.burn+"\nSideboard\n4 Pyroblast",Examples.commander("Ambassador Laquatus")
+        )))
+        val results=JSONObject(command(request)).getJSONArray("results")
+        assertEquals(3,results.length())
+        assertTrue(results.getJSONObject(0).toString(),results.getJSONObject(0).getBoolean("valid"))
+        assertFalse(results.getJSONObject(1).getBoolean("valid"))
+        assertTrue(results.getJSONObject(1).getJSONArray("errors").toString().contains("sideboard"))
+        assertTrue(results.getJSONObject(2).toString(),results.getJSONObject(2).getBoolean("valid"))
+        assertTrue(timingEvents.isEmpty())
+    }
     @Test fun legalCommanderPairHasCombinedIdentityWithoutErrorFlood() {
         val text="// Commanders\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n97 Plains\n1 Swamp\n"
         val result=JSONObject(command(JSONObject().put("operation","validate").put("text",text).put("format","commander")))

@@ -54,7 +54,15 @@ open class EngineService : Service() {
                         check(startGate!!.await(120,java.util.concurrent.TimeUnit.SECONDS)) { "Other benchmark engines could not become ready within the resource budget." }
                     }
                     if (request.optString("operation") == "validate") {
-                        val result = EngineValidation.validate(request.getString("text"), request.getString("format"), File(path + ".dck"))
+                        val texts=request.optJSONArray("texts")
+                        val result=if(texts==null) EngineValidation.validate(request.getString("text"), request.getString("format"), File(path + ".dck")) else {
+                            val results=org.json.JSONArray()
+                            for(index in 0 until texts.length()) {
+                                send(1,"Checking deck ${index+1} of ${texts.length()}")
+                                results.put(EngineValidation.validate(texts.getString(index),request.getString("format"),File(path+".$index.dck")))
+                            }
+                            JSONObject().put("results",results)
+                        }
                         resultFile.writeText(result.toString())
                     } else if (request.optString("operation") == "setup") {
                         resultFile.writeText(JSONObject().put("ready", true).put("engineVersion", BuildConfig.FORGE_VERSION).toString())
