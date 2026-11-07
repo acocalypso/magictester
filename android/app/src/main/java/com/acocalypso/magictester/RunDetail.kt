@@ -53,10 +53,11 @@ import kotlin.math.sqrt
         item {
             if(run.state in listOf("queued","running")) OutlinedButton(onClick={model.cancel(id)}) { Text("Cancel analysis") }
             if(run.state in listOf("failed","interrupted","cancelled")) {
-                Text("Resume unfinished matches · $timeout seconds per game")
+                val benchmark=run.payload.optString("kind")=="benchmark"
+                Text(if(benchmark) "Rerun performance test · $timeout seconds per game" else "Resume unfinished matches · $timeout seconds per game")
                 Slider(timeout.toFloat(),{timeout=(it.toInt()/5*5).coerceIn(5,300)},valueRange=5f..300f,steps=58)
-                Button(onClick={model.resume(id,timeout)}) { Text("Resume with these settings") }
-                Text("Completed matches are preserved. Failed attempts remain visible. The new timeout applies only to unfinished matches.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick={model.resume(id,timeout)}) { Text(if(benchmark) "Rerun performance test" else "Resume with these settings") }
+                Text(if(benchmark) "A new benchmark repeats complete measurement levels. Earlier game evidence is preserved; the recommendation uses the new measured rounds." else "Completed matches are preserved. Failed attempts remain visible. The new timeout applies only to unfinished matches.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick={export(id)}) {Text("Export results and game evidence")}
             OutlinedButton(onClick={diagnostics(id)},enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}

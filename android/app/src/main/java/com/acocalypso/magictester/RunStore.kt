@@ -121,7 +121,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         val run = get(id) ?: return
         require(run.state !in listOf("running", "queued", "complete")); require(clock in 5..300)
         val payload = run.payload.put("clockSeconds",clock)
-        writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label","Resuming unfinished matches") },"id=?",arrayOf(id))
+        writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label",if(payload.optString("kind")=="benchmark") "Rerunning device performance measurements" else "Resuming unfinished matches") },"id=?",arrayOf(id))
         Diagnostics.event("run.resumed","Unfinished matches requeued",id,details=JSONObject().put("clockSeconds",clock))
         RunEvents.changed()
     }

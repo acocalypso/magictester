@@ -31,7 +31,8 @@ class ResourceAdmissionTest {
     @Test fun realBaselineBenchmarkFinishesBothGamesUnderAdvisoryReports() = runBlocking {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val store=RunStore(context)
-        val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",1).put("format","pauper").put("deck",Examples.burn).put("games",20).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
+        // Reproduce the display total saved by the failed 0.1.2 benchmark in the device ZIP.
+        val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",1).put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",org.json.JSONArray().put(JSONObject().put("name","Reference burn").put("text",Examples.burn)))
         val id=store.create(payload,"importing")
         try {

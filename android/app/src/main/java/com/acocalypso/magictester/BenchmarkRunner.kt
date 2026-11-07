@@ -11,10 +11,13 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object BenchmarkRunner {
     suspend fun run(context: Context,store: RunStore,run: Run,resourceSnapshot: ()->JSONObject={PerformanceSettings.resources(context)},progress: (String)->Unit) {
-        val payload=run.payload
+        // A failed older benchmark may have reduced its display total to one saved game.
+        // Every fresh calibration still needs all possible trial indices.
+        val payload=JSONObject(run.payload.toString()).put("games",CapacityMath.MAX_ENGINES*(CapacityMath.MAX_ENGINES+1))
         val profile=PerformanceSettings.profile(payload.getString("format"),payload.optInt("players",4))
         val samples=JSONArray()
         val report=JSONObject().put("identity",PerformanceSettings.identity(context)).put("profile",profile).put("measuredAt",System.currentTimeMillis()).put("samples",samples).put("recommended",1).put("maxStable",0).put("processBudgetMiB",PerformanceSettings.processBudgetMiB(context,profile))
+        store.updatePayload(run.id,JSONObject(payload.toString()).put("benchmarkReport",report))
         val maxLevel=minOf(CapacityMath.cpuLimit(Runtime.getRuntime().availableProcessors()),payload.optInt("benchmarkMax",CapacityMath.MAX_ENGINES))
         var completed=0;var index=0
         val successful=mutableListOf<Pair<Int,Double>>()
@@ -98,7 +101,8 @@ object BenchmarkRunner {
         save()
         val maxStable=report.optInt("maxStable")
         if(store.get(run.id)?.state=="running") {
-            val finalPayload=JSONObject(store.get(run.id)!!.payload.toString()).put("games",maxOf(1,completed)).put("benchmarkReport",report)
+            val recordedTotal=store.results(run.id).maxOfOrNull {it.optInt("index")+1} ?: 0
+            val finalPayload=JSONObject(store.get(run.id)!!.payload.toString()).put("games",maxOf(1,completed,recordedTotal)).put("benchmarkReport",report)
             store.updatePayload(run.id,finalPayload)
             store.update(run.id,if(maxStable>0) "complete" else "failed",if(maxStable>0) "Benchmark complete: recommended ${report.getInt("recommended")}; highest validated $maxStable parallel engines." else "Benchmark stopped: ${if(samples.length()>0) samples.getJSONObject(samples.length()-1).optString("reason") else report.optString("stoppedReason","No stable level completed. Export diagnostic logs.")}",completed,onlyIfRunning=true)
         }
