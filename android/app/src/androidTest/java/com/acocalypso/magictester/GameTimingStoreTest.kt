@@ -48,6 +48,20 @@ class GameTimingStoreTest {
             assertEquals(recorded,GameClock.elapsed(stopped.getLong("startedElapsedMs"),SystemClock.elapsedRealtime()+999000,false,recorded))
         } finally { store.close() }
     }
+    @Test fun parallelGamesKeepIndependentClocksAndAllStopOnCancellation() {
+        val store=RunStore(isolated())
+        try {
+            val id=store.create(JSONObject().put("title","Parallel timing fixture"))
+            store.update(id,"running","Preparing")
+            store.gameEvent(id,started(0,SystemClock.elapsedRealtime()-2000).put("index",0))
+            store.gameEvent(id,started(0,SystemClock.elapsedRealtime()-1000).put("index",1))
+            assertEquals(2,store.get(id)!!.liveGames.count {it.getBoolean("active")})
+            store.gameEvent(id,JSONObject().put("type","game_finished").put("index",0).put("gameIndex",0).put("durationMs",2500).put("termination","normal"))
+            assertEquals(1,store.get(id)!!.liveGames.count {it.getBoolean("active")})
+            store.update(id,"cancelled","Cancelled")
+            assertTrue(store.get(id)!!.liveGames.none {it.getBoolean("active")})
+        } finally {store.close()}
+    }
     @Test fun nextGameResetsAndRecoveryKeepsOnlyLastKnownElapsedTime() {
         val store=RunStore(isolated())
         try {

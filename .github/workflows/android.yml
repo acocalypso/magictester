@@ -123,7 +123,8 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disk-size: 6G
-          ram-size: 4096M
+          cores: 4
+          ram-size: 6144M
           heap-size: 768M
           disable-animations: true
           emulator-options: -no-window -no-snapshot -gpu software -noaudio -no-boot-anim -camera-back none -camera-front none
