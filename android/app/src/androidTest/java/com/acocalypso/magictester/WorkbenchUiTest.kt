@@ -72,4 +72,36 @@ class WorkbenchUiTest {
         } finally {store.delete(id);store.close()}
     }
 
+    @Test fun savedDeckLoadsUpdatesAndProtectsUnsavedChanges() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val library=DeckLibrary(context)
+        val text="Commander\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n98 Plains\n"
+        val saved=library.save(null,"UI library fixture","commander",text,"https://moxfield.com/decks/gJFmgkq120Srp4FL8EghPw")
+        try {
+            compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
+            compose.onNodeWithText("Saved decks").performScrollTo().performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithTag("load-saved-deck-${saved.id}").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithTag("load-saved-deck-${saved.id}").performScrollTo().performClick()
+            if(compose.onAllNodesWithText("Replace current draft?").fetchSemanticsNodes().isNotEmpty()) compose.onNodeWithText("Load deck").performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Format: Commander ▾").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Decklist").performScrollTo().assertTextContains(text)
+            compose.onNodeWithText("Deck name").performScrollTo().performTextReplacement("Updated UI library fixture")
+            compose.onNodeWithText("Update saved deck").performScrollTo().performClick()
+            compose.waitUntil(10000) {library.get(saved.id)?.name=="Updated UI library fixture"}
+            compose.onNodeWithText("Decklist").performScrollTo().performTextReplacement("Unsaved editing draft")
+            compose.onNodeWithText("Saved decks").performScrollTo().performClick()
+            compose.onNodeWithTag("load-saved-deck-${saved.id}").performScrollTo().performClick()
+            compose.onNodeWithText("Replace current draft?").assertIsDisplayed()
+            compose.onNodeWithText("Load deck").performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Replace current draft?").fetchSemanticsNodes().isEmpty()}
+            compose.onNodeWithText("Decklist").performScrollTo().assertTextContains(text)
+            compose.onNodeWithText("Saved decks").performScrollTo().performClick()
+            compose.onNodeWithTag("delete-saved-deck-${saved.id}").performScrollTo().performClick()
+            compose.onNodeWithText("Delete saved deck").performClick()
+            compose.waitUntil(10000) {library.get(saved.id)==null}
+            compose.onNodeWithText("Close").performClick()
+            compose.onNodeWithText("Decklist").performScrollTo().assertTextContains(text)
+        } finally {library.delete(saved.id);library.close()}
+    }
+
 }

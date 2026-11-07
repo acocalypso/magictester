@@ -134,6 +134,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
             Button(onClick={model.saveDeck()},enabled=!model.busy && model.deck.isNotBlank()) {Text(if(model.savedDeckId==null) "Save deck" else "Update saved deck")}
             if(model.savedDeckId!=null) TextButton(onClick={model.saveDeck(true)},enabled=!model.busy && model.deck.isNotBlank()) {Text("Save as new")}
         }
+        if(model.savedDeckId!=null) Text(if(model.hasUnsavedDeck) "Unsaved changes to the loaded deck" else "Saved copy is up to date",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Saved decks stay on this device and keep their format, commanders, sideboard and source link. Saving does not require engine setup or a legality check.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         TextButton(onClick={model.loadReference()},enabled=!model.busy) {Text("Load reference deck")}
         HorizontalDivider()
