@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-11-07T22:23:19.791573+00:00",
+  "purpose": "Small availability/schema/provenance audit; no full-corpus accuracy or training-rights guarantee",
+  "officialIndex": {
+    "source": "https://www.17lands.com/public_datasets",
+    "cmsLastPublished": "2026-10-30T03:09:11+0000",
+    "listedRows": 139,
+    "sets": 37,
+    "events": [
+      "PickTwoDraft",
+      "PickTwoTradDraft",
+      "PremierDraft",
+      "QuickDraft",
+      "Sealed",
+      "TradDraft",
+      "TradSealed"
+    ],
+    "replayLinks": 105,
+    "setsWithReplay": 28
+  },
+  "rawSample": {
+    "url": "https://17lands-public.s3.amazonaws.com/analysis_data/replay_data/replay_data_public.AFR.PremierDraft.csv.gz",
+    "container": "gzip-tar",
+    "member": "replay-data.AFR.PremierDraft.csv",
+    "columns": 2022,
+    "rowsRead": 8,
+    "firstRowUserTurn1Life": "20",
+    "firstRowOpponentTurn1Life": "20"
+  },
+  "corpus": {
+    "url": "https://huggingface.co/datasets/TrevorJS/17lands-corpus",
+    "revision": "766a56bbdb5ebe1ed4c0d3441df694c81ec9f774",
+    "lastModified": "2026-09-16T22:14:25.000Z",
+    "declaredLicense": "cc-by-4.0",
+    "previewUrl": "https://datasets-server.huggingface.co/first-rows?dataset=TrevorJS%2F17lands-corpus&config=replay_turns&split=train",
+    "previewRows": 100,
+    "nonNumericOpponentLifeValues": [
+      "77479|77463",
+      "77479|77463",
+      "77471|77479"
+    ],
+    "nonNumericOpponentLifeCount": 3,
+    "limitation": "Preview is not a random/global quality sample; origin of malformed values not established"
+  },
+  "draftzero": {
+    "url": "https://huggingface.co/datasets/danbrooks/draftzero-selfplay-games",
+    "revision": "b10e310a6897b99ed08143828c75facd5f262d15",
+    "declaredLicense": "cc-by-4.0",
+    "files": [
+      ".gitattributes",
+      "README.md"
+    ],
+    "usedStorage": 0,
+    "usableGameFiles": 0
+  },
+  "pennyDreadful": {
+    "suppliedMatchStatus": 404,
+    "suppliedExportStatus": 404,
+    "checkedMatch": "https://logs.pennydreadfulmagic.com/match/275648199/",
+    "checkedMatchStatus": 200,
+    "checkedExport": "https://logs.pennydreadfulmagic.com/export/275648199/",
+    "checkedExportStatus": 200,
+    "robotsUrl": "https://logs.pennydreadfulmagic.com/robots.txt",
+    "robotsSha256": "da0cadf9e179e3feb4c15154e869c44d0e541d81dc9b8202f32b1b4ac113aa4c",
+    "aiTrainSignal": "no",
+    "generalCrawlerDisallow": "/",
+    "trainingDatasetLicense": "not established",
+    "bulkIngestion": "excluded pending permission"
+  },
+  "endstep": {
+    "repositoryLicense": "MIT",
+    "firefoxPackageLicense": "MPL-2.0",
+    "firefoxVersion": "1.7"
+  },
+  "tools": {
+    "spells-mtg": {
+      "version": "0.17.0",
+      "metadataLicense": "MIT"
+    },
+    "magicr": {
+      "currentRepository": "https://github.com/joelnitta/mtgr",
+      "license": "MIT + file LICENSE"
+    },
+    "MTGA-Tapps": {
+      "license": "AGPL-3.0"
+    },
+    "MTGWeightedSampling": {
+      "explicitLicenseDetected": false
+    }
+  }
+}

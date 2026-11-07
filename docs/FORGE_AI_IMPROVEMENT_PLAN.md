@@ -63,3 +63,5 @@ The recommended approach is a shared, versioned Java AI layer around Forge: reta
 3. A pinned upstream-enhanced policy behind an experimental flag, followed by the balanced strength/performance comparison.
 
 Subsequent changes expand the strategy matrix and mobile optimizations based on measured failures. Consider a small locally executed learned evaluator only after reliable training/evaluation data exists. A remote LLM dependency would conflict with the standalone/offline goal and is not necessary for these first improvements.
+
+The [verified external gameplay-data review](research/MTG_GAME_DATA_REVIEW.md) adds a proposed Forge decision recorder and training-data foundation. It corrects the empty DraftZero corpus, partial human replay semantics, sample quality failures and source-specific licensing limits. External data should supplement verified Forge decisions rather than supply invented complete game states.
