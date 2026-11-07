@@ -43,7 +43,7 @@ The port retains the desktop bridge's game/result/action schema, seeded games, L
 
 Scryfall legality is fetched in batches and cached daily. Forge independently checks card scripts and deck conformance, including pairing and combined color identity. A card that is legal but unsupported by the bundled Forge release is rejected explicitly. An AI simulation cannot establish how a human player will perform.
 
-Android 8.0 / API 26 is the declared minimum; the CI emulator matrix defines tested versions. This is managed Java/Kotlin code without application JNI, so the application does not ship CPU-specific native libraries. Actual deck coverage depends on Forge's card scripts, AI decisions, available memory, and test evidence; an SDK minimum is not a claim that every device and every card combination has passed acceptance.
+Android 8.0 / API 26 is the declared minimum; the CI emulator matrix defines tested versions. The Forge engine is managed Java/Kotlin without engine JNI. The universal APK includes AndroidX graphics helpers for ARM64, ARMv7, x86 and x86_64; their ELF load segments and APK entries use 16 KiB alignment. Actual deck coverage depends on Forge's card scripts, AI decisions, available memory, and test evidence; an SDK minimum is not a claim that every device and every card combination has passed acceptance.
 
 ### Resource and recovery policy
 

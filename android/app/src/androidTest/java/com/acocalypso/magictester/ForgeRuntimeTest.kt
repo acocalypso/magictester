@@ -3,6 +3,8 @@ package com.acocalypso.magictester
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Test
+import org.junit.Rule
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.json.JSONObject
@@ -11,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 
 @RunWith(AndroidJUnit4::class)
 class ForgeRuntimeTest {
+    @get:Rule val visibleWorkbench=ActivityScenarioRule(MainActivity::class.java)
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private fun command(request: JSONObject): String = runBlocking { ForgeClient.execute(context,request,"acceptance") { _,_ -> }.readText() }
     private fun game(format: String, decks: List<String>, seed: Int = 12345, bestOf: Int = 1): List<JSONObject> {

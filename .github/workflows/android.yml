@@ -92,6 +92,18 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Use current tools for minor-version Android images
+        run: |
+          sdkmanager "cmdline-tools;23.0"
+          python3 - <<'PYTOOLS'
+          import os,pathlib,shutil
+          root=pathlib.Path(os.environ['ANDROID_HOME'])/'cmdline-tools'
+          latest=root/'latest'
+          if latest.is_symlink():latest.unlink()
+          elif latest.exists():shutil.rmtree(latest)
+          latest.symlink_to(root/'23.0',target_is_directory=True)
+          PYTOOLS
+          cat "$ANDROID_HOME/cmdline-tools/latest/source.properties"
       - name: Verify real engine and native UI on Android
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
@@ -100,9 +112,10 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disk-size: 6G
-          ram-size: 3072M
+          ram-size: 4096M
           heap-size: 768M
           disable-animations: true
+          emulator-options: -no-window -no-snapshot -gpu software -noaudio -no-boot-anim -camera-back none -camera-front none
           script: python3 android/tools/run_instrumentation.py android/artifacts android/artifacts/acceptance
       - uses: actions/upload-artifact@v7.0.2
         if: always()
