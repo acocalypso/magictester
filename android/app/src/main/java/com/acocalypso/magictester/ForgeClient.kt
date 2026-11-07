@@ -29,12 +29,15 @@ object ForgeClient {
                         override fun handleMessage(message: Message) {
                             if(!continuation.isActive) return
                             pid.set(message.data.getInt("pid"))
-                            if(cancelled) { cancel(id);continuation.resumeWith(Result.failure(IllegalStateException("Operation cancelled")));return }
+                            if(cancelled) { ForgeClient.cancel(id);continuation.resumeWith(Result.failure(IllegalStateException("Operation cancelled")));return }
                             val value = message.data.getString("value") ?: return
                             when (message.what) {
                                 1 -> progress(value, message.data.getFloat("fraction").takeIf { it >= 0 })
                                 2 -> if (continuation.isActive) continuation.resumeWith(Result.success(File(value)))
-                                3 -> if (continuation.isActive) continuation.resumeWith(Result.failure(IllegalStateException(File(value).readText())))
+                                3 -> if (continuation.isActive) {
+                                    val diagnostic=JSONObject(File(value).readText()).optString("error","Forge failed")
+                                    continuation.resumeWith(Result.failure(IllegalStateException(diagnostic.lineSequence().first().removePrefix("java.lang.IllegalArgumentException: ").removePrefix("java.lang.IllegalStateException: "))))
+                                }
                             }
                         }
                     })
@@ -48,12 +51,13 @@ object ForgeClient {
                         override fun onNullBinding(name: ComponentName) = onServiceDisconnected(name)
                     }
                     if (!context.bindService(Intent(context, EngineService::class.java), connection!!, Context.BIND_AUTO_CREATE)) continuation.resumeWith(Result.failure(IllegalStateException("Could not start local Forge")))
-                    continuation.invokeOnCancellation { cancel(id) }
+                    continuation.invokeOnCancellation { ForgeClient.cancel(id) }
                 }
             }
         } finally {
-            withContext(NonCancellable + Dispatchers.Main) { connection?.let { try { context.unbindService(it) } catch (_: IllegalArgumentException) { } }; cancel(id); owner = "" }
+            withContext(NonCancellable + Dispatchers.Main) { connection?.let { try { context.unbindService(it) } catch (_: IllegalArgumentException) { } }; ForgeClient.cancel(id); owner = "" }
             input.delete()
+            directory.listFiles { file -> file.name.startsWith(input.name + ".") && file.name.endsWith(".dck") }?.forEach { it.delete() }
         }
     }
 }
