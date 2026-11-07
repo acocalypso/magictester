@@ -33,10 +33,24 @@ function run(file, args, cwd = root, env = process.env) {
   const r = spawnSync(command, args, {
     cwd,
     env,
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
     shell: process.platform === "win32" && file === "npm",
   });
-  if (r.status !== 0) throw Error(command + " failed (" + r.status + ")");
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  if (r.status !== 0) {
+    // Keep actionable diagnostics in the check annotations even when a runner's
+    // archived log download is temporarily unavailable.
+    if (process.env.GITHUB_ACTIONS) {
+      const detail = ((r.stdout || "") + (r.stderr || "") + (r.error?.message || "")).slice(-12000);
+      console.error("::error title=Desktop build command failed::" +
+        (command + " " + args.join(" ") + "\n" + detail)
+          .replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A"));
+    }
+    throw Error(command + " failed (" + r.status + ")");
+  }
 }
 await fs.mkdir(output, { recursive: true });
 await fs.rm(app, { recursive: true, force: true });
