@@ -25,6 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    outputs:
+      code: ${{ steps.version.outputs.code }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-java@v5
@@ -126,6 +128,11 @@ jobs:
           latest.symlink_to(root/'23.0',target_is_directory=True)
           PYTOOLS
           cat "$ANDROID_HOME/cmdline-tools/latest/source.properties"
+      - name: Fetch the published persistent-key upgrade baseline
+        if: ${{ fromJSON(needs.build.outputs.code) > 104 }}
+        run: |
+          python3 android/tools/fetch_upgrade_baseline.py android/artifacts/upgrade-probe.apk
+          python3 android/tools/verify_debug_signing.py android/artifacts
       - name: Verify real engine and native UI on Android
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:

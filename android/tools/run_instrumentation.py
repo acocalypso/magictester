@@ -15,6 +15,8 @@ try:
         retained=subprocess.check_output(['adb','shell','run-as','com.acocalypso.magictester','cat','files/upgrade-probe.txt'],text=True).strip()
         if retained!='retained-across-update':raise RuntimeError('An in-place update lost private app data')
         (output/'upgrade-check.txt').write_text('PASS: older-version APK updated in place; private app data retained.\n')
+        baseline=apk_dir/'upgrade-baseline.json'
+        if baseline.is_file():(output/'upgrade-baseline.json').write_text(baseline.read_text())
     result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000','com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=1500)
     print(result.stdout);print(result.stderr,file=sys.stderr)
     (output/'instrumentation.txt').write_text(result.stdout+result.stderr)
