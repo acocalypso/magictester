@@ -7,11 +7,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 class WorkbenchUiTest {
-    companion object {
-        @JvmStatic @org.junit.BeforeClass fun grantNotifications() {
-            if(android.os.Build.VERSION.SDK_INT >= 33) InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("pm grant com.acocalypso.magictester android.permission.POST_NOTIFICATIONS").close()
-        }
-    }
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     private fun phoneBack() {
         val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
@@ -61,16 +56,24 @@ class WorkbenchUiTest {
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opponent 1 cast Cast Down targeting Your creature."))
             compose.onNodeWithText("Opponent 1 cast Cast Down targeting Your creature.").assertIsDisplayed()
             phoneBack()
+            compose.waitUntil(10000) {compose.onNodeWithText("View observed game →").isDisplayed()}
             compose.onNodeWithText("View observed game →").assertIsDisplayed()
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Your decklist"))
             compose.onNodeWithText("Your decklist").performClick()
             compose.onNodeWithText("Close").assertIsDisplayed()
             phoneBack()
+            compose.waitUntil(10000) {!compose.onNodeWithText("Close").isDisplayed() && compose.onNodeWithText("Your decklist").isDisplayed()}
             compose.onNodeWithText("Your decklist").assertIsDisplayed()
             phoneBack()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Your analyses").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Your analyses").assertExists()
             phoneBack()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Put your deck\nto the test.").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Put your deck\nto the test.").assertExists()
+        } catch(error:Throwable) {
+            runCatching {compose.onRoot().printToLog("MagicTesterBackFailure")}
+            runCatching {File(context.filesDir,"acceptance-back-failure.png").outputStream().use {InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG,100,it)}}
+            throw error
         } finally {store.delete(id);store.close()}
     }
 

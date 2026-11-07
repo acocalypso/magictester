@@ -62,6 +62,10 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         } }
         viewModelScope.launch { try { latest = withContext(Dispatchers.IO) { ForgeRelease.check(app) } } catch(_:Exception) { } }
     }
+    fun markNotificationPrompted(): Boolean {
+        if(prefs.getBoolean("notificationPrompted",false)) return false
+        prefs.edit().putBoolean("notificationPrompted",true).apply();return true
+    }
     fun saveDraft() { prefs.edit().putString("deck",deck).putString("title",title).putString("format",format).putString("deckLink",deckLink).putString("savedDeckId",savedDeckId).apply() }
     fun chooseFormat(value: String) { format=value;saveDraft();loadPool() }
     fun loadPool() {

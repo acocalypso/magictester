@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <application android:name=".MagicTesterApplication" android:allowBackup="false" android:label="MagicTester" android:icon="@drawable/ic_magictester" android:largeHeap="true" android:supportsRtl="true" android:theme="@style/Theme.MagicTester" android:usesCleartextTraffic="false">
+    <application android:name=".MagicTesterApplication" android:enableOnBackInvokedCallback="true" tools:replace="android:enableOnBackInvokedCallback" android:allowBackup="false" android:label="MagicTester" android:icon="@drawable/ic_magictester" android:largeHeap="true" android:supportsRtl="true" android:theme="@style/Theme.MagicTester" android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>

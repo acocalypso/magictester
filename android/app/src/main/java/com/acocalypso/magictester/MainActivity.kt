@@ -77,7 +77,9 @@ class MainActivity : ComponentActivity() {
     val exportLogs=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if(uri!=null) model.exportDiagnostics(uri,pendingDiagnosticRun,pendingDiagnosticDecks)
     }
-    LaunchedEffect(Unit) { if(Build.VERSION.SDK_INT >= 33) notification.launch(Manifest.permission.POST_NOTIFICATIONS) }
+    LaunchedEffect(Unit) {
+        if(Build.VERSION.SDK_INT>=33 && androidx.core.content.ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED && model.markNotificationPrompted()) notification.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     Scaffold(containerColor=charcoal,bottomBar={ NavigationBar(containerColor=charcoal,tonalElevation=0.dp) {
         listOf("Test","Runs","Pools","Setup").forEachIndexed { index,label -> NavigationBarItem(selected=tab==index,onClick={navigateTab(index)},icon={Text(listOf("＋","≡","▤","○")[index],fontSize=24.sp)},label={Text(label)}) }
     } }) { padding ->

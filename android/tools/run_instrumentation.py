@@ -17,14 +17,23 @@ try:
         (output/'upgrade-check.txt').write_text('PASS: older-version APK updated in place; private app data retained.\n')
         baseline=apk_dir/'upgrade-baseline.json'
         if baseline.is_file():(output/'upgrade-baseline.json').write_text(baseline.read_text())
-    result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000','com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=1500)
-    print(result.stdout);print(result.stderr,file=sys.stderr)
-    (output/'instrumentation.txt').write_text(result.stdout+result.stderr)
-    if result.returncode or not re.search(r'OK \(\d+ tests?\)',result.stdout) or 'FAILURES!!!' in result.stdout:raise RuntimeError('Real Android acceptance failed; see instrumentation and logcat artifacts')
+    sdk=int(subprocess.check_output(['adb','shell','getprop','ro.build.version.sdk'],text=True).strip())
+    if sdk>=33:subprocess.run(['adb','shell','pm','grant','com.acocalypso.magictester','android.permission.POST_NOTIFICATIONS'],check=True)
+    reports=[]
+    for label,selection,timeout in [('ui',['-e','class','com.acocalypso.magictester.WorkbenchUiTest'],180),('engine',['-e','notClass','com.acocalypso.magictester.WorkbenchUiTest'],1500)]:
+        result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','disableAnalytics','true','-e','timeout_msec','720000',*selection,'com.acocalypso.magictester.test/androidx.test.runner.AndroidJUnitRunner'],capture_output=True,text=True,timeout=timeout)
+        print(result.stdout,flush=True);print(result.stderr,file=sys.stderr,flush=True)
+        report=result.stdout+result.stderr;reports.append(report)
+        (output/f'instrumentation-{label}.txt').write_text(report)
+        (output/'instrumentation.txt').write_text('\n'.join(reports))
+        passed=re.search(r'OK \((\d+) tests?\)',result.stdout)
+        if result.returncode or not passed or int(passed.group(1))==0 or 'FAILURES!!!' in result.stdout:raise RuntimeError(f'Real Android {label} acceptance failed; see instrumentation and logcat artifacts')
+
 finally:
     with (output/'logcat.txt').open('w') as log:subprocess.run(['adb','logcat','-d'],stdout=log,stderr=subprocess.STDOUT)
     with (output/'acceptance-ui.png').open('wb') as image:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','files/acceptance-ui.png'],stdout=image,stderr=subprocess.DEVNULL)
 
+    with (output/'acceptance-back-failure.png').open('wb') as screenshot:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','files/acceptance-back-failure.png'],stdout=screenshot,stderr=subprocess.DEVNULL)
     # Test fixtures only: retain the app's bounded engine/error logs when instrumentation fails.
     with (output/'engine-diagnostics.tar').open('wb') as logs:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','tar','-cf','-','files/diagnostics'],stdout=logs,stderr=subprocess.DEVNULL)
     with (output/'performance-settings.xml').open('wb') as settings:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','shared_prefs/performance.xml'],stdout=settings,stderr=subprocess.DEVNULL)
