@@ -14,15 +14,21 @@ class CurrentLegality(context: Context, private val collection: (String) -> Stri
         val missing = names.filter { name -> val f=files.getValue(name); !f.isFile || System.currentTimeMillis()-f.lastModified() > 86400000 }
         for(chunk in missing.chunked(75)) {
             progress("Checking current card legality · ${names.size-missing.size}/${names.size} cached")
-            val response = JSONObject(collection(JSONObject().put("identifiers",JSONArray(chunk.map { JSONObject().put("name",it) })).toString()))
+            val response = JSONObject(collection(JSONObject().put("identifiers",JSONArray(chunk.map { CardNames.identifier(it) }.distinct().map { JSONObject().put("name",it) })).toString()))
             val unknown = response.optJSONArray("not_found") ?: JSONArray()
-            require(unknown.length() == 0) { "Scryfall could not identify: ${(0 until unknown.length()).joinToString { unknown.getJSONObject(it).optString("name") }}" }
+            require(unknown.length() == 0) {
+                val identifiers=(0 until unknown.length()).map { unknown.getJSONObject(it).optString("name") }
+                "Scryfall could not identify: ${chunk.filter { name -> identifiers.any { it.equals(CardNames.identifier(name),true) } }.joinToString()}"
+            }
             val data = response.getJSONArray("data")
+            val resolved=mutableSetOf<String>()
             for(i in 0 until data.length()) {
                 val card = data.getJSONObject(i); val canonical = card.getString("name")
-                val matches = chunk.filter { it.equals(canonical,true) || it.equals(canonical.substringBefore(" // "),true) }
+                val matches = chunk.filter { CardNames.matches(it,canonical) }
+                resolved.addAll(matches)
                 for(name in matches) files.getValue(name).writeText(card.toString())
             }
+            require(resolved.containsAll(chunk)) { "Could not check ${(chunk-resolved).joinToString()}. Use the full official card name; both faces must match." }
             Thread.sleep(120)
         }
         val key = if(format == "cedh") "commander" else format

@@ -109,4 +109,15 @@ class ForgeRuntimeTest {
         val result=JSONObject(command(JSONObject().put("operation","setup")))
         assertTrue(result.getBoolean("ready"))
     }
+    @Test fun pathwayFullNameLoadsWithPairedCommanderIdentityAndRejectsWrongIdentity() {
+        val legal="Commander\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n97 Plains\n1 Brightclimb Pathway // Grimclimb Pathway"
+        val result=JSONObject(command(JSONObject().put("operation","validate").put("text",legal).put("format","commander")))
+        assertTrue(result.toString(),result.getBoolean("valid"))
+        assertTrue((0 until result.getJSONArray("cards").length()).any {result.getJSONArray("cards").getJSONObject(it).getString("name")=="Brightclimb Pathway"})
+        val wrong="Commander\n1 Avacyn, Angel of Hope\nDeck\n98 Plains\n1 Brightclimb Pathway//Grimclimb Pathway"
+        val rejected=JSONObject(command(JSONObject().put("operation","validate").put("text",wrong).put("format","commander")))
+        assertFalse(rejected.toString(),rejected.getBoolean("valid"))
+        assertTrue(rejected.toString(),rejected.getJSONArray("errors").toString().contains("color identity",true))
+    }
+
 }

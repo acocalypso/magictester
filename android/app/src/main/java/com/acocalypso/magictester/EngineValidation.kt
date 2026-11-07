@@ -16,8 +16,8 @@ object EngineValidation {
         val deck = Deck("MagicTester")
         val canonical = mutableListOf<DeckLine>()
         for (line in parsed.cards) {
-            val card = StaticData.instance().commonCards.getCard(line.name)
-                ?: StaticData.instance().commonCards.getCard(line.name.substringBefore(" // "))
+            val card = StaticData.instance().commonCards.getCard(CardNames.normalized(line.name))
+                ?: StaticData.instance().commonCards.getCard(CardNames.identifier(line.name))
             if (card == null || card.rules.isUnsupported) { problems += "${line.name}: this Forge release has no supported card script."; continue }
             canonical += line.copy(name = card.name)
             val section = when (line.section) { "Commander" -> DeckSection.Commander; "Sideboard", "Companion" -> DeckSection.Sideboard; else -> DeckSection.Main }
