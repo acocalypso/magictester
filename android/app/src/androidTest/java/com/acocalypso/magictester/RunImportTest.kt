@@ -26,7 +26,7 @@ class RunImportTest {
     @Test fun importingAnActiveExportCreatesAnInterruptedCopyWithoutQueuingWork() {
         val store=RunStore(isolated())
         try {
-            val payload=JSONObject().put("title","Old installation").put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray().put(JSONObject().put("name","Saved opponent").put("text",Examples.burn)))
+            val payload=JSONObject().put("title","Old installation").put("format","pauper").put("deck",Examples.burn).put("games",1).put("clockSeconds",120).put("seed",12345).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray().put(JSONObject().put("name","Saved opponent").put("text",Examples.burn)))
             val archive=JSONObject().put("schemaVersion",1).put("application","MagicTester Android").put("runId","old-run").put("state","running").put("settings",payload).put("results",JSONArray())
             val first=store.importExport(archive.toString());val second=store.importExport(archive.toString())
             assertNotEquals(first,second);assertEquals("interrupted",store.get(first)!!.state)
