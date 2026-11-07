@@ -33,11 +33,11 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       MAGICTESTER_AUTO_MAINTENANCE: 0
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24.22.1
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6.1.0
         with:
           global-json-file: desktop/global.json
       - name: Determine version
@@ -75,7 +75,7 @@ jobs:
           else
             "desktop/artifacts/MagicTester-$RELEASE_VERSION-$TARGET_RID/MagicTester" --engine-check
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: magictester-${{ matrix.rid }}
           compression-level: 0
@@ -84,7 +84,7 @@ jobs:
             desktop/artifacts/*.tar.gz
             desktop/artifacts/*.sha256
             desktop/artifacts/desktop-ui.png
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:
           name: desktop-failure-${{ matrix.rid }}
@@ -98,12 +98,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.2
         with:
           pattern: magictester-*
           merge-multiple: true
           path: release
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3.0.4
         with:
           name: MagicTester Desktop ${{ github.ref_name }}
           generate_release_notes: true

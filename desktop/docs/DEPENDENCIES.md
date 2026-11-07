@@ -8,6 +8,8 @@ Checked 7 November 2026 using Context7's public MCP endpoint, official .NET rele
 - The independently included engine keeps the root application's pinned dependency versions: Cheerio 1.2.0, csv-parse 7.0.3, robots-parser 3.0.1, Zod 4.6.7, TypeScript 6.0.3 and Node 24 types 24.19.2. The desktop runtime does not import Fastify, Next.js, PostgreSQL, BullMQ or Redis.
 - **Eclipse Temurin Java 21 JDK**, fetched from Adoptium's current stable 21 metadata and verified with its official SHA-256. A compiler-enabled runtime image is required because a newly published stable Forge version must compile the pinned bridge/overrides and run Java source-mode contracts before activation. The packager links all JDK modules, including the compiler, and omits build-only source/jmod archives and debug symbols.
 
+The desktop workflow also uses the current official Node 24 action releases: checkout 7.0.1, setup-node 7.1.0, setup-dotnet 6.1.0, upload-artifact 7.0.2, download-artifact 8.0.2 and action-gh-release 3.0.4, verified against their release metadata and action manifests.
+
 Context7 references:
 
 - https://context7.com/avaloniaui/avalonia — dispatcher calls, Avalonia 12 text/clipboard APIs, real-font headless Skia rendering.
