@@ -45,7 +45,10 @@ object BenchmarkRunner {
                         while(isActive) {
                             val sample=PerformanceSettings.resources(context)
                             minimumFree.updateAndGet { minOf(it,sample.getLong("availableMiB")) }
-                            if(sample.getBoolean("lowMemory") || sample.getInt("thermal")>=PowerManager.THERMAL_STATUS_SEVERE) { failure="Android reported memory or thermal pressure.";ForgeClient.cancel(run.id);break }
+                            if(sample.getInt("thermal")>=PowerManager.THERMAL_STATUS_CRITICAL || sample.getLong("availableMiB")<CapacityMath.SINGLE_RESERVE_MIB || (level>1 && (sample.getBoolean("lowMemory") || sample.getInt("thermal")>=PowerManager.THERMAL_STATUS_SEVERE))) {
+                                failure="Android resource pressure: ${sample.getLong("availableMiB")} MiB available; thermal ${PerformanceSettings.thermalLabel(sample.getInt("thermal"))}; memory-pressure flag ${sample.getBoolean("lowMemory")}."
+                                ForgeClient.cancel(run.id);break
+                            }
                             delay(1000)
                         }
                     }

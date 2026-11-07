@@ -11,6 +11,18 @@ object CapacityMath {
     fun cpuLimit(cores: Int)=(cores/2).coerceIn(1,MAX_ENGINES)
     fun reserveMiB(totalMiB: Long)=maxOf(512L,totalMiB/5)
     fun memoryLimit(availableMiB: Long,totalMiB: Long,processMiB: Long)=((availableMiB-reserveMiB(totalMiB)).coerceAtLeast(0)/processMiB.coerceAtLeast(384)).toInt().coerceIn(0,MAX_ENGINES)
+    const val SINGLE_RESERVE_MIB=128L
+    fun startLimit(configured: Int,lowMemory: Boolean,thermal: Int)=when {
+        thermal>=4 -> 0 // Android THERMAL_STATUS_CRITICAL and above.
+        lowMemory || thermal>=3 -> minOf(configured,1)
+        else -> configured
+    }
+    fun startReserveMiB(totalMiB: Long,active: Int)=if(active==0) SINGLE_RESERVE_MIB else reserveMiB(totalMiB)
+    fun canStart(availableMiB: Long,totalMiB: Long,processMiB: Long,active: Int,reservedMiB: Long=0)=availableMiB>=processMiB+startReserveMiB(totalMiB,active)+reservedMiB
+    fun candidates(availableMiB: Long,totalMiB: Long,processMiB: Long,cores: Int,lowMemory: Boolean,thermal: Int): Int {
+        if(!canStart(availableMiB,totalMiB,processMiB,0)) return 0
+        return startLimit(minOf(cpuLimit(cores),memoryLimit(availableMiB,totalMiB,processMiB).coerceAtLeast(1)),lowMemory,thermal)
+    }
     fun recommendation(samples: List<Pair<Int,Double>>): Int {
         var count=1;var best=0.0
         for((level,rate) in samples.sortedBy { it.first }) if(rate>best*1.05) { count=level;best=rate }
@@ -31,16 +43,19 @@ object PerformanceSettings {
         val chosen=selected(context)
         return minOf(if(chosen==0) report?.optInt("recommended",1) ?: 1 else chosen,tested,CapacityMath.cpuLimit(Runtime.getRuntime().availableProcessors())).coerceAtLeast(1)
     }
-    fun processBudgetMiB(context: Context,profile: String): Long = maxOf(if(profile.startsWith("commander")) 512L else 384L,report(context,profile)?.optLong("processBudgetMiB",512) ?: 512L)
+    fun processBudgetMiB(context: Context,profile: String): Long {
+        val minimum=if(profile.startsWith("commander")) 512L else 384L
+        return maxOf(minimum,report(context,profile)?.optLong("processBudgetMiB",minimum) ?: minimum)
+    }
+    fun thermalLabel(status: Int)=listOf("normal","light throttling","moderate throttling","severe throttling","critical","emergency","shutdown").getOrNull(status) ?: "unavailable ($status)"
     fun resources(context: Context): JSONObject {
         val manager=context.getSystemService(ActivityManager::class.java)
         val memory=ActivityManager.MemoryInfo().also { manager.getMemoryInfo(it) }
         val thermal=if(Build.VERSION.SDK_INT>=29) context.getSystemService(PowerManager::class.java).currentThermalStatus else 0
-        return JSONObject().put("availableMiB",memory.availMem/1048576).put("totalMiB",memory.totalMem/1048576).put("lowMemory",memory.lowMemory).put("thermal",thermal).put("largeHeapMiB",manager.largeMemoryClass).put("cores",Runtime.getRuntime().availableProcessors())
+        return JSONObject().put("availableMiB",memory.availMem/1048576).put("totalMiB",memory.totalMem/1048576).put("memoryThresholdMiB",memory.threshold/1048576).put("lowMemory",memory.lowMemory).put("thermal",thermal).put("largeHeapMiB",manager.largeMemoryClass).put("cores",Runtime.getRuntime().availableProcessors())
     }
     fun candidates(context: Context,profile: String): Int {
         val r=resources(context)
-        if(r.getBoolean("lowMemory") || r.getInt("thermal")>=PowerManager.THERMAL_STATUS_SEVERE) return 0
-        return minOf(CapacityMath.cpuLimit(r.getInt("cores")),CapacityMath.memoryLimit(r.getLong("availableMiB"),r.getLong("totalMiB"),processBudgetMiB(context,profile)))
+        return CapacityMath.candidates(r.getLong("availableMiB"),r.getLong("totalMiB"),processBudgetMiB(context,profile),r.getInt("cores"),r.getBoolean("lowMemory"),r.getInt("thermal"))
     }
 }

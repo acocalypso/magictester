@@ -101,22 +101,30 @@ object ForgeClient {
     fun cancel(id: String) { generations.getOrPut(id) { java.util.concurrent.atomic.AtomicLong() }.incrementAndGet();connections.forEach { it.cancel(id) } }
     fun releaseBenchmark(id: String) { connections.forEach { it.release(id) } }
     fun activePids(context: Context,id: String): List<Int> = connections.map { it.pidFor(id) }.filter { it>0 }
-    suspend fun execute(context: Context,request: JSONObject,id: String,onGame: (JSONObject)->Unit={},onMetrics: (JSONObject)->Unit={},onReady: ()->Unit={},allowed: ()->Boolean={true},progress: (String,Float?)->Unit): File {
+    suspend fun execute(context: Context,request: JSONObject,id: String,onGame: (JSONObject)->Unit={},onMetrics: (JSONObject)->Unit={},onReady: ()->Unit={},allowed: ()->Boolean={true},resourceSnapshot: ()->JSONObject={PerformanceSettings.resources(context)},progress: (String,Float?)->Unit): File {
         val counter=generations.getOrPut(id) { java.util.concurrent.atomic.AtomicLong() };val generation=counter.get()
         val profile=PerformanceSettings.profile(request.optString("format"),request.optJSONArray("rawDecks")?.length() ?: 4)
         val budget=PerformanceSettings.processBudgetMiB(context,profile)
         var slot=-1
+        var allocation: JSONObject?=null
+        val operation=when(request.optString("operation")) {"setup" -> "set up Forge";"validate" -> "validate the deck";else -> "start the game"}
+        val maxGames=if(request.optInt("bestOf")==3) 5 else 1
+        val waitBudget=(request.optInt("clockSeconds",120)*maxGames+180)*CapacityMath.MAX_ENGINES*1000L
         try {
-        withTimeout(180000) {
+        withTimeout(waitBudget) {
             while(slot<0) {
                 currentCoroutineContext().ensureActive()
                 if(counter.get()!=generation || !allowed()) throw CancellationException("Request cancelled before an engine became available")
                 slot=leaseMutex.withLock {
-                    val resources=PerformanceSettings.resources(context)
-                    val ceiling=if(request.optInt("benchmarkParallelism")>0) minOf(request.getInt("benchmarkParallelism"),CapacityMath.cpuLimit(resources.getInt("cores"))) else PerformanceSettings.limit(context,profile)
+                    val resources=resourceSnapshot()
+                    val configured=if(request.optInt("benchmarkParallelism")>0) minOf(request.getInt("benchmarkParallelism"),CapacityMath.cpuLimit(resources.getInt("cores"))) else PerformanceSettings.limit(context,profile)
+                    val ceiling=CapacityMath.startLimit(configured,resources.getBoolean("lowMemory"),resources.getInt("thermal"))
                     val count=owners.count { it!=null }
-                    if(resources.getBoolean("lowMemory") || resources.getInt("thermal")>=PowerManager.THERMAL_STATUS_SEVERE) {
-                        if(count==0) error("The device needs more free memory or time to cool before another game can start.")
+                    if(ceiling==0) {
+                        if(count==0) {
+                            Diagnostics.event("engine.admission_denied","Critical Android thermal status prevents engine startup",id,level="WARN",details=resources)
+                            error("Cannot $operation: Android reports ${PerformanceSettings.thermalLabel(resources.getInt("thermal"))} thermal status (${resources.getInt("thermal")}). ${resources.getLong("availableMiB")} MiB is available. Let the phone cool and retry.")
+                        }
                         -1
                     } else if(count>=ceiling) -1 else {
                         val manager=context.getSystemService(android.app.ActivityManager::class.java)
@@ -126,17 +134,24 @@ object ForgeClient {
                             val used=if(pid>0) runCatching { manager.getProcessMemoryInfo(intArrayOf(pid))[0].totalPss/1024L }.getOrDefault(0) else 0L
                             reserved+=(budgets[index]-used).coerceAtLeast(0)
                         }
-                        if(resources.getLong("availableMiB")-CapacityMath.reserveMiB(resources.getLong("totalMiB"))-reserved<budget) {
-                            if(count==0) error("Not enough free memory for a Forge process. Close other apps and try again.")
+                        val headroom=CapacityMath.startReserveMiB(resources.getLong("totalMiB"),count)
+                        if(!CapacityMath.canStart(resources.getLong("availableMiB"),resources.getLong("totalMiB"),budget,count,reserved)) {
+                            if(count==0) {
+                                Diagnostics.event("engine.admission_denied","Insufficient available memory for one engine",id,level="WARN",details=resources.put("requiredMiB",budget+headroom).put("processBudgetMiB",budget))
+                                error("Cannot $operation: ${resources.getLong("availableMiB")} MiB available; ${budget+headroom} MiB needed ($budget MiB engine budget + $headroom MiB headroom). Close other apps and retry. Android memory-pressure flag: ${resources.getBoolean("lowMemory")}.")
+                            }
                             -1
-                        } else owners.indices.firstOrNull { owners[it]==null }?.also { owners[it]=id;budgets[it]=budget } ?: -1
+                        } else owners.indices.firstOrNull { owners[it]==null }?.also {
+                            owners[it]=id;budgets[it]=budget
+                            allocation=resources.put("slot",it).put("budgetMiB",budget).put("headroomMiB",headroom).put("effectiveLimit",ceiling).put("operation",request.optString("operation","simulate"))
+                        } ?: -1
                     }
                 }
                 if(slot<0) delay(200)
             }
         }
             if(counter.get()!=generation || !allowed()) throw CancellationException("Request cancelled")
-            Diagnostics.event("engine.leased","Allocated an isolated engine process",id,details=JSONObject().put("slot",slot).put("budgetMiB",budget))
+            Diagnostics.event("engine.leased","Allocated an isolated engine process",id,details=allocation ?: JSONObject().put("slot",slot).put("budgetMiB",budget))
             return connections[slot].execute(context,request,id,onGame,onMetrics,onReady,{counter.get()==generation && allowed()},progress)
         } finally { withContext(NonCancellable) { leaseMutex.withLock { if(slot>=0) {owners[slot]=null;budgets[slot]=0} } } }
     }

@@ -67,7 +67,7 @@ class QueueService: Service() {
         val pending=(0 until total).filter {it !in done}.toMutableList()
         val profile=PerformanceSettings.profile(payload.getString("format"),payload.optInt("players",4))
         while(pending.isNotEmpty() && store.get(run.id)?.state=="running") {
-            val limit=PerformanceSettings.limit(this,profile)
+            val limit=minOf(PerformanceSettings.limit(this,profile),PerformanceSettings.candidates(this,profile).coerceAtLeast(1))
             val wave=pending.take(limit);repeat(wave.size) {pending.removeAt(0)}
             Diagnostics.event("parallel.wave","Scheduling ${wave.size} isolated games",run.id,details=JSONObject().put("configured",PerformanceSettings.selected(this)).put("effectiveLimit",limit))
             val outcomes=supervisorScope {wave.map {unit->async {runCatching {runUnit(run,unit,count,total)}}}.awaitAll()}
@@ -80,7 +80,7 @@ class QueueService: Service() {
         val request=SimulationRequest.unit(run.payload,unit)
         val wake=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MagicTester:match")
         try {
-            wake.acquire((request.getInt("clockSeconds")*(if(request.optInt("bestOf")==3) 5 else 1)+480)*1000L)
+            wake.acquire((request.getInt("clockSeconds")*(if(request.optInt("bestOf")==3) 5 else 1)+480)*CapacityMath.MAX_ENGINES*1000L)
             Diagnostics.event("attempt.started","Starting match ${unit+1}/$total",run.id,details=PerformanceSettings.resources(this).put("unit",unit))
             val result=ForgeClient.execute(this,request,run.id,onGame={store.gameEvent(run.id,it)},allowed={store.get(run.id)?.state=="running"}) {label,_->
                 store.update(run.id,"running","Match ${unit+1}/$total · $label",count.get(),onlyIfRunning=true);progress("${count.get()}/$total matches saved · $label")

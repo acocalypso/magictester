@@ -118,7 +118,7 @@ object DiagnosticExporter {
                 append("Recorded warnings/errors: ${errors.size}. See errors.txt for full messages and stack traces.\n")
                 databaseError?.let { append("The history database could not be read. Existing logs were exported; see database-error.txt.\n") }
             })
-            text("device.json",device.toString(2))
+            text("device.json",device.put("engineAdmission",PerformanceSettings.resources(context).put("singleEngineHeadroomMiB",CapacityMath.SINGLE_RESERVE_MIB).put("setupProcessBudgetMiB",PerformanceSettings.processBudgetMiB(context,"constructed"))).toString(2))
             text("performance-settings.json",JSONObject().put("selectedParallelLimit",PerformanceSettings.selected(context)).put("mode",if(PerformanceSettings.selected(context)==0) "automatic" else "manual").put("reports",JSONObject().apply {
                 for(profile in listOf("constructed","commander-2","commander-3","commander-4")) PerformanceSettings.report(context,profile)?.let { put(profile,it) }
             }).toString(2))

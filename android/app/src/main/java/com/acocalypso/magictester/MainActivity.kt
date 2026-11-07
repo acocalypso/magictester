@@ -181,12 +181,13 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         if(model.busy) TextButton(onClick={ForgeClient.cancel("setup")}) {Text("Cancel setup")}
         OutlinedButton(onClick=diagnostics,enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}
         Text("Save a readable summary, engine errors, setup events and Android process-exit reasons. Logs stay on this device until you choose where to save the ZIP.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        ResourceStatusPanel()
         OutlinedButton(onClick=restore,enabled=!model.busy) {Text("Import exported analyses")}
         Text("Restore analysis JSON files saved through Runs → Export results and game evidence, including exports from 0.1.1. Decklists, opponent lists and observed actions are preserved; imported runs never start automatically. Diagnostic ZIP files cannot restore full analysis history.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider()
         PerformancePanel(model)
         HorizontalDivider();Text("Resource policy",fontSize=19.sp)
-        Text("The saved parallel-game limit is shared by all Forge work. Each process has isolated game state; new games wait when memory is scarce, and severe thermal pressure stops new work. Long analyses keep a visible notification and a bounded wake lock. Cancel from Runs. Android may still stop work under memory or battery pressure; completed match evidence is saved.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("The saved parallel-game limit is shared by all Forge work. Each process has isolated game state. Advisory memory pressure or severe thermal throttling limits work to one process; critical thermal status or insufficient measured free RAM stops startup. Single-engine setup uses a fixed headroom allowance; parallel work reserves additional system memory. Long analyses keep a visible notification and a bounded wake lock. Cancel from Runs. Android may still stop work under memory or battery pressure; completed match evidence is saved.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Latest stable Forge",fontSize=19.sp)
         Text("Bundled: ${BuildConfig.FORGE_VERSION} · Latest checked: ${model.latest.ifBlank { "not checked" }}. New engine code arrives in a signed app update. Version checks occur hourly when online; cached verification is accepted for 26 hours. New runs stop when a newer stable engine is available.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedButton(onClick={context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/acocalypso/magictester/releases")))}) {Text("App releases")}
