@@ -44,7 +44,7 @@ function run(file, args, cwd = root, env = process.env) {
     // Keep actionable diagnostics in the check annotations even when a runner's
     // archived log download is temporarily unavailable.
     if (process.env.GITHUB_ACTIONS) {
-      const detail = ((r.stdout || "") + (r.stderr || "") + (r.error?.message || "")).slice(-12000);
+      const detail = ((r.stdout || "") + (r.stderr || "") + (r.error?.message || "")).slice(-2800);
       console.error("::error title=Desktop build command failed::" +
         (command + " " + args.join(" ") + "\n" + detail)
           .replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A"));

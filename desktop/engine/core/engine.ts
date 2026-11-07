@@ -216,6 +216,7 @@ export class ForgeResultParser {
     public playerCount = 2,
   ) {}
   line(line: string): GameResult | null {
+    line = line.replace(/\r$/, "");
     if (line.includes("Stopping slow match as draw")) this.timeout = true;
     if (
       /Exception|StackOverflowError|Could not load deck|No deck found/.test(

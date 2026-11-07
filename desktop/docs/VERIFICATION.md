@@ -7,10 +7,11 @@ Verified locally on Linux x64 on 7 November 2026. Windows checks run on the Wind
 - Native .NET 10 / Avalonia 12.1.5 compilation: zero errors and zero warnings.
 - Genuine Skia headless rendering of the native window and asynchronous clean shutdown: passed. The build workflow retains a screenshot.
 - C# executable → private Node worker → SQLite initialization/command handshake: passed with all nine formats. No HTTP listener, PostgreSQL or Redis is involved.
-- Engine contracts: 82 tests, including persistence, frozen inputs, resource admission, runtime activation failure, checkpoints, deck rules and game history. On an empty cache, metadata-dependent tests skip explicitly. The preceding 80-test suite also passed against real cached card data without skips.
+- Engine contracts: all 83 passed against real cached card data, without skips, including persistence, frozen inputs, resource admission, runtime activation failure, checkpoints, deck rules and game history. On an empty cache, metadata-dependent tests skip explicitly.
 - Real native-worker acceptance with the Docker services stopped: four Pauper games completed normally with saved action histories. A separate 240-second retry preserved the original results, was cancelled, resumed with the same identifier and completed.
 - Real BO3 acceptance: two Modern matches completed with five actual games and inspectable observed-game evidence.
 - Real multiplayer acceptance: one four-player Commander game completed normally with recorded actions and an actual fourth-place finish.
+- Packaged Linux executable with bundled Node and linked Java: verified Forge staging, all native contracts, real games, action histories, process-tree cancellation and same-ID resume passed.
 - Complete self-contained Linux packaging: passed, including the bundled executable, Node, linked Java runtime and Java compiler checks. The initial compressed archive was approximately 169 MB; final sizes vary with runtime updates.
 
 These game outcomes are integration checks, not statistical claims about deck strength. Contracts using fixtures do not count as real simulated games.
