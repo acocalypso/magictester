@@ -67,13 +67,18 @@ if (!existsSync(home + "/build.txt")) {
   for await (const b of createReadStream(archive)) hash.update(b);
   if (hash.digest("hex") !== release.archiveSha256)
     throw new Error("Forge archive checksum mismatch");
-  // Git/MSYS GNU tar can precede Windows' bsdtar on PATH and interprets D:
-  // archive paths as remote hosts. Use the OS tool and a relative archive name.
+  // The release's native host streams tar.bz2 itself. Raw worker development
+  // without the UI can still use the operating system's tar implementation.
   const tar = process.platform === "win32"
     ? join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe")
     : "tar";
-  console.log(JSON.stringify({ event: "extracting_forge", tool: tar }));
-  execFileSync(tar, ["-xjf", "forge.tar.bz2"], {
+  const host = process.env.MAGICTESTER_HOST;
+  const extractorArgs = host ? [
+    ...(process.env.MAGICTESTER_HOST_ASSEMBLY ? [process.env.MAGICTESTER_HOST_ASSEMBLY] : []),
+    "--extract-forge", archive, home,
+  ] : ["-xjf", "forge.tar.bz2"];
+  console.log(JSON.stringify({ event: "extracting_forge", tool: host ? "native streaming extractor" : tar }));
+  execFileSync(host || tar, extractorArgs, {
     cwd: home, windowsHide: true, encoding: "utf8", stdio: "inherit", timeout: 300000,
   });
   console.log(JSON.stringify({ event: "forge_extracted" }));

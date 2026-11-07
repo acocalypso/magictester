@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using MagicTester.Desktop;
+ArchiveChecks.Run();
 AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).UseSkia().SetupWithoutStarting();
 var window = new MainWindow(); window.Show();
 for (int i = 0; i < 80; i++) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(50); }

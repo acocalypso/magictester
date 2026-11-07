@@ -31,6 +31,14 @@ public sealed class WorkerClient : IAsyncDisposable
         info.Environment["DATA_DIR"] = DataDirectory;
         info.Environment["FORGE_HOME"] = Path.Combine(DataDirectory, "forge");
         info.Environment["NODE_USE_ENV_PROXY"] = "1";
+        if (System.Reflection.Assembly.GetEntryAssembly() == typeof(WorkerClient).Assembly)
+        {
+            info.Environment["MAGICTESTER_HOST"] = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot locate the native application host");
+            // dotnet EXECUTABLE.dll is supported as well as a published apphost.
+            if (Path.GetFileNameWithoutExtension(Environment.ProcessPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+                info.Environment["MAGICTESTER_HOST_ASSEMBLY"] = Path.Combine(AppContext.BaseDirectory, "MagicTester.dll");
+            else info.Environment.Remove("MAGICTESTER_HOST_ASSEMBLY");
+        }
         string java = Path.Combine(home, "tools", "java", "bin");
         if (Directory.Exists(java)) { info.Environment["PATH"] = java + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"); info.Environment["JAVA_HOME"] = Path.GetDirectoryName(java); }
         process = Process.Start(info) ?? throw new InvalidOperationException("Could not start the local engine");

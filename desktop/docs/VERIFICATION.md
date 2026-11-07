@@ -5,6 +5,7 @@ Verified locally on Linux x64 on 7 November 2026. Windows checks run on the Wind
 ## Local results
 
 - Native .NET 10 / Avalonia 12.1.5 compilation: zero errors and zero warnings.
+- Native streaming archive checks passed for Unicode paths/data, destination traversal rejection and corrupt input.
 - Genuine Skia headless rendering of the native window and asynchronous clean shutdown: passed. The build workflow retains a screenshot.
 - C# executable → private Node worker → SQLite initialization/command handshake: passed with all nine formats. No HTTP listener, PostgreSQL or Redis is involved.
 - Engine contracts: all 84 passed against real cached card data, without skips, including persistence, frozen inputs, resource admission, runtime activation failure, checkpoints, deck rules and game history. On an empty cache, metadata-dependent tests skip explicitly.
@@ -22,7 +23,7 @@ The desktop workflow compiles and packages on both Windows x64 and Linux x64. Ea
 
 The release packages contain their runtime source URLs/checksums and SHA-256 archive files. Packaging does not sign executables. First setup and daily source refresh require network access; playing against downloaded pools uses local Forge processes.
 
-Packaging collects license and component notices from all resolved NuGet dependencies and .NET runtime packs. A local audit verified 29 package entries, including complete Avalonia/MicroCom/D-Bus MIT grants and .NET's third-party notices. Node, npm dependencies and linked Java retain their own notice files.
+Packaging collects license and component notices from all resolved NuGet dependencies and .NET runtime packs. A local audit verified 30 package entries, including complete Avalonia/MicroCom/D-Bus MIT grants and .NET's third-party notices. Node, npm dependencies and linked Java retain their own notice files.
 
 ## Efficiency and scope
 

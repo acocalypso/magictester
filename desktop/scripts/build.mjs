@@ -202,6 +202,7 @@ await fs.writeFile(
       rid,
       node: nodeVersion,
       avalonia: "12.1.5",
+      archiveDecoder: "SharpCompress 1.0.0 / System.Formats.Tar",
       javaImage:
         "Java 21 ALL-MODULE-PATH, compiler included; debug symbols, headers and manuals omitted",
       dotnet: "10.0",

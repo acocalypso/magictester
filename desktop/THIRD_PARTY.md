@@ -2,7 +2,7 @@
 
 MagicTester and the included project engine/bridge source are GPL-3.0-only; see `LICENSE` and `engine/bridge/FORGE_LICENSE.txt`. Corresponding source is published at https://github.com/acocalypso/magictester under the release tag.
 
-Avalonia is MIT-licensed. Microsoft .NET is MIT-licensed and includes third-party components under their upstream notices. Node.js is distributed under its included `tools/node/LICENSE`, which contains notices for its bundled components. npm dependency versions/licenses are recorded in `engine/package-lock.json` and their package folders.
+Avalonia and the SharpCompress streaming decoder are MIT-licensed. Microsoft .NET is MIT-licensed and includes third-party components under their upstream notices. Node.js is distributed under its included `tools/node/LICENSE`, which contains notices for its bundled components. npm dependency versions/licenses are recorded in `engine/package-lock.json` and their package folders.
 
 `licenses/nuget` retains the resolved NuGet metadata, copyright declarations, license grants and component notices for the native UI and bundled .NET runtime. `packages.json` indexes those files. MIT grants for packages declaring the MIT expression include their metadata's original copyright holder; package-provided license and third-party files are also retained.
 

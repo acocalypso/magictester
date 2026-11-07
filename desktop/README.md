@@ -53,7 +53,7 @@ export MAGICTESTER_NODE="$(command -v node)"
 dotnet run --project MagicTester.Desktop
 ```
 
-Development setup needs Java 21 JDK and `tar` on PATH. Release packages supply the compiler-enabled Java runtime. Windows supplies `tar.exe`; Linux uses system tar. First setup verifies every downloaded Forge archive and pinned patch source hash. A release can be tested without downloading Forge using `MagicTester --worker-check`.
+Development setup needs Java 21 JDK on PATH. Release packages supply the compiler-enabled Java runtime and a native C# streaming archive extractor. They do not need an external archive utility. Running the raw worker bootstrap without the desktop host still uses system tar. First setup verifies every downloaded Forge archive and pinned patch source hash. A release can be tested without downloading Forge using `MagicTester --worker-check`.
 
 ## Storage and operation
 
