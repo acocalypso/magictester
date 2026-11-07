@@ -44,3 +44,5 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
 }
+// Forge already contains the Android Guava implementation, including this API.
+configurations.configureEach { exclude(group = "com.google.guava", module = "listenablefuture") }
