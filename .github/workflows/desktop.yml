@@ -85,6 +85,7 @@ jobs:
             desktop/artifacts/*.tar.gz
             desktop/artifacts/*.sha256
             desktop/artifacts/desktop-ui.png
+            desktop/artifacts/desktop-setup-*.png
       - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:

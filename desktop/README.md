@@ -8,7 +8,7 @@ Download the package matching your operating system from the repository’s desk
 
 Use a machine with at least 4 GB RAM; 6–8 GB is recommended for Forge and concurrent analyses.
 
-On first launch, open **Setup & information → Download / update and validate Forge**. This downloads a checksummed stable Forge release and Scryfall card data and plays real validation games before activating the build. Internet and approximately 4–6 GB free space are needed for the initial download, installation and caches. No game results are fabricated.
+On first launch, the **setup assistant opens automatically**. Choose **Download & set up**. It shows the current step, measured download bytes/size/speed, archive-reading progress and completed validation checks. If a server does not supply a reliable size, the current step shows an activity indicator and bytes received. Cancel safely or retry a failed setup; verified cached card data is reused. Choose **Start testing a deck** when it finishes. The same assistant remains in **Setup & information** for updates. This downloads a checksummed stable Forge release and Scryfall card data and plays real validation games before activating the build. Internet and approximately 4–6 GB free space are needed for the initial download, installation and caches. No game results are fabricated.
 
 Linux requires a graphical desktop with X11/XWayland, glibc, OpenSSL 3, ICU, fontconfig, FreeType, libX11/libICE/libSM and working graphics libraries. Ubuntu 22.04/24.04 and comparable x64 distributions are the build targets. This is a portable application folder, not a Linux container. Windows 10/11 x64 is supported. ARM and macOS packages are not currently produced. Releases are unsigned; the workflow does not claim code signing.
 

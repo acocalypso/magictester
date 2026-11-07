@@ -15,7 +15,7 @@ namespace MagicTester.Desktop;
 public sealed class MainWindow : Window
 {
     readonly TabControl tabs = new();
-    readonly TextBlock connection = Text("Starting the local engine…"), capacity = Text(""), message = Text(""), setupProgress = Text(""), poolInfo = Text(""), summary = Text(""), resultTitle = Text("Select a run from the queue."), validation = Text("");
+    readonly TextBlock connection = Text("Starting the local engine…"), capacity = Text(""), message = Text(""), poolInfo = Text(""), summary = Text(""), resultTitle = Text("Select a run from the queue."), validation = Text("");
     readonly ComboBox format = new(), pool = new(), gameMode = new(), distribution = new();
     readonly TextBox name = new() { Text = "My deck" }, deck = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 400, PlaceholderText = "Commander\n1 Your Commander\n\nDeck\n…remaining cards…", FontFamily = new FontFamily("monospace") }, link = new() { PlaceholderText = "Moxfield or Archidekt public deck URL" };
     readonly NumericUpDown matchLimit = new() { Minimum = 3, Maximum = 9, Value = 5, Increment = 1, FormatString = "0" };
@@ -28,13 +28,15 @@ public sealed class MainWindow : Window
     readonly List<PodChoice> pods = [];
     readonly Button start, addPod;
     readonly TabItem resultsTab, queueTab;
+    readonly TabItem setupTab;
+    readonly SetupAssistant setupAssistant;
     WorkerClient? worker;
     FileStream? instanceLock;
     DispatcherTimer? timer;
     string? selectedJob;
     string revision = "";
     int runPage, observationPage;
-    bool polling, closing;
+    bool polling, closing, initialStatusRead, setupInFlight, setupCancelled;
     JsonNode? results;
     sealed record Row(JsonNode Data, string Label) { public override string ToString() => Label; }
     sealed record FormatChoice(string Id, string Name) { public override string ToString() => Name; }
@@ -77,7 +79,11 @@ public sealed class MainWindow : Window
         runs.MaxHeight = 260; runs.MinHeight = 120; observations.MaxHeight = 200;
         runs.DoubleTapped += async (_, _) => await Safe(OpenRunDetails); observations.DoubleTapped += async (_, _) => await Safe(OpenObservation); tabs.Items.Add(resultsTab);
         tabs.Items.Add(Tab("Opponent pools", Stack(Text("Daily sources and saved pools", 24), Text("Each daily pool keeps its reporting window, source, shares and decklists. Commander sourcing uses a competitive cEDH population, not a universal casual Commander meta. Reference pools are integration decks, not tournament data."), Button("Refresh selected format’s daily pool", RefreshMeta), Button("Import JSON or CSV pool…", ImportPool), Button("Inspect selected pool decklists", ShowPoolDecks), autoMeta, Button("Save refresh preference", async () => { await Call("preferences", new { autoMeta = autoMeta.IsChecked == true }); message.Text = "Refresh preference saved."; }))));
-        tabs.Items.Add(Tab("Setup & information", Stack(Text("Your local engine", 24), Text("Release packages include .NET, Node and a Java 21 JDK. First setup downloads verified Forge and card data, then validates real engine contracts. It can take several minutes and needs internet and free disk space. Latest stable Forge is checked hourly; metadata is refreshed daily while the app is open. Cached games need a stable-version check from the last 26 hours."), Button("Download / update and validate Forge", SetupEngine), Button("Refresh card metadata and validate Forge", async () => await SetupEngine(true)), setupProgress, settingsLog, Button("Open local data folder", OpenDataFolder), Text("Resource limits\nThe engine checks allocated CPUs and free memory before starting JVMs. The default budget is two CPU cores and a 1 GiB Java heap plus 512 MiB overhead per JVM, with additional memory headroom. Capacity is shared across analyses; it falls when memory is scarce. Games inside one BO3 stay sequential. No result is fabricated or inferred from a timeout."), Text("Deck format\nPut commanders under a Commander heading and the other cards under Deck. Commander decks total 100 cards including eligible commander pairs. Companions have their own Companion heading. Formats and card support are validated before play."), Text("History and retry\nEvery game can show recorded actions in turn order. Partial logs and older attempts are labelled. Resume retains completed checkpoints and the old clock; retrying with a new clock starts a separate run with the same saved opponents and seeds."))));
+        setupAssistant = new SetupAssistant(SetupEngine, () => Safe(CancelSetup), () => Safe(async () => { await Refresh(); await LoadPools(); tabs.SelectedIndex = 0; }), () => tabs.SelectedIndex = 0);
+        setupTab = Tab("Setup & information", Stack(setupAssistant, Button("Open local data folder", OpenDataFolder),
+            new Expander { Header = "How setup and simulations work", Content = Stack(Text("The app downloads the latest stable Forge engine and card data, verifies and extracts the files, prepares card compatibility data, then checks the rules and plays validation games. Engine updates activate only when these checks pass."), Text("Resource limits\nThe engine checks available CPUs and memory before starting games. The default budget is two CPU cores and a 1 GiB Java heap plus overhead per JVM, with memory reserved for the OS. Capacity is shared across analyses."), Text("Deck format\nPut commanders under a Commander heading and the remaining cards under Deck. Eligible commander pairs and companions are checked before play."), Text("Daily refresh\nForge updates are checked hourly and card metadata daily while the app is open. A recent stable-release check is required before starting an analysis.")) },
+            new Expander { Header = "Setup activity and diagnostics", Content = settingsLog }));
+        tabs.Items.Add(setupTab);
         Opened += async (_, _) => await Safe(StartWorker);
         Closing += OnClosing;
     }
@@ -98,7 +104,7 @@ public sealed class MainWindow : Window
     {
         var data = Environment.GetEnvironmentVariable("MAGICTESTER_DATA") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagicTester"); Directory.CreateDirectory(data);
         instanceLock = new FileStream(Path.Combine(data, "desktop-ui.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        worker = new WorkerClient(); worker.Notification += (kind, payload) => Dispatcher.UIThread.Post(() => { if (kind == "setup") { setupProgress.Text = S(payload, "message"); settingsLog.Children.Add(Text(S(payload, "message"))); if (settingsLog.Children.Count > 40) settingsLog.Children.RemoveAt(0); } else if (kind is "warning" or "disconnected") message.Text = S(payload, "message").Length == 0 ? S(payload) : S(payload, "message"); });
+        worker = new WorkerClient(); worker.Notification += (kind, payload) => Dispatcher.UIThread.Post(() => { if (kind == "setup-progress") setupAssistant.Apply(payload); else if (kind == "setup" && S(payload, "event") is not ("download_progress" or "extraction_progress")) { settingsLog.Children.Add(Text(S(payload, "message"))); if (settingsLog.Children.Count > 40) settingsLog.Children.RemoveAt(0); } else if (kind is "warning" or "disconnected") message.Text = S(payload, "message").Length == 0 ? S(payload) : S(payload, "message"); });
         await Refresh(); await LoadPools();
         timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) }; timer.Tick += async (_, _) => { if (polling || closing) return; polling = true; try { await Safe(Refresh); } finally { polling = false; } }; timer.Start();
     }
@@ -106,9 +112,12 @@ public sealed class MainWindow : Window
     {
         var state = await Call("status"); bool ready = state?["ready"]?.GetValue<bool>() == true;
         connection.Text = ready ? "Local workspace · Forge " + S(state?["forge"], "engineVersion") : "Setup required";
-        start.IsEnabled = ready && state?["setupBusy"]?.GetValue<bool>() != true;
+        start.IsEnabled = ready && !setupInFlight && state?["setupBusy"]?.GetValue<bool>() != true;
         var r = state?["resources"]; capacity.Text = $"{S(r, "active")} running batches · {S(r, "waiting")} waiting · up to {S(r, "max")} in parallel\n{S(r, "cpuCores")} CPU cores · {S(r, "availableMemoryMiB")} MiB available RAM · {S(r, "reason")}";
-        if (!ready) setupProgress.Text = S(state, "setupError");
+        setupAssistant.SetWorkspace(S(state, "dataDirectory"), ready);
+        setupAssistant.Apply(state?["setupProgress"]);
+        if (ready && state?["setupBusy"]?.GetValue<bool>() != true && S(state?["setupProgress"], "status") == "idle") setupAssistant.MarkReady();
+        if (!initialStatusRead) { initialStatusRead = true; if (!ready) tabs.SelectedItem = setupTab; }
         string? selection = (queue.SelectedItem as Row)?.Data["id"]?.ToString();
         var rows = state?["jobs"]?.AsArray().Select(j => new Row(j!.DeepClone(), $"{S(j?["input"], "name")}  ·  {S(j?["input"], "format")}  ·  {S(j, "state")}  ·  {S(j, "completed")}/{S(j?["input"], "games")} units  ·  {S(j?["input"], "clockSeconds")} s/game")).ToList() ?? [];
         queue.ItemsSource = rows; queue.SelectedItem = rows.FirstOrDefault(row => S(row.Data, "id") == selection);
@@ -236,7 +245,16 @@ public sealed class MainWindow : Window
         string text; if (file.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) { static string Quote(string s) => "\"" + s.Replace("\"", "\"\"") + "\""; var csv = new StringBuilder("opponent,games,wins,losses,draws,win_rate\n"); foreach (var p in results["matchups"]!.AsArray()) { var s = p!["summary"]; csv.AppendLine(string.Join(',', Quote(S(p, "name")), S(s, "games"), S(s, "wins"), S(s, "losses"), S(s, "draws"), S(s, "winRate"))); } text = csv.ToString(); } else text = results.ToJsonString(new() { WriteIndented = true }); await using var stream = await file.OpenWriteAsync(); using var writer = new StreamWriter(stream); await writer.WriteAsync(text); message.Text = "Export saved.";
     }
     async Task SetupEngine() => await SetupEngine(false);
-    async Task SetupEngine(bool refreshCards) { setupProgress.Text = "Preparing engine setup…"; await Call("setup", new { refreshCards }); await Refresh(); await LoadPools(); message.Text = "Engine and card data are ready."; }
+    async Task SetupEngine(bool refreshCards)
+    {
+        if (setupInFlight) return;
+        setupInFlight = true; setupCancelled = false; tabs.SelectedItem = setupTab;
+        setupAssistant.SetRequestRunning(true); setupAssistant.Begin(); settingsLog.Children.Clear();
+        try { await Call("setup", new { refreshCards }); await Refresh(); await LoadPools(); setupAssistant.MarkReady(); message.Text = "Engine and card data are ready."; }
+        catch (Exception error) { setupAssistant.Fail(setupCancelled ? "Setup cancelled. Restart when you are ready." : error.Message, setupCancelled); }
+        finally { setupInFlight = false; setupAssistant.SetRequestRunning(false); }
+    }
+    async Task CancelSetup() { setupCancelled = true; await Call("cancelSetup"); }
     Task OpenDataFolder() { if (worker is not null) Process.Start(new ProcessStartInfo { FileName = worker.DataDirectory, UseShellExecute = true }); return Task.CompletedTask; }
     async Task<IStorageFile?> Pick(string title, string[] patterns) => (await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = false, FileTypeFilter = [new("Supported files") { Patterns = patterns }] })).FirstOrDefault();
     static async Task<string> ReadFile(IStorageFile file, int max) { await using var stream = await file.OpenReadAsync(); if (stream.CanSeek && stream.Length > max) throw new IOException("File exceeds the supported size limit"); using var reader = new StreamReader(stream); string text = await reader.ReadToEndAsync(); if (Encoding.UTF8.GetByteCount(text) > max) throw new IOException("File exceeds the supported size limit"); return text; }
