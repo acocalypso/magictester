@@ -185,3 +185,12 @@ test("snow basic lands are exempt from copy limits", () => {
     true,
   );
 });
+
+test("commander export headings preserve both commanders and reset to the library", () => {
+  for (const heading of ["Commanders", "COMMANDERS:", "[Commanders]:", "Commanders (2)", "# [Commanders] (2)", "// COMMANDER", "Commander(s)", "Command zone"]) {
+    const result = parseDeck(`${heading}\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n98 Plains`);
+    assert.deepEqual(result.errors, [], heading);
+    assert.deepEqual(result.cards.filter(c => c.section === "COMMANDER").map(c => c.name), ["Ravos, Soultender", "Tymna the Weaver"], heading);
+    assert.equal(result.cards.find(c => c.name === "Plains")?.section, "MAINBOARD");
+  }
+});

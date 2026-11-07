@@ -44,19 +44,29 @@ export function parseDeck(text: string): {
     deck: "MAINBOARD",
     main: "MAINBOARD",
     mainboard: "MAINBOARD",
+    "main deck": "MAINBOARD",
     sideboard: "SIDEBOARD",
     commander: "COMMANDER",
+    commanders: "COMMANDER",
+    "commander(s)": "COMMANDER",
+    "command zone": "COMMANDER",
     companion: "COMPANION",
+    companions: "COMPANION",
     maybeboard: "MAYBEBOARD",
   };
   text.split(/\r?\n/).forEach((raw, i) => {
     let line = raw.trim();
-    if (!line || line.startsWith("#") || line.startsWith("//")) return;
-    const title = normalize(line.replace(/^\[|\]$|:$/g, ""));
+    if (!line) return;
+    const title = normalize(line
+      .replace(/^(?:#|\/\/)\s*/, "")
+      .replace(/:$/, "")
+      .replace(/\s*\(\d+\)$/, "")
+      .replace(/^\[|\]$/g, ""));
     if (aliases[title]) {
       section = aliases[title];
       return;
     }
+    if (line.startsWith("#") || line.startsWith("//")) return;
     let lineSection = section;
     if (/^SB:\s*/i.test(line)) {
       line = line.replace(/^SB:\s*/i, "");
@@ -67,7 +77,7 @@ export function parseDeck(text: string): {
       errors.push({
         code: "MALFORMED_LINE",
         line: i + 1,
-        message: "Expected a quantity followed by a card name.",
+        message: "Expected a quantity followed by a card name, or a section heading such as Deck or Commanders.",
       });
       return;
     }

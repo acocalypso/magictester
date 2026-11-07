@@ -145,7 +145,9 @@ public sealed class MainWindow : Window
     async Task Validate()
     {
         var result = await Call("validate", new { decklist = deck.Text ?? "", format = FormatId }); bool valid = result?["valid"]?.GetValue<bool>() == true;
-        validation.Text = valid ? "Deck validated. The cards, deck size and format requirements passed." : string.Join("\n", result?["errors"]?.AsArray().Select(e => S(e, "message")) ?? []);
+        var leaders = result?["cards"]?.AsArray().Where(c => S(c, "section") == "COMMANDER").Select(c => S(c, "name")).ToList() ?? [];
+        string leaderSummary = IsCommander && leaders.Count > 0 ? "Commanders: " + string.Join(" + ", leaders) + ".\n" : "";
+        validation.Text = leaderSummary + (valid ? "Deck validated. The cards, deck size and format requirements passed." : string.Join("\n", result?["errors"]?.AsArray().Select(e => (S(e, "line").Length > 0 ? "Line " + S(e, "line") + ": " : "") + S(e, "message")) ?? []));
         validation.Foreground = valid ? Brushes.LightGreen : Brushes.LightSalmon;
     }
     async Task StartRun()

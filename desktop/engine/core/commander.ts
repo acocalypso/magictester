@@ -20,8 +20,9 @@ export function validateCommanders(
   if (count < 1 || count > 2 || commanders.some((c) => c.quantity !== 1))
     errors.push({
       code: "COMMANDER_COUNT",
-      message:
-        "Designate one commander, or two different commanders with a compatible pairing ability.",
+      message: count === 0
+        ? "No commanders were found. Add a Commander or Commanders section, followed by each commander on its own '1 Card name' line. Put the remaining cards under Deck."
+        : "Designate one commander, or two different commanders with a compatible pairing ability, each listed once.",
     });
   const facts = commanders.map((c) => provider.engineFacts?.(c.name));
   for (const [i, c] of commanders.entries()) {
@@ -62,6 +63,11 @@ export function validateCommanders(
       message:
         "These commanders do not have compatible partner, Background or Doctor pairing abilities.",
     });
+  // An absent or unrecognized commander gives no reliable identity to compare
+  // against. Report the role/lookup problem instead of blaming every card.
+  if (count < 1 || count > 2 || commanders.length !== count ||
+      commanders.some((c) => c.quantity !== 1 || !provider.find(c.name)))
+    return errors;
   const identity = new Set(
     commanders.flatMap((c) => provider.find(c.name)?.colorIdentity || []),
   );

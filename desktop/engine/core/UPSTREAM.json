@@ -23,6 +23,7 @@
     "retry-options.ts": "a2f515b63c4a351285081a8a276d8f7fcc8c9057f0b6455b5c4bee9579047d71"
   },
   "adaptations": [
+    "domain.ts / commander.ts: plural/commented commander headings and non-cascading role errors (shared root fix)",
     "engine.ts: Windows classpath, process-tree cancellation, portable log filenames, Windows CRLF log parsing, explicit UTF-8 Java pipes",
     "runtime.mjs: standalone asset path",
     "forge-releases.mjs: bounded transient release API retries and cancellable discovery",

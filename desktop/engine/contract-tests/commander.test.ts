@@ -435,3 +435,21 @@ test(
     );
   },
 );
+
+test("Ravos and Tymna retain their shared identity under plural commander headings", enabled, async () => {
+  const p = await load();
+  for (const heading of ["Commander", "Commanders", "[Commanders] (2):", "// Commanders"]) {
+    const result = validateDeck(`${heading}\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n98 Plains`, "commander", p);
+    good(result); assert.equal(result.counts.commanders, 2); assert.equal(result.counts.mainboard, 98);
+  }
+  assert.ok(codes(validateDeck("Commanders\n1 Ravos, Soultender\n1 Tymna the Weaver\nDeck\n97 Plains\n1 Forest", "commander", p)).includes("COLOR_IDENTITY"));
+});
+test("missing commander roles do not generate a misleading library-wide identity cascade", enabled, async () => {
+  const p = await load();
+  const missing = validateDeck("100 Plains", "commander", p);
+  assert.ok(codes(missing).includes("COMMANDER_COUNT")); assert.ok(!codes(missing).includes("COLOR_IDENTITY"));
+  const unknown = validateDeck("Commanders\n1 Unrecognized Commander Name\nDeck\n99 Plains", "commander", p);
+  assert.ok(codes(unknown).includes("UNKNOWN_CARD")); assert.ok(!codes(unknown).includes("COLOR_IDENTITY"));
+  const colorless = validateDeck("Commander\n1 Kozilek, the Great Distortion\nDeck\n99 Plains", "commander", p);
+  assert.ok(codes(colorless).includes("COLOR_IDENTITY"), "Known colorless commanders must still reject colored cards");
+});
