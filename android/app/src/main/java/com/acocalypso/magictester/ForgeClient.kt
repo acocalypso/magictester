@@ -68,7 +68,7 @@ private class EngineConnection(private val slot: Int) {
                         }
                         override fun onServiceDisconnected(name: ComponentName) { if (continuation.isActive) {
                             Diagnostics.event("engine.disconnected",if(cancelled) "Engine stopped following cancellation" else "Engine process disconnected before returning a result",id,level=if(cancelled) "INFO" else "ERROR",details=JSONObject().put("pid",pid.get()))
-                            continuation.resumeWith(Result.failure(IllegalStateException("Forge stopped. The phone may have run out of memory, or this run was cancelled.")))
+                            continuation.resumeWith(Result.failure(IllegalStateException(if(cancelled) "Forge request was cancelled by MagicTester." else "Forge service disconnected before returning a result. Export diagnostics to check Android’s process-exit reason.")))
                         } }
                         override fun onBindingDied(name: ComponentName) = onServiceDisconnected(name)
                         override fun onNullBinding(name: ComponentName) = onServiceDisconnected(name)

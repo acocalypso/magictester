@@ -28,4 +28,22 @@ class ResourceAdmissionTest {
         }
         assertTrue(ForgeClient.activePids(context,id).isEmpty())
     }
+    @Test fun realBaselineBenchmarkFinishesBothGamesUnderAdvisoryReports() = runBlocking {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val store=RunStore(context)
+        val payload=JSONObject().put("title","Advisory benchmark regression").put("kind","benchmark").put("benchmarkMax",1).put("format","pauper").put("deck",Examples.burn).put("games",20).put("clockSeconds",120).put("seed",24681357).put("bestOf",1).put("players",2).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().put(JSONObject().put("name","Reference burn").put("text",Examples.burn)))
+        val id=store.create(payload)
+        try {
+            assertTrue(store.claim(id))
+            BenchmarkRunner.run(context,store,store.get(id)!!,resourceSnapshot={PerformanceSettings.resources(context).put("lowMemory",true).put("thermal",3)}) {}
+            val restored=store.get(id)!!
+            assertEquals(restored.label,"complete",restored.state)
+            val report=restored.payload.getJSONObject("benchmarkReport")
+            assertEquals(1,report.getInt("maxStable"));assertEquals(2,report.getInt("completedGames"))
+            assertEquals(2,store.successfulIndices(id).size)
+            assertTrue(report.getJSONArray("samples").getJSONObject(0).getBoolean("stable"))
+        } finally {ForgeClient.cancel(id);store.delete(id);store.close()}
+    }
+
 }

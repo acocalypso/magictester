@@ -22,6 +22,10 @@ class CapacityMathTest {
         assertEquals(1,CapacityMath.candidates(1024,12288,384,8,true,3))
         assertEquals(0,CapacityMath.candidates(400,12288,384,8,false,0))
         assertEquals(0,CapacityMath.candidates(2048,12288,384,8,false,4))
+        assertFalse(CapacityMath.stopBenchmark(1,6460,true,3))
+        assertTrue(CapacityMath.stopBenchmark(2,6460,true,3))
+        assertTrue(CapacityMath.stopBenchmark(1,6460,false,4))
+        assertTrue(CapacityMath.stopBenchmark(1,100,false,0))
     }
 
 }

@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 object BenchmarkRunner {
-    suspend fun run(context: Context,store: RunStore,run: Run,progress: (String)->Unit) {
+    suspend fun run(context: Context,store: RunStore,run: Run,resourceSnapshot: ()->JSONObject={PerformanceSettings.resources(context)},progress: (String)->Unit) {
         val payload=run.payload
         val profile=PerformanceSettings.profile(payload.getString("format"),payload.optInt("players",4))
         val samples=JSONArray()
@@ -26,9 +26,9 @@ object BenchmarkRunner {
         for(level in 1..maxLevel) {
             currentCoroutineContext().ensureActive()
             if(store.get(run.id)?.state!="running") break
-            val resources=PerformanceSettings.resources(context)
-            val capacity=PerformanceSettings.candidates(context,profile)
-            if(capacity<level) { report.put("stoppedReason","Available memory/CPU/thermal limits allow $capacity engines now.");break }
+            val resources=resourceSnapshot()
+            val capacity=CapacityMath.candidates(resources.getLong("availableMiB"),resources.getLong("totalMiB"),PerformanceSettings.processBudgetMiB(context,profile),resources.getInt("cores"),resources.getBoolean("lowMemory"),resources.getInt("thermal"))
+            if(capacity<level) { report.put("stoppedReason","Current capacity is $capacity engines: ${resources.getLong("availableMiB")} MiB available; thermal ${PerformanceSettings.thermalLabel(resources.getInt("thermal"))}; memory-pressure flag ${resources.getBoolean("lowMemory")}.").put("stopResources",resources);break }
             val started=SystemClock.elapsedRealtime()
             val active=ConcurrentHashMap.newKeySet<Int>()
             val peakActive=AtomicInteger(0)
@@ -36,6 +36,7 @@ object BenchmarkRunner {
             val peakPss=java.util.concurrent.atomic.AtomicLong()
             val minimumFree=java.util.concurrent.atomic.AtomicLong(resources.getLong("availableMiB"))
             var failure: String?=null
+            var stopResources: JSONObject?=null
             val stageStart=index
             progress("Benchmark: testing $level parallel engines")
             for(round in 0..1) {
@@ -43,10 +44,12 @@ object BenchmarkRunner {
                 val outcomes=supervisorScope {
                     val monitor=launch {
                         while(isActive) {
-                            val sample=PerformanceSettings.resources(context)
+                            val sample=resourceSnapshot()
                             minimumFree.updateAndGet { minOf(it,sample.getLong("availableMiB")) }
-                            if(sample.getInt("thermal")>=PowerManager.THERMAL_STATUS_CRITICAL || sample.getLong("availableMiB")<CapacityMath.SINGLE_RESERVE_MIB || (level>1 && (sample.getBoolean("lowMemory") || sample.getInt("thermal")>=PowerManager.THERMAL_STATUS_SEVERE))) {
+                            if(CapacityMath.stopBenchmark(level,sample.getLong("availableMiB"),sample.getBoolean("lowMemory"),sample.getInt("thermal"))) {
                                 failure="Android resource pressure: ${sample.getLong("availableMiB")} MiB available; thermal ${PerformanceSettings.thermalLabel(sample.getInt("thermal"))}; memory-pressure flag ${sample.getBoolean("lowMemory")}."
+                                stopResources=JSONObject(sample.toString())
+                                Diagnostics.event("benchmark.resource_stop",failure!!,run.id,level="WARN",details=stopResources)
                                 ForgeClient.cancel(run.id);break
                             }
                             delay(1000)
@@ -60,7 +63,7 @@ object BenchmarkRunner {
                                 val file=ForgeClient.execute(context,request,run.id,onGame={ event ->
                                     store.gameEvent(run.id,event)
                                     if(event.optString("type")=="game_started") { active.add(unit);peakActive.updateAndGet { maxOf(it,active.size) } } else if(event.optString("type")=="game_finished") active.remove(unit)
-                                },onMetrics={ metrics -> pids.add(metrics.getInt("pid"));peakPss.updateAndGet { maxOf(it,metrics.optLong("peakPssKiB")/1024) } },onReady={ if(ready.incrementAndGet()==level) ForgeClient.releaseBenchmark(run.id) },allowed={store.get(run.id)?.state=="running"}) { label,_ ->progress("Benchmark $level engines · $label") }
+                                },onMetrics={ metrics -> pids.add(metrics.getInt("pid"));peakPss.updateAndGet { maxOf(it,metrics.optLong("peakPssKiB")/1024) } },onReady={ if(ready.incrementAndGet()==level) ForgeClient.releaseBenchmark(run.id) },allowed={store.get(run.id)?.state=="running"},resourceSnapshot=resourceSnapshot) { label,_ ->progress("Benchmark $level engines · $label") }
                                 try {
                                     val destination=store.saveAttempt(run.id,file,unit) ?: throw CancellationException("Benchmark cancelled")
                                     val events=destination.readLines().filter {it.isNotBlank()}.map {JSONObject(it)}
@@ -72,7 +75,7 @@ object BenchmarkRunner {
                     } finally {monitor.cancelAndJoin()}
                 }
                 completed+=outcomes.count {it.isSuccess}
-                outcomes.firstOrNull {it.isFailure}?.exceptionOrNull()?.let { failure=it.message ?: "Engine failed during benchmark" }
+                outcomes.firstOrNull {it.isFailure}?.exceptionOrNull()?.let { if(failure==null) failure=it.message ?: "Engine failed during benchmark" }
                 store.update(run.id,"running","Benchmark $level engines: ${outcomes.count {it.isSuccess}}/$level games saved in round ${round+1}",completed,onlyIfRunning=true)
                 if(failure!=null) break
             }
@@ -85,6 +88,7 @@ object BenchmarkRunner {
             val sample=JSONObject().put("parallelism",level).put("completed",finished).put("expected",expected).put("elapsedMs",elapsed).put("gamesPerMinute",rate)
                 .put("peakSimultaneousGames",peakActive.get()).put("processIds",JSONArray(pids.toList())).put("peakProcessPssMiB",peakPss.get()).put("minimumFreeMemoryMiB",minimumFree.get()).put("stable",stable)
                 .put("reason",failure ?: if(!stable) "The requested games did not overlap; this concurrency level was not validated." else "All real games completed with overlapping engine processes.")
+            stopResources?.let {sample.put("stopResources",it)}
             samples.put(sample)
             if(stable) { successful+=level to rate;report.put("maxStable",level);report.put("processBudgetMiB",maxOf(384L,(peakPss.get()*1.3).toLong())) }
             save()
@@ -96,7 +100,7 @@ object BenchmarkRunner {
         if(store.get(run.id)?.state=="running") {
             val finalPayload=JSONObject(store.get(run.id)!!.payload.toString()).put("games",maxOf(1,completed)).put("benchmarkReport",report)
             store.updatePayload(run.id,finalPayload)
-            store.update(run.id,if(maxStable>0) "complete" else "failed",if(maxStable>0) "Benchmark complete: recommended ${report.getInt("recommended")}; highest validated $maxStable parallel engines." else "No stable benchmark level completed. Review diagnostic logs.",completed,onlyIfRunning=true)
+            store.update(run.id,if(maxStable>0) "complete" else "failed",if(maxStable>0) "Benchmark complete: recommended ${report.getInt("recommended")}; highest validated $maxStable parallel engines." else "Benchmark stopped: ${if(samples.length()>0) samples.getJSONObject(samples.length()-1).optString("reason") else report.optString("stoppedReason","No stable level completed. Export diagnostic logs.")}",completed,onlyIfRunning=true)
         }
     }
 }
