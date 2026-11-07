@@ -8,9 +8,9 @@ val prepareForge = tasks.register<Exec>("prepareForge") {
 }
 android {
     namespace = "com.acocalypso.magictester"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
-        applicationId = "com.acocalypso.magictester"; minSdk = 26; targetSdk = 37
+        applicationId = "com.acocalypso.magictester"; minSdk = 26; targetSdk = 36
         versionCode = providers.gradleProperty("versionCode").orElse("1").get().toInt()
         versionName = providers.gradleProperty("versionName").orElse("0.1.0").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
