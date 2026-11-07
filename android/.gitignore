@@ -1,0 +1,12 @@
+.gradle/
+**/build/
+local.properties
+signing/
+*.jks
+*.keystore
+*.p12
+artifacts/
+.tools/
+app/src/main/assets/forge-data.zip
+app/src/main/assets/engine-manifest.json
+app/src/main/assets/LICENSE.txt

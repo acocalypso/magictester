@@ -1,0 +1,46 @@
+[
+  {
+    "path": "forge/game/player/Player.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/player/Player.java",
+    "sha256": "f5353a9f4e69ea21437f336390d558aba0bcd8d4e9ec5fbd29d92edf4d0e7451",
+    "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception. Honor legal pregame wild-color choices from the registered deck rather than an empty-hand AI color guess.",
+    "replacements": [
+      {
+        "find": "if (game.getRules().hasAppliedVariant(GameType.Commander)) {",
+        "replace": "if (game.getRules().hasAppliedVariant(GameType.Commander) && !Boolean.getBoolean(\"magictester.duel\")) {"
+      },
+      {
+        "find": "        PlayerZone commandZone = getZone(ZoneType.Command);\n        companion = game.getAction().moveTo(ZoneType.Command, companion, null, AbilityKey.newMap());",
+        "replace": "        if (companion == null) return; // Optional companion choice can be declined.\n        PlayerZone commandZone = getZone(ZoneType.Command);\n        companion = game.getAction().moveTo(ZoneType.Command, companion, null, AbilityKey.newMap());"
+      },
+      {
+        "find": "            byte chosenColor = p.getController().chooseColor(prompt, cmdColorsa, ColorSet.WUBRG);",
+        "replace": "            String configured = System.getProperty(\"magictester.commanderColor.\" + p.getName() + \".\" + cmd.getName());\n            byte chosenColor = configured == null ? p.getController().chooseColor(prompt, cmdColorsa, ColorSet.WUBRG) : MagicColor.fromName(configured);\n            if (Integer.bitCount(chosenColor & 0xff) != 1) throw new IllegalStateException(\"Invalid pregame commander color\");"
+      }
+    ]
+  },
+  {
+    "path": "forge/game/staticability/StaticAbilityCantBeCast.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/staticability/StaticAbilityCantBeCast.java",
+    "sha256": "60c3aed9c191920f8bad88e5dd5fee47af0c97fcd1e183506306135b4da9b382",
+    "find": "        card.setCastSA(spell);\n\n        final Game game = activator.getGame();",
+    "replace": "        card.setCastSA(spell);\n\n        final Game game = activator.getGame();\n        // MagicTester Duel rule: after the first command-zone commander cast,\n        // another designated commander cannot be cast from that zone this game.\n        // The native commander-tax counters track that exact cast history.\n        if (Boolean.getBoolean(\"magictester.duel\") && card.isCommander()\n                && card.isInZone(ZoneType.Command) && card.getOwner().equals(activator)\n                && activator.getTotalCommanderCast() > 0 && activator.getCommanderCast(card) == 0) {\n            return true;\n        }",
+    "purpose": "Lock other designated commanders after the first command-zone cast, retaining recasts and casting from other zones."
+  },
+  {
+    "path": "forge/ai/PlayerControllerAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/PlayerControllerAi.java",
+    "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
+    "find": "if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
+    "replace": "if (lastOutcome.getWinningPlayer() != null && lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
+    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner."
+  },
+  {
+    "path": "forge/ai/ability/ChooseCompanionAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/ChooseCompanionAi.java",
+    "sha256": "50e031fcf8d59c4a4b07c58b288d68dd7ddc9a4862577b37b3aed8128c93717c",
+    "find": "        Collections.shuffle(cards, MyRandom.getRandom());",
+    "replace": "        String requested = System.getProperty(\"magictester.companion.\" + ai.getLobbyPlayer().getName());\n        if (requested != null) {\n            for (Card card : cards) if (card.getName().equals(requested)) return card;\n            return null; // Do not silently substitute a different companion.\n        }\n        Collections.shuffle(cards, MyRandom.getRandom());",
+    "purpose": "Honor the submitted companion candidate; decline rather than substitute another card if it is not eligible after sideboarding."
+  }
+]
