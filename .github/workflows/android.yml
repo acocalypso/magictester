@@ -95,7 +95,8 @@ jobs:
           - api: '26'
             target: google_apis
           - api: '35'
-            target: google_apis
+            # Full AOSP image avoids Pixel Launcher's background ANR overlay in CI.
+            target: default
           - api: '37.2'
             target: google_apis_ps16k
     runs-on: ubuntu-24.04

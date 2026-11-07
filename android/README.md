@@ -129,3 +129,5 @@ The library uses private SQLite storage and survives app restarts and compatible
 From 0.1.4 onward, release acceptance downloads the published 0.1.3 APK, verifies its checksum and pinned certificate, then checks that installing the new APK over it retains private app data. This uses an actual release as the baseline.
 
 Match cards and observed-game pages label the submitted deck **You**, with distinct **Opponent 1/2/3** labels and a legend containing each actual deck name. Action histories apply the same display aliases to earlier saved games. BO3 game views retain the parent match index when choosing opponent names. Stored engine identities and exported evidence are preserved.
+
+The Android 15 acceptance job uses the official full AOSP system image. The Google API image's Pixel Launcher produced background ANR dialogs that intercepted system Back during UI tests; app failures remain visible and are not dismissed or suppressed. Android 8 and the Android 17 16 KiB checks retain their Google API images.
