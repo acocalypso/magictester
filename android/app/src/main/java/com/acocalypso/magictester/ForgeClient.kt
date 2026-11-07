@@ -54,6 +54,11 @@ private class EngineConnection(private val slot: Int) {
                     })
                     connection = object : ServiceConnection {
                         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                            // Android can reconnect a killed service after this continuation has finished.
+                            if(!continuation.isActive || cancelled) {
+                                runCatching { Messenger(binder).send(Message.obtain(null,9)) }
+                                return
+                            }
                             engineBinder=binder
                             remote=Messenger(binder)
                             Diagnostics.event("engine.bound","Connected to local Forge service",id)
