@@ -21,17 +21,20 @@ class RunStore(context: Context) : SQLiteOpenHelper(context, "runs.db", null, 1)
     override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) = error("Unsupported database migration")
     private fun row(c: android.database.Cursor)=Run(c.getString(0),c.getString(1),c.getString(2),c.getInt(3),JSONObject(c.getString(4)))
     fun all(): List<Run> = readableDatabase.rawQuery("SELECT id,state,label,completed,payload FROM runs ORDER BY created DESC,rowid DESC", null).use { c -> buildList { while(c.moveToNext()) add(row(c)) } }
+    fun recent(limit: Int): List<Run> = readableDatabase.rawQuery("SELECT id,state,label,completed,payload FROM runs ORDER BY created DESC,rowid DESC LIMIT ?",arrayOf(limit.coerceIn(1,100).toString())).use { c -> buildList { while(c.moveToNext()) add(row(c)) } }
     fun get(id: String): Run? = readableDatabase.rawQuery("SELECT id,state,label,completed,payload FROM runs WHERE id=?",arrayOf(id)).use { if(it.moveToFirst()) row(it) else null }
     fun create(payload: JSONObject): String {
         require(payload.toString().toByteArray().size <= 1000000) { "The frozen deck pool exceeds 1 MB. Select fewer opponents." }
         val id = UUID.randomUUID().toString()
         writableDatabase.insertOrThrow("runs", null, ContentValues().apply { put("id",id);put("state","queued");put("label","Waiting for the local engine");put("payload",payload.toString());put("created",System.currentTimeMillis()) })
         File(directory,id).mkdirs()
+        Diagnostics.event("run.queued","Analysis added to the local queue",id,details=JSONObject().put("format",payload.optString("format")).put("games",payload.optInt("games")).put("clockSeconds",payload.optInt("clockSeconds")).put("seed",payload.optInt("seed")))
         RunEvents.changed();return id
     }
     fun next(): Run? = readableDatabase.rawQuery("SELECT id,state,label,completed,payload FROM runs WHERE state='queued' ORDER BY created,rowid LIMIT 1",null).use { if(it.moveToFirst()) row(it) else null }
     fun update(id: String, state: String, label: String, completed: Int? = null) {
         writableDatabase.update("runs", ContentValues().apply { put("state", state);put("label",label);completed?.let { put("completed",it) } },"id=?",arrayOf(id))
+        Diagnostics.event("run.$state",label,id,level=if(state=="failed") "ERROR" else "INFO",details=JSONObject().put("completed",completed ?: JSONObject.NULL))
         RunEvents.changed()
     }
     fun recover() { writableDatabase.execSQL("UPDATE runs SET state='interrupted',label='Android stopped this run. Resume to continue from saved results.' WHERE state='running'") }
@@ -40,6 +43,7 @@ class RunStore(context: Context) : SQLiteOpenHelper(context, "runs.db", null, 1)
         require(run.state !in listOf("running", "queued", "complete")); require(clock in 5..300)
         val payload = run.payload.put("clockSeconds",clock)
         writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());put("state","queued");put("label","Resuming unfinished matches") },"id=?",arrayOf(id))
+        Diagnostics.event("run.resumed","Unfinished matches requeued",id,details=JSONObject().put("clockSeconds",clock))
         RunEvents.changed()
     }
     fun file(id: String, name: String) = File(File(directory,id),name)

@@ -18,6 +18,8 @@ object ForgeClient {
     fun cancel(id: String) { if (owner == id) { cancelled=true;pid.getAndSet(0).takeIf { it > 0 }?.let { Process.killProcess(it) } } }
     suspend fun execute(context: Context, request: JSONObject, id: String, progress: (String, Float?) -> Unit): File = mutex.withLock {
         owner = id;cancelled=false
+        request.put("diagnosticRunId",id)
+        Diagnostics.event("engine.request","Starting a local engine request",id,details=JSONObject().put("operation",request.optString("operation","simulate")).put("clockSeconds",request.optInt("clockSeconds")).put("bestOf",request.optInt("bestOf",1)))
         val directory = File(context.filesDir, "ipc").apply { mkdirs() }
         val input = File(directory, UUID.randomUUID().toString() + ".json")
         withContext(Dispatchers.IO) { input.writeText(request.toString()) }
@@ -46,11 +48,15 @@ object ForgeClient {
                     connection = object : ServiceConnection {
                         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
                             engineBinder=binder
+                            Diagnostics.event("engine.bound","Connected to local Forge service",id)
                             try { binder.linkToDeath({ stopped.complete(Unit) },0) } catch(_:RemoteException) { stopped.complete(Unit) }
                             try { Messenger(binder).send(Message.obtain(null, 1).apply { replyTo = handler; data = Bundle().apply { putString("path", input.absolutePath) } }) }
                             catch (error: Exception) { if (continuation.isActive) continuation.resumeWith(Result.failure(error)) }
                         }
-                        override fun onServiceDisconnected(name: ComponentName) { if (continuation.isActive) continuation.resumeWith(Result.failure(IllegalStateException("Forge stopped. The phone may have run out of memory, or this run was cancelled."))) }
+                        override fun onServiceDisconnected(name: ComponentName) { if (continuation.isActive) {
+                            Diagnostics.event("engine.disconnected",if(cancelled) "Engine stopped following cancellation" else "Engine process disconnected before returning a result",id,level=if(cancelled) "INFO" else "ERROR",details=JSONObject().put("pid",pid.get()))
+                            continuation.resumeWith(Result.failure(IllegalStateException("Forge stopped. The phone may have run out of memory, or this run was cancelled.")))
+                        } }
                         override fun onBindingDied(name: ComponentName) = onServiceDisconnected(name)
                         override fun onNullBinding(name: ComponentName) = onServiceDisconnected(name)
                     }
@@ -58,7 +64,11 @@ object ForgeClient {
                     continuation.invokeOnCancellation { ForgeClient.cancel(id) }
                 }
             }
+        } catch(error:Throwable) {
+            Diagnostics.event("engine.request_failed",error.message ?: "Engine request failed",id,level=if(cancelled) "INFO" else "ERROR",error=error)
+            throw error
         } finally {
+            Diagnostics.event("engine.retired","Disposing the engine process after this request",id,details=JSONObject().put("pid",pid.get()).put("cancelled",cancelled))
             withContext(NonCancellable + Dispatchers.Main) { connection?.let { try { context.unbindService(it) } catch (_: IllegalArgumentException) { } }; ForgeClient.cancel(id); owner = "" }
             withContext(NonCancellable) { if(engineBinder != null) withTimeoutOrNull(3000) { stopped.await() } }
             input.delete()

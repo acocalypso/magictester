@@ -30,6 +30,21 @@ class ForgeRuntimeTest {
         assertTrue(result.getJSONObject("actionLog").getJSONArray("entries").length() > 20)
         assertTrue(events.any { it.optString("type") == "batch_complete" })
     }
+    @Test fun engineFailureRetainsFullJavaErrorForDiagnosticExport() {
+        val runId="diagnostic-engine-acceptance"
+        try {
+            runBlocking { ForgeClient.execute(context,JSONObject().put("rawDecks",JSONArray(listOf("Deck\n60 No Such MagicTester Card",Examples.burn))).put("format","pauper").put("games",1).put("seed",1).put("clockSeconds",5).put("mode","constructed"),runId) { _,_ -> } }
+            fail("Unsupported cards must fail")
+        } catch(error:IllegalStateException) { assertTrue(error.message.orEmpty(),error.message.orEmpty().contains("supported card script")) }
+        val bytes=java.io.ByteArrayOutputStream()
+        DiagnosticExporter.write(context,bytes,runId)
+        val files=java.util.zip.ZipInputStream(bytes.toByteArray().inputStream()).use { zip -> buildMap<String,String> {
+            while(true) { val entry=zip.nextEntry ?: break;put(entry.name,zip.bufferedReader().readText());zip.closeEntry() }
+        } }
+        assertTrue(files.getValue("errors.txt"),files.getValue("errors.txt").contains("EngineService"))
+        assertTrue(files.values.any { it.contains("No Such MagicTester Card") })
+        assertTrue(files.keys.any { it.endsWith("stderr.log") })
+    }
     @Test fun nativeBestOfThreeKeepsMatchAndGameEvidence() {
         val events=game("pauper",listOf(Examples.burn+"\nSideboard\n4 Pyroblast\n",Examples.burn+"\nSideboard\n4 Blue Elemental Blast\n"),31337,3)
         val result=events.first { it.optString("type") == "result" }.getJSONObject("result")

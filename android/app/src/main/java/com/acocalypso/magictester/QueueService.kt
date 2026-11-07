@@ -44,6 +44,7 @@ class QueueService : Service() {
                 store.update(run.id,"running","Checking available memory")
                 try {
                     require(run.payload.getString("engineVersion") == BuildConfig.FORGE_VERSION) { "This run uses a different Forge version. Create a new analysis to keep its evidence consistent." }
+                    Diagnostics.event("run.started","Analysis began on the local engine",run.id,details=DiagnosticExporter.device(this))
                     val memory = ActivityManager.MemoryInfo().also { getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
                     require(!memory.lowMemory && memory.availMem > 350L*1024*1024) { "Not enough free memory for Forge. Close other apps, then resume this run." }
                     val maxHeap = getSystemService(ActivityManager::class.java).largeMemoryClass
@@ -59,6 +60,9 @@ class QueueService : Service() {
                         if (store.get(run.id)?.state != "running") break
                         val power = getSystemService(PowerManager::class.java)
                         if (Build.VERSION.SDK_INT >= 29 && power.currentThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE) error("The phone is too hot. Let it cool, then resume this run.")
+                        val resources=DiagnosticExporter.device(this)
+                        Diagnostics.event("attempt.started","Starting match ${unit+1}/$count",run.id,details=resources.put("unit",unit).put("clockSeconds",payload.getInt("clockSeconds")).put("seed",payload.getInt("seed")))
+                        require(!resources.getBoolean("lowMemory") && resources.getLong("freeMemoryMiB")>350) { "Free memory is too low for another match. Close other apps, then resume this run." }
                         val timeout = payload.getInt("clockSeconds")
                         wake.acquire((timeout * (if(payload.optInt("bestOf") == 3) 5 else 1) + 300)*1000L)
                         val decks = JSONArray().put(payload.getString("deck"))
@@ -83,6 +87,7 @@ class QueueService : Service() {
                     }
                     if (store.get(run.id)?.state == "running") store.update(run.id,"complete","All requested matches have recorded outcomes",count)
                 } catch (error: Throwable) {
+                    Diagnostics.event("run.exception",error.message ?: "Local analysis failed",run.id,level=if(store.get(run.id)?.state=="cancelled") "INFO" else "ERROR",error=error)
                     if (store.get(run.id)?.state == "running") store.update(run.id,"failed",error.message ?: "The local engine stopped.")
                 } finally { ForgeClient.cancel(run.id); if(wake.isHeld) wake.release() }
             }

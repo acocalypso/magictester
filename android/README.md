@@ -77,3 +77,13 @@ Preserve an offline backup of this keystore. Every upgrade must use the same sig
 Decks/jobs/evidence remain in private app storage, with user-selected JSON export through Android's document picker. Public deck imports contact their respective hosts; Scryfall receives card names for legality checks, MTGTop8 serves public opponent data, and GitHub serves version information. Uninstalling clears private app data; export evidence first.
 
 MagicTester and its Forge integration are GPL-3.0-only. See [LICENSE](LICENSE), the pinned source manifests under `engine/`, the repository source at the corresponding release tag, and the upstream/third-party notices embedded in the engine JAR/APK. Magic: The Gathering is owned by Wizards of the Coast; this project is independent.
+
+## Diagnostic log export
+
+Choose **Setup → Export diagnostic logs** for startup/setup/recent-run troubleshooting, or **Runs → select a run → Export diagnostic logs** for one analysis. Choose a destination in Android's document picker. Export remains available while setup or a simulation is running.
+
+The ZIP opens with `README.txt` and `summary.txt`, followed by a chronological timeline, full error traces, Forge stdout/stderr, thread stacks captured on timeouts, Android process-exit reasons where supported, current device/resource details, engine version/checksums and recent attempt evidence. Normal engine process cleanup is explicitly labeled, so its expected signal exit can be distinguished from failures. Logcat collection is best effort and limited to what Android permits this app to read.
+
+Complete decklists are excluded by default and can be included in the export dialog. Error messages and game actions may still contain card names. No device serial number, Android ID or account credentials are requested. Logs remain in private app storage until exported; streams are capped at 2 MiB, with a seven-day/24 MiB retention budget. The timeline includes the last 5,000 matching events. Export limits and omitted files are listed in `omissions.txt`. Full results can be exported separately.
+
+New app crashes are recorded before the normal Android crash handler runs. Android 11+ can also report historical crashes, low-memory kills and other exit reasons. A new installation cannot recover private diagnostic files removed by uninstalling an older debug build.

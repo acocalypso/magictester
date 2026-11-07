@@ -10,7 +10,7 @@ class MetaJobService : JobService() {
             val meta = Metagame(this@MetaJobService)
             for(format in DeckText.formats) {
                 ensureActive()
-                try { meta.refresh(format) } catch(error:Exception) { getSharedPreferences("meta-status",MODE_PRIVATE).edit().putString(format,error.message).apply() }
+                try { meta.refresh(format) { ensureActive() } } catch(error:Exception) { Diagnostics.event("metadata.refresh_failed",error.message ?: "Scheduled refresh failed",level="ERROR",details=org.json.JSONObject().put("format",format),error=error); getSharedPreferences("meta-status",MODE_PRIVATE).edit().putString(format,error.message).apply() }
             }
             try { ForgeRelease.check(this@MetaJobService) } catch(_:Exception) { }
             jobFinished(params,false)

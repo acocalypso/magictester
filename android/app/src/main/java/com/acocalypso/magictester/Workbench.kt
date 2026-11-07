@@ -21,6 +21,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var selected by mutableStateOf<Set<String>>(emptySet())
     var runs by mutableStateOf<List<Run>>(emptyList())
     var busy by mutableStateOf(false)
+    var exportingDiagnostics by mutableStateOf(false)
     var status by mutableStateOf("")
     var fraction by mutableStateOf<Float?>(null)
     var message by mutableStateOf("")
@@ -28,8 +29,12 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var latest by mutableStateOf(prefs.getString("latest","") ?: "")
     var latestPool by mutableStateOf<JSONObject?>(null)
     init {
-        MetaJobService.schedule(app); loadPool()
-        viewModelScope.launch { RunEvents.changes.collect { runs = withContext(Dispatchers.IO) { store.all() } } }
+        runCatching { MetaJobService.schedule(app) }.onFailure { Diagnostics.event("metadata.schedule_failed","Daily refresh could not be scheduled",level="ERROR",error=it) }
+        loadPool()
+        viewModelScope.launch { RunEvents.changes.collect {
+            try { runs = withContext(Dispatchers.IO) { store.all() } }
+            catch(error:Exception) { Diagnostics.event("database.read_failed","History could not be read",level="ERROR",error=error);message="Local history could not be opened. Export diagnostic logs from Setup for details." }
+        } }
         viewModelScope.launch { try { latest = withContext(Dispatchers.IO) { ForgeRelease.check(app) } } catch(_:Exception) { } }
     }
     fun saveDraft() { prefs.edit().putString("deck",deck).putString("title",title).putString("format",format).apply() }
@@ -45,14 +50,16 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         if(busy) return
         busy=true;message="";fraction=null
         viewModelScope.launch {
-            try { block() } catch(error:Throwable) { if(error is CancellationException) throw error; message=error.message ?: "The operation failed." }
+            try { block() } catch(error:Throwable) { if(error is CancellationException) throw error; Diagnostics.event("operation.failed",error.message ?: "Operation failed",level="ERROR",error=error); message=error.message ?: "The operation failed." }
             finally { busy=false;fraction=null }
         }
     }
     fun setup() = launchWork {
+        Diagnostics.event("setup.started","Local engine setup requested", "setup")
         status="Preparing on-device engine"
         val result = ForgeClient.execute(app,JSONObject().put("operation","setup"),"setup") { label,value -> status=label;fraction=value }
         check(JSONObject(withContext(Dispatchers.IO) { result.readText() }).getBoolean("ready"))
+        Diagnostics.event("setup.complete","Local engine setup completed", "setup")
         prefs.edit().putBoolean("setupReady",true).apply();firstSetup=false;message="Forge is installed and initialized. Import your deck and add opponents to begin."
         withContext(Dispatchers.IO) { result.delete() }
     }
@@ -99,6 +106,20 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             .put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
         withContext(Dispatchers.IO) { store.create(payload) };startQueue();message="Analysis queued. Follow it in Runs; completed evidence is saved after every match."
+    }
+    fun exportDiagnostics(uri: android.net.Uri, runId: String?, includeDecklists: Boolean) {
+        if(exportingDiagnostics) return
+        exportingDiagnostics=true
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val stream=app.contentResolver.openOutputStream(uri) ?: error("Could not open the selected destination")
+                    stream.use { DiagnosticExporter.write(app,it,runId,includeDecklists) }
+                }
+                message="Diagnostic ZIP saved. Open summary.txt first; errors and engine traces are included."
+            } catch(error:Exception) { Diagnostics.event("diagnostics.failed","Could not save diagnostic ZIP",runId,level="ERROR",error=error);message=error.message ?: "Diagnostic export failed." }
+            finally { exportingDiagnostics=false }
+        }
     }
     fun startQueue() { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java)) }
     fun cancel(id: String) { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java).setAction("cancel").putExtra("id",id)) }

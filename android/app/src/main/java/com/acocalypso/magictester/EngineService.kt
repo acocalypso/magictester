@@ -23,10 +23,22 @@ class EngineService : Service() {
             executor.execute {
                 val requestFile = File(path)
                 val resultFile = File(path + ".result")
+                var runId: String?=null
+                var console: Diagnostics.ConsoleCapture?=null
                 try {
                     val request = JSONObject(requestFile.readText())
-                    val home = EngineAssets.install(this@EngineService) { label, fraction -> send(1, label, fraction ?: -1f) }
-                    AndroidForgeBridge.initialize(home.absolutePath) { send(1, it) }
+                    val requestRunId=request.optString("diagnosticRunId","engine")
+                    runId=requestRunId
+                    console=Diagnostics.captureConsole(this@EngineService,requestRunId)
+                    Diagnostics.event("engine.started","Forge process is preparing the request",runId,details=DiagnosticExporter.device(this@EngineService))
+                    var lastProgress=""
+                    var lastBucket=-1
+                    val home = EngineAssets.install(this@EngineService) { label, fraction ->
+                        send(1,label,fraction ?: -1f)
+                        val stage=label.substringBefore('·').trim();val bucket=((fraction ?: -1f)*10).toInt()
+                        if(stage!=lastProgress || bucket!=lastBucket) { Diagnostics.event("engine.setup_progress",label,runId);lastProgress=stage;lastBucket=bucket }
+                    }
+                    AndroidForgeBridge.initialize(home.absolutePath) { send(1,it);Diagnostics.event("engine.initialized",it,runId) }
                     if (request.optString("operation") == "validate") {
                         val result = EngineValidation.validate(request.getString("text"), request.getString("format"), File(path + ".dck"))
                         resultFile.writeText(result.toString())
@@ -45,14 +57,22 @@ class EngineService : Service() {
                             request.put("decks", paths).put("companions", companions)
                         }
                         resultFile.bufferedWriter().use { writer ->
-                            AndroidForgeBridge.execute(request.toString()) { event -> writer.appendLine(event); writer.flush(); val json = JSONObject(event); if (json.optString("type") == "game_started") send(1, "Playing game ${json.optInt("gameIndex") + 1}") }
+                            AndroidForgeBridge.execute(request.toString()) { event -> writer.appendLine(event); writer.flush(); val json = JSONObject(event)
+                                when(json.optString("type")) {
+                                    "game_started" -> Diagnostics.event("game.started","Forge started an observed game",runId,details=JSONObject().put("unit",json.optInt("index")).put("game",json.optInt("gameIndex")).put("gameSeed",json.optInt("gameSeed")))
+                                    "result" -> { val result=json.getJSONObject("result");val termination=result.optString("termination");if(termination !in listOf("normal","rule_draw")) Diagnostics.threadDump(this@EngineService,requestRunId);Diagnostics.event("game.result","Game/match finished: $termination",runId,level=if(termination in listOf("normal","rule_draw")) "INFO" else "ERROR",details=JSONObject().put("unit",result.optInt("index")).put("termination",termination).put("durationMs",result.optLong("durationMs")).put("turns",result.optInt("turns")).put("clockSeconds",request.optInt("clockSeconds"))) }
+                                    "error" -> Diagnostics.event("game.error",json.optString("message","Forge reported an error"),runId,level="ERROR")
+                                }
+                                if (json.optString("type") == "game_started") send(1, "Playing game ${json.optInt("gameIndex") + 1}") }
                         }
                     }
                     send(2, resultFile.absolutePath)
                 } catch (error: Throwable) {
+                    Diagnostics.event("engine.error",error.message ?: "Forge process failed",runId,level="ERROR",error=error)
+                    error.printStackTrace()
                     resultFile.writeText(JSONObject().put("error", error.stackTraceToString().take(16000)).toString())
                     send(3, resultFile.absolutePath)
-                }
+                } finally { console?.restore() }
             }
         }
     })

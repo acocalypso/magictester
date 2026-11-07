@@ -34,6 +34,7 @@ private val charcoal = Color(0xFF141719)
 private val paper = Color(0xFFF2F2EE)
 private val accent = Color(0xFFB3CAD7)
 private val palette = darkColorScheme(primary=accent,onPrimary=charcoal,secondary=accent,onSecondary=charcoal,secondaryContainer=Color(0xFF2A3941),onSecondaryContainer=paper,tertiary=accent,onTertiary=charcoal,outlineVariant=Color(0xFF3D464C),background=charcoal,onBackground=paper,surface=Color(0xFF1E2225),onSurface=paper,surfaceVariant=Color(0xFF292F33),onSurfaceVariant=Color(0xFFB3B9BC),outline=Color(0xFF596269),error=Color(0xFFFFB4AB))
+private data class DiagnosticRequest(val runId: String?)
 class MainActivity : ComponentActivity() {
     private val model: Workbench by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +47,10 @@ class MainActivity : ComponentActivity() {
     var selectedRun by remember { mutableStateOf<String?>(null) }
     var deckDialog by remember { mutableStateOf<Pair<String,String>?>(null) }
     var exportRun by remember { mutableStateOf<String?>(null) }
+    var diagnosticRequest by remember { mutableStateOf<DiagnosticRequest?>(null) }
+    var includeDiagnosticDecks by remember { mutableStateOf(false) }
+    var pendingDiagnosticRun by remember { mutableStateOf<String?>(null) }
+    var pendingDiagnosticDecks by remember { mutableStateOf(false) }
     val context=androidx.compose.ui.platform.LocalContext.current
     val scope=rememberCoroutineScope()
     val notification=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -55,6 +60,9 @@ class MainActivity : ComponentActivity() {
     val export=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val id=exportRun
         if(uri != null && id != null) scope.launchIO(model) { context.contentResolver.openOutputStream(uri)!!.bufferedWriter().use { it.write(model.store.export(id)) } }
+    }
+    val exportLogs=androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if(uri!=null) model.exportDiagnostics(uri,pendingDiagnosticRun,pendingDiagnosticDecks)
     }
     LaunchedEffect(Unit) { if(Build.VERSION.SDK_INT >= 33) notification.launch(Manifest.permission.POST_NOTIFICATIONS) }
     Scaffold(containerColor=charcoal,bottomBar={ NavigationBar(containerColor=charcoal,tonalElevation=0.dp) {
@@ -67,15 +75,23 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.weight(1f));Text("Forge\n${BuildConfig.FORGE_VERSION}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider(color=MaterialTheme.colorScheme.surfaceVariant)
-            if(model.busy) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
+            if(model.busy || model.exportingDiagnostics) Column(Modifier.padding(horizontal=22.dp,vertical=10.dp)) { Text(if(model.exportingDiagnostics) "Collecting diagnostic logs" else model.status,fontSize=12.sp);Spacer(Modifier.height(8.dp));if(model.exportingDiagnostics || model.fraction == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else LinearProgressIndicator(progress={model.fraction ?: 0f},modifier=Modifier.fillMaxWidth()) }
             if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
                 0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{tab=2})
-                1 -> if(selectedRun == null) RunsScreen(model) { selectedRun=it } else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")})
+                1 -> if(selectedRun == null) RunsScreen(model) { selectedRun=it } else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)})
                 2 -> PoolsScreen(model) { deckDialog=it }
-                else -> SetupScreen(model)
+                else -> SetupScreen(model) { includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) }
             }
         }
+    }
+    diagnosticRequest?.let { request ->
+        AlertDialog(onDismissRequest={diagnosticRequest=null},title={Text("Export diagnostic logs")},text={Column {
+            Text(if(request.runId==null) "Save startup, setup and recent run diagnostics." else "Save the selected run's settings, errors and engine evidence.")
+            Spacer(Modifier.height(12.dp))
+            Text("Includes device/resource information, error traces and game actions, which may contain card names. Complete decklists are optional.",fontSize=13.sp)
+            Row(verticalAlignment=Alignment.CenterVertically) { Checkbox(includeDiagnosticDecks,{includeDiagnosticDecks=it});Text("Include complete decklists",fontSize=13.sp) }
+        }},confirmButton={TextButton(onClick={pendingDiagnosticRun=request.runId;pendingDiagnosticDecks=includeDiagnosticDecks;diagnosticRequest=null;exportLogs.launch("MagicTester-diagnostics-${System.currentTimeMillis()}.zip")},enabled=!model.exportingDiagnostics) {Text("Save ZIP")}},dismissButton={TextButton(onClick={diagnosticRequest=null}) {Text("Cancel")}})
     }
     deckDialog?.let { (title,text) -> AlertDialog(onDismissRequest={deckDialog=null},title={Text(title)},text={Box(Modifier.heightIn(max=500.dp).verticalScroll(rememberScrollState())) { Text(text,fontFamily=FontFamily.Monospace,fontSize=13.sp) }},confirmButton={TextButton(onClick={deckDialog=null}) {Text("Close")}}) }
 }
@@ -138,7 +154,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         TextButton(onClick={model.clearCustom()}) {Text("Clear custom opponents for this format")}
     }
 }
-@Composable private fun SetupScreen(model: Workbench) {
+@Composable private fun SetupScreen(model: Workbench, diagnostics: () -> Unit) {
     val context=androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         PageTitle("04 / Local engine",if(model.firstSetup) "Welcome to\nyour workbench." else "Ready on\nyour device.","Forge runs directly on Android. No Docker, desktop Java, Node, account, or analysis server is required.")
@@ -146,6 +162,8 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         Text("The APK includes verified Forge ${BuildConfig.FORGE_VERSION} resources. First setup extracts them into private app storage and shows real extraction progress. Initialization uses a separate process and can take a few minutes on slower phones.",fontSize=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick={model.setup()},enabled=!model.busy,modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(6.dp)) { Text(if(model.firstSetup) "Set up local engine" else "Verify local engine") }
         if(model.busy) TextButton(onClick={ForgeClient.cancel("setup")}) {Text("Cancel setup")}
+        OutlinedButton(onClick=diagnostics,enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}
+        Text("Save a readable summary, engine errors, setup events and Android process-exit reasons. Logs stay on this device until you choose where to save the ZIP.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider();Text("Resource policy",fontSize=19.sp)
         Text("One disposable Forge process runs at a time. Each match checks free memory; runs pause on severe thermal pressure. Long analyses keep a visible notification and a bounded wake lock. Cancel from Runs. Android may still stop work under memory or battery pressure; completed match evidence is saved.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Latest stable Forge",fontSize=19.sp)
