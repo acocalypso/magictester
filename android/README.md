@@ -161,6 +161,15 @@ Diagnostics include these settings, recovery counts and AI comparison identifier
 Implementation references: [Android service restart semantics](https://developer.android.com/reference/android/app/Service#START_STICKY)
 and [Doze and App Standby](https://developer.android.com/training/monitoring-device-state/doze-standby).
 
+### Timeouts and unfinished matches (0.1.12)
+
+A timed-out match now saves its evidence and lets later scheduled matches
+continue. The analysis ends **incomplete** if any matches have no outcome.
+Open it to resume only unfinished matches with a longer per-game limit; earlier
+finished matches are preserved. The chart excludes timeouts from win rates.
+Existing failed runs can also be resumed after updating.
+See [timeout handling and regression coverage](../docs/ANDROID_TIMEOUT_HANDLING.md).
+
 ### Matchup charts (0.1.11)
 
 Completed run details include an opponent-by-policy heatmap with win rates,
