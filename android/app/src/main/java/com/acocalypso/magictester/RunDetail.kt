@@ -61,6 +61,7 @@ import kotlin.math.sqrt
             for(i in 0 until opponents.length()) { val opponent=opponents.getJSONObject(i);TextButton(onClick={deck(opponent.getString("name") to opponent.getString("text"))}) { Text("Opponent: ${opponent.getString("name")}") } }
         }
         item {
+            if(run.state=="queued") OutlinedButton(onClick={model.restartPendingQueue()}) {Text("Start queued analyses")}
             if(run.state in listOf("queued","running")) OutlinedButton(onClick={model.cancel(id)}) { Text("Cancel analysis") }
             if(run.state in listOf("failed","interrupted","cancelled")) {
                 val benchmark=run.payload.optString("kind")=="benchmark"

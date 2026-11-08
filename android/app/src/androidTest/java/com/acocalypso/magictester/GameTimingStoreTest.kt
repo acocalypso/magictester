@@ -76,7 +76,7 @@ class GameTimingStoreTest {
             val checkpoint=store.get(id)!!.liveGame!!.getLong("elapsedMs")
             store.recover()
             val recovered=store.get(id)!!
-            assertEquals("interrupted",recovered.state)
+            assertEquals("queued",recovered.state)
             assertFalse(recovered.liveGame!!.getBoolean("active"))
             assertTrue(recovered.liveGame!!.getBoolean("estimated"))
             assertEquals(checkpoint,recovered.liveGame!!.getLong("elapsedMs"))

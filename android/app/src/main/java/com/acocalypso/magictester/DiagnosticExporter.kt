@@ -25,6 +25,7 @@ object DiagnosticExporter {
             .put("largeHeapMiB",manager.largeMemoryClass).put("freeMemoryMiB",memory.availMem/1048576).put("totalMemoryMiB",memory.totalMem/1048576)
             .put("lowMemory",memory.lowMemory).put("freeStorageMiB",context.filesDir.usableSpace/1048576).put("powerSaveMode",power.isPowerSaveMode)
             .put("thermalStatus",if(Build.VERSION.SDK_INT>=29) power.currentThermalStatus else JSONObject.NULL)
+            .put("backgroundRunStatus",BackgroundRunStatus.snapshot(context))
     }
     private fun events(context: Context, runId: String?): List<JSONObject> {
         val queue=java.util.PriorityQueue<JSONObject>(compareBy { it.optLong("timestamp") })
@@ -131,7 +132,7 @@ object DiagnosticExporter {
             for(log in logFiles) file("engine-and-crash-logs/${log.name}",log)
             for(run in runs) {
                 val settings=JSONObject().put("runId",run.id).put("state",run.state).put("lastMessage",run.label).put("completed",run.completed)
-                for(key in listOf("title","format","games","clockSeconds","bestOf","players","seed","engineVersion","createdAt","legality","kind","benchmarkReport")) if(run.payload.has(key)) settings.put(key,run.payload.opt(key))
+                for(key in listOf("title","format","games","clockSeconds","bestOf","players","seed","engineVersion","engineBuildSha256","aiPolicy","aiScope","comparisonId","comparisonRole","comparisonSettingsChanged","processRecoveryAttempts","createdAt","legality","kind","benchmarkReport")) if(run.payload.has(key)) settings.put(key,run.payload.opt(key))
                 run.liveGame?.let { settings.put("liveGame",it) }
                 settings.put("opponentCount",run.payload.optJSONArray("opponents")?.length() ?: 0)
                 text("runs/${run.id}/settings.json",settings.toString(2))

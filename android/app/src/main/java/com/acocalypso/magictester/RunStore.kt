@@ -83,12 +83,22 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         val db=writableDatabase
         db.beginTransaction()
         try {
-            db.rawQuery("SELECT id,live_game FROM runs WHERE state='running'",null).use { cursor ->
+            db.rawQuery("SELECT id,live_game,payload FROM runs WHERE state='running'",null).use { cursor ->
                 while(cursor.moveToNext()) {
                     val live=if(cursor.isNull(1)) null else JSONObject(cursor.getString(1))
                     val values=games(live)
                     values.values.filter { it.optBoolean("active") }.forEach { it.put("active",false).put("estimated",true).put("termination","interrupted") }
-                    db.update("runs",ContentValues().apply {put("state","interrupted");put("label","Android stopped this run. Resume to continue from saved results.");if(values.isNotEmpty()) put("live_game",grouped(values).toString())},"id=?",arrayOf(cursor.getString(0)))
+                    val payload=JSONObject(cursor.getString(2))
+                    val restarts=payload.optInt("processRecoveryAttempts")
+                    val retry=payload.optString("kind")!="benchmark" && restarts<2
+                    if(retry) payload.put("processRecoveryAttempts",restarts+1)
+                    db.update("runs",ContentValues().apply {
+                        put("state",if(retry) "queued" else "interrupted")
+                        put("label",if(retry) "Android stopped the process. Continuing from saved matches (recovery ${restarts+1}/2)." else "Android stopped this run. Resume to continue from saved results.")
+                        put("payload",payload.toString())
+                        if(values.isNotEmpty()) put("live_game",grouped(values).toString())
+                    },"id=?",arrayOf(cursor.getString(0)))
+                    Diagnostics.event("run.process_recovered",if(retry) "Requeued unfinished matches after process loss" else "Automatic recovery paused; manual resume required",cursor.getString(0),details=JSONObject().put("automatic",retry).put("recoveryAttempts",payload.optInt("processRecoveryAttempts")))
                 }
             }
             db.setTransactionSuccessful()
@@ -134,6 +144,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         val run = get(id) ?: return
         require(run.state !in listOf("running", "queued", "complete")); require(GameTimeouts.accepts(run.payload.getString("format"),clock))
         val payload = run.payload
+        payload.remove("processRecoveryAttempts")
         if(payload.has("comparisonId") && payload.optInt("clockSeconds")!=clock) payload.put("comparisonSettingsChanged",true)
         payload.put("clockSeconds",clock)
         writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label",if(payload.optString("kind")=="benchmark") "Rerunning device performance measurements" else "Resuming unfinished matches") },"id=?",arrayOf(id))

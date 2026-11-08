@@ -26,6 +26,12 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var aiPolicy by mutableStateOf(prefs.getString("preferredAiPolicy",AiPolicy.STABLE)?.takeIf {it in AiPolicy.options} ?: AiPolicy.STABLE)
         private set
     var compareAi by mutableStateOf(false)
+    var keepScreenOnDuringRuns by mutableStateOf(prefs.getBoolean("keepScreenOnDuringRuns",false))
+        private set
+    fun chooseKeepScreenOnDuringRuns(enabled: Boolean) {
+        keepScreenOnDuringRuns=enabled
+        prefs.edit().putBoolean("keepScreenOnDuringRuns",enabled).apply()
+    }
     fun chooseAiPolicy(policy: String) {
         aiPolicy=AiPolicy.checked(policy);if(policy==AiPolicy.STABLE) compareAi=false
         prefs.edit().putString("preferredAiPolicy",policy).apply()
@@ -259,6 +265,12 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         }
     }
     fun startQueue() { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java)) }
+    fun restartPendingQueue() {
+        runCatching { if(store.next()!=null) startQueue() }.onFailure {
+            Diagnostics.event("queue.restart_failed","Queued work could not restart",level="ERROR",error=it)
+            message="Queued work could not start. Open Runs and use Start queued analyses to retry."
+        }
+    }
     fun cancel(id: String) { ContextCompat.startForegroundService(app,Intent(app,QueueService::class.java).setAction("cancel").putExtra("id",id)) }
     fun resume(id: String, timeout: Int) { store.resume(id,timeout);startQueue() }
     override fun onCleared() { ForgeClient.cancel("setup");ForgeClient.cancel("validation");deckLibrary.close();super.onCleared() }

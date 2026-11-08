@@ -44,8 +44,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme(colorScheme=palette) { Surface(Modifier.fillMaxSize()) { WorkbenchApp(model) } } }
     }
+    override fun onResume() {
+        super.onResume()
+        model.restartPendingQueue()
+    }
 }
 @Composable private fun WorkbenchApp(model: Workbench) {
+    val windowView=androidx.compose.ui.platform.LocalView.current
+    val keepAwake=model.keepScreenOnDuringRuns && model.runs.any {it.state=="running"}
+    DisposableEffect(windowView,keepAwake) {
+        val previous=windowView.keepScreenOn
+        windowView.keepScreenOn=keepAwake
+        onDispose {windowView.keepScreenOn=previous}
+    }
     var tab by remember { mutableIntStateOf(if(model.firstSetup) 3 else 0) }
     var showDeckLibrary by remember {mutableStateOf(false)}
     var confirmNewDeck by remember {mutableStateOf(false)}
@@ -207,6 +218,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         OutlinedButton(onClick=diagnostics,enabled=!model.exportingDiagnostics) {Text("Export diagnostic logs")}
         Text("Save a readable summary, engine errors, setup events and Android process-exit reasons. Logs stay on this device until you choose where to save the ZIP.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         ResourceStatusPanel()
+        BackgroundRunPanel(model)
         OutlinedButton(onClick=restore,enabled=!model.busy) {Text("Import exported analyses")}
         Text("Restore analysis JSON files saved through Runs → Export results and game evidence, including exports from 0.1.1. Decklists, opponent lists and observed actions are preserved; imported runs never start automatically. Diagnostic ZIP files cannot restore full analysis history.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider()

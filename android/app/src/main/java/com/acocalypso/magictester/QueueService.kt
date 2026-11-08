@@ -14,9 +14,11 @@ class QueueService: Service() {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private lateinit var store: RunStore
     private var runner: Job?=null
+    private var destroying=false
     @Volatile private var currentId=""
     override fun onCreate() {
         super.onCreate();store=RunStore(this)
+        scope.coroutineContext[Job]!!.invokeOnCompletion {store.close()}
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("runs","Deck analyses",NotificationManager.IMPORTANCE_LOW))
         scope.launch {while(isActive) {delay(5000);val id=currentId;if(id.isNotEmpty()) runCatching {store.checkpointGame(id)}}}
     }
@@ -33,7 +35,9 @@ class QueueService: Service() {
             ForgeClient.cancel(id)
         }
         if(runner?.isActive!=true) runner=scope.launch {queue()}
-        return START_NOT_STICKY
+        // Rebuild work from SQLite after a process restart; never redeliver a
+        // cancellation intent as if it were a new user command.
+        return START_STICKY
     }
     private suspend fun queue() {
         try {
@@ -58,7 +62,7 @@ class QueueService: Service() {
             }
         } finally {
             currentId=""
-            withContext(NonCancellable+Dispatchers.Main) {runner=null;if(store.next()!=null) runner=scope.launch {queue()} else {stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}}
+            withContext(NonCancellable+Dispatchers.Main) {runner=null;if(!destroying) {if(store.next()!=null) runner=scope.launch {queue()} else {stopForeground(STOP_FOREGROUND_REMOVE);stopSelf()}}}
         }
     }
     private suspend fun analysis(run: Run) {
@@ -96,6 +100,6 @@ class QueueService: Service() {
         } finally {if(wake.isHeld) wake.release()}
     }
     override fun onBind(intent: Intent?)=null
-    override fun onDestroy() {if(currentId.isNotEmpty()) {ForgeClient.cancel(currentId);store.update(currentId,"interrupted","Android stopped the analysis. Resume to continue.",onlyIfRunning=true)};scope.cancel();store.close();super.onDestroy()}
+    override fun onDestroy() {destroying=true;if(currentId.isNotEmpty()) {ForgeClient.cancel(currentId);store.update(currentId,"interrupted","Android stopped the analysis. Resume to continue.",onlyIfRunning=true)};scope.cancel();super.onDestroy()}
     override fun onTimeout(startId: Int,fgsType: Int) {if(currentId.isNotEmpty()) ForgeClient.cancel(currentId);stopSelf()}
 }

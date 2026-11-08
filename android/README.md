@@ -137,3 +137,26 @@ The Android 15 acceptance job uses the official full AOSP system image. The Goog
 **Test → Analysis settings → Choose AI policy** offers Native Forge, Tactical v1 and Expanded v2. Native Forge remains the default until you choose another policy. The choice is retained across navigation; each run freezes its policy, scope and engine build. Normal analyses pilot every deck with one policy. **Also queue a native comparison** instead creates a native baseline and a candidate for your deck against fixed native opponents, with linked results and the same initial inputs.
 
 Expanded v2 adds tested corrections for burn, life loss, discard, mill, draw and poison. Shared cancellation safeguards stop an isolated attempt if an evaluator cannot exit. Results show readable planning counts, evaluation timeouts and build provenance. Full decklists and ordinary action histories remain available. See the [0.1.8 full-test guide](../docs/AI_FULL_TEST_GUIDE.md), [shared AI module](../engine-ai/README.md) and [tactical evidence](../docs/benchmarks/expanded-v2-summary.json). These improvements are experimental; an overall win-rate increase has not been established.
+
+### Background run recovery (0.1.9)
+
+The coordinator is a sticky foreground service. If Android recreates its process,
+SQLite recovery requeues unfinished analyses before their queued successors and
+keeps completed match receipts. Opening the app also starts pending queued work;
+queued run details include **Start queued analyses**. An unfinished game is replayed
+from its frozen seed, not resumed mid-turn. Two automatic recoveries are allowed
+per analysis; further process losses require **Resume**. Explicit cancellation,
+completed/failed work, imported history and benchmarks do not automatically restart.
+Manual resume resets the recovery allowance. Resource and engine-build checks still
+apply. Android force-stop and vendor battery restrictions can prevent service
+restart until the app is opened again.
+
+**Setup → Long runs & background activity** shows Android's battery exemption and
+notification status, links to system battery/app settings, and offers an opt-in
+screen-awake setting while a run is active and the app is visible. OxygenOS may
+have additional per-app background activity controls. Keeping the display on costs
+battery and can increase heat. No setting can guarantee immunity from system kills.
+Diagnostics include these settings, recovery counts and AI comparison identifiers.
+
+Implementation references: [Android service restart semantics](https://developer.android.com/reference/android/app/Service#START_STICKY)
+and [Doze and App Standby](https://developer.android.com/training/monitoring-device-state/doze-standby).
