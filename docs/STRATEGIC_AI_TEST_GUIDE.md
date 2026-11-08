@@ -45,7 +45,7 @@ archives are not committed. Reports retain public matchup names, action signatur
 and policy evidence. The reference traces for seed 12345 match the phone export
 when duration summaries and card-instance IDs are excluded.
 
-The initial 30-pair sample finished all matches: Native 21/30, Strategic 24/30,
+The final packaged-engine 30-pair sample finished all matches: Native 21/30, Strategic 24/30,
 with changed action sequences in 26 pairs. This is +10 percentage points in this
 selected sample. It is not a confidence-backed general AI strength result, a
 seat-balanced league or a Commander win-rate benchmark. Host durations are not a
@@ -64,6 +64,12 @@ against Strategic on your seat, with native opponents, and writes no raw deck
 text to the report. The shared native contract suite runs through
 `python3 engine-ai/tools/check.py`; use its documented native-home/bridge-class
 arguments as in the Android workflow.
+
+The native suite passed **50 positions and 78 assertions** against the packaged
+engine, in addition to the existing target, visibility, cancellation and transport
+contracts. Local Android compilation, 21 JVM tests and lint passed. See the
+[archived summary](benchmarks/strategic-v1-summary.json) and per-seed compressed
+reports beside it.
 
 CI runs real engine/UI/upgrade acceptance on Android emulators. Physical OnePlus
 acceptance and broad strength testing still require device/user testing.

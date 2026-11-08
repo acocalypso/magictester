@@ -1,0 +1,97 @@
+{
+  "implementationCommit": "05eb73d923585ce8c89a0515663fab7d5718a704",
+  "forgeVersion": "2.0.15",
+  "localEngineJarSha256": "137d5a8948620a7c2ebd7d9908f61b08e2d0be2e4f999dea49102c033ec60466",
+  "platform": "JVM with packaged Android native overrides; not a phone performance benchmark",
+  "appVersion": "0.1.10",
+  "versionCode": 111,
+  "policy": "strategic-v1",
+  "date": "2026-11-08",
+  "seeds": [
+    12345,
+    42,
+    20261108
+  ],
+  "opponentsPerSeed": 10,
+  "finishedPairs": 30,
+  "baselineWins": 21,
+  "strategicWins": 24,
+  "extraWins": 3,
+  "gainedWins": 3,
+  "lostWins": 0,
+  "winRateDifferencePercentagePoints": 10.0,
+  "changedActionPairs": 26,
+  "nativeTraceMatchesAgainstPhoneExport": 10,
+  "actionSignatureNormalization": "Exclude Match Duration summaries and numeric card-instance IDs; compare turn, event kind and text.",
+  "nativePositions": 50,
+  "nativeAssertions": 78,
+  "planningChecks": {
+    "team-haste-order": 4,
+    "mana-refund-main1": 64,
+    "conditional-haste-main1": 44,
+    "team-haste-setup-main1": 2,
+    "mulligan-bottom-selected": 7,
+    "mulligan-keep-changed": 6
+  },
+  "androidJvmTests": 21,
+  "androidJvmFailures": 0,
+  "localAndroidBuild": "debug APK, instrumentation APK, unit tests and lint passed",
+  "androidReleaseWorkflowRun": 42504086542,
+  "androidEmulatorAcceptance": "passed on API 26, 35 and 37.2",
+  "physicalOnePlusAcceptance": "pending user device test",
+  "interpretation": "Small fixed-seat selected-deck sample. No general strength claim or phone performance claim. Full decklists and diagnostic archives are not committed.",
+  "frozenDeckSha256": "d381aef8a84a66515917753f190558d07671903a117f72721578a44771724199",
+  "frozenOpponents": [
+    {
+      "name": "Dimir Control",
+      "sha256": "0d52b0bc4362f1ae80a9a0603dea82fbf8862b4d8aa20dd41f30e918c5816eb1"
+    },
+    {
+      "name": "Affinity",
+      "sha256": "95dfd8424d2af120f9aadf4ba35e97fe09508756fc90aea5441ef55f5943aa45"
+    },
+    {
+      "name": "Burn",
+      "sha256": "4cf9390625fa4432ff264330c3345143f5da49096f1d4686f0dc83a65c761625"
+    },
+    {
+      "name": "Balustrade Spy",
+      "sha256": "3b7e6a3629c77fae8b50efcc9b0802447ee2f414a561bbf1c212c4f3626c13d7"
+    },
+    {
+      "name": "Weenie White",
+      "sha256": "6637690bf920831f6be82ca3511e3b89b22a4c6fc38fbe2e5966f16a3ec790bb"
+    },
+    {
+      "name": "Red Deck Wins",
+      "sha256": "d4180c99be3fbe2015eb1c31ba3b0b0b24e1b18768bdf176d4b87240086a6faa"
+    },
+    {
+      "name": "Urzatron",
+      "sha256": "a28864ecf81f47c4777edc58a9d9c1db0391895f256489a286af56d8b605920c"
+    },
+    {
+      "name": "Mono Blue Aggro",
+      "sha256": "cf1df1716ad556560afce255d6cac42b4fd577dbed23de10fd0336381815f14c"
+    },
+    {
+      "name": "Elves",
+      "sha256": "2470ccd0e846db50a2affbc1676ce22a4708cdd96f412a8077ca03f57c3dfcce"
+    },
+    {
+      "name": "RG Ruby Storm",
+      "sha256": "de094b53727cfa405dd82fd3225d3fd7914f0a8a958e17e5eecf50f6e91a99b0"
+    }
+  ],
+  "publishedApkSha256": "6d2ed8cf1f05bced275b7ae52d01e8da0f6eb50c13127d95634b8784578e8983",
+  "releaseUrl": "https://github.com/acocalypso/magictester/releases/tag/android-v0.1.10",
+  "publishedEngineJarSha256": "137d5a8948620a7c2ebd7d9908f61b08e2d0be2e4f999dea49102c033ec60466",
+  "publishedEngineMatchesBenchmarkedEngine": true,
+  "androidEmulatorUiTestsPerDevice": 5,
+  "androidEmulatorEngineTestsPerDevice": 47,
+  "androidEmulatorApis": [
+    "26",
+    "35",
+    "37.2"
+  ]
+}
