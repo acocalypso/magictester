@@ -38,3 +38,24 @@ wrapping, multiplayer pods, matching-pair exclusions, confidence intervals,
 best-of-three counts, paginated PDF rendering and phone Back from cell details.
 The release workflow retains chart/PDF previews with its Android acceptance
 artifacts. Screenshot previews use clearly labelled synthetic test data.
+
+## Verified release
+
+[Android 0.1.11](https://github.com/acocalypso/magictester/releases/tag/android-v0.1.11)
+was published from commit `527ab01`.
+[Acceptance workflow](https://github.com/acocalypso/magictester/actions/runs/42516994215)
+passed 26 JVM tests, lint, shared/native AI checks, and 6 UI plus 50 engine/runtime
+tests on each of API 26, 35 and 37.2. In-place upgrade and private-data retention
+checks passed. These are emulator checks, not a physical OnePlus device test.
+
+The downloaded published APK was independently checked:
+
+- Version: 0.1.11 / code 112.
+- APK SHA-256: `70edad61248ff3f92f5e77ea93477ff61ebc411c74e353d759f43774eeed9e4a`.
+- Signing certificate SHA-256: `a12aa61ccbe6ceb0973da544ce5b09dc07a50306afe8338ca61c356fe5f68f07`.
+- Engine JAR SHA-256: `137d5a8948620a7c2ebd7d9908f61b08e2d0be2e4f999dea49102c033ec60466` (unchanged from 0.1.10).
+
+Actual Android PDF rendering, first of three pages, with **synthetic test data**
+for layout verification. Its percentages are not an AI benchmark or user run:
+
+![Paired matchup PDF rendered on Android, using synthetic test data](images/android-v0.1.11-matchup-chart-test-data.png)
