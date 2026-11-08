@@ -177,6 +177,27 @@ class WorkbenchUiTest {
         } finally {store.delete(id);store.close()}
     }
 
+    @Test fun liveParallelOpponentsAppearInRunsAndAnalysis() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext;val store=RunStore(context)
+        val payload=org.json.JSONObject().put("title","Live opponent fixture").put("format","pauper").put("deck",Examples.burn).put("games",50).put("players",2).put("clockSeconds",195).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().apply {for(name in listOf("Dimir Control","Affinity","Burn"))put(org.json.JSONObject().put("name",name).put("text",Examples.burn))})
+        val id=store.create(payload,"importing")
+        try {
+            store.update(id,"running","Match 48/50 · Playing game 1",1)
+            for(unit in listOf(47,48))store.gameEvent(id,org.json.JSONObject().put("type","game_started").put("index",unit).put("gameIndex",if(unit==47)0 else 1)
+                .put("gameSeed",123+unit).put("startedAtEpochMs",System.currentTimeMillis()).put("startedElapsedMs",android.os.SystemClock.elapsedRealtime()).put("clockSeconds",195))
+            compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Live opponent fixture").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opponent: Burn"))
+            compose.onNodeWithText("Opponent: Burn").assertIsDisplayed()
+            compose.onNodeWithText("Opponent: Dimir Control").assertExists()
+            compose.onNodeWithText("Live opponent fixture").performScrollTo().performClick()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opponent: Burn"))
+            compose.onNodeWithText("Opponent: Burn").assertIsDisplayed()
+            compose.onNodeWithText("Opponent: Dimir Control").assertExists()
+            compose.onNodeWithText("Match 49 · Game 2").assertExists()
+        } finally {store.delete(id);store.close()}
+    }
     @Test fun savedDeckLoadsUpdatesAndProtectsUnsavedChanges() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val library=DeckLibrary(context)

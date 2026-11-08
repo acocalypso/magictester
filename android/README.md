@@ -161,6 +161,14 @@ Diagnostics include these settings, recovery counts and AI comparison identifier
 Implementation references: [Android service restart semantics](https://developer.android.com/reference/android/app/Service#START_STICKY)
 and [Doze and App Standby](https://developer.android.com/training/monitoring-device-state/doze-standby).
 
+### Live opponents (0.1.13)
+
+Each live match in Runs and the analysis detail shows its opponent deck. Parallel
+matches show their own opponents; multiplayer Commander lists every opposing
+seat. Progress messages and the ongoing notification also name the matchup while
+the engine prepares or plays. Names come from the run's frozen pool and match
+index, so retries keep the correct assignment without fetching current metadata.
+
 ### Timeouts and unfinished matches (0.1.12)
 
 A timed-out match now saves its evidence and lets later scheduled matches

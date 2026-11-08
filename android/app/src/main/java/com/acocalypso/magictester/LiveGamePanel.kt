@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
     for(game in visible) key(game.optInt("unitIndex")) { GameTimeItem(run,game,compact) }
 }
 @Composable private fun GameTimeItem(run: Run,game: org.json.JSONObject,compact: Boolean) {
+    val opponents=remember(run.payload,game.optInt("unitIndex",-1)) {MatchOpponents.names(run.payload,game.optInt("unitIndex",-1))}
     val active=run.state=="running" && game.optBoolean("active")
     val started=game.optLong("startedElapsedMs")
     var now by remember(run.id,started,active) { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -42,6 +43,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
     }
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Text("Match ${game.optInt("unitIndex")+1} · Game ${game.optInt("gameIndex")+1}",fontSize=if(compact) 11.sp else 12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(opponents.isEmpty())Text("Opponent not recorded",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        else for((index,name) in opponents.withIndex())Text("${if(opponents.size==1) "Opponent" else PlayerLabels.name(index+1)}: $name",fontSize=if(compact) 12.sp else 13.sp)
         Text("${GameClock.format(elapsed)} $status · ${GameClock.format(budget)} limit",fontFamily=FontFamily.Monospace,fontSize=if(compact) 12.sp else 18.sp,color=MaterialTheme.colorScheme.primary)
         if(active && !compact) {
             LinearProgressIndicator(progress={if(budget>0) (elapsed.toFloat()/budget).coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth())

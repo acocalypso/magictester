@@ -13,6 +13,18 @@ import java.io.File
 import java.util.UUID
 
 class GameTimingStoreTest {
+    @Test fun liveOpponentsFollowTheScheduledMatchAndFrozenSeatOrder() {
+        val pool=org.json.JSONArray().apply {for(name in listOf("Dimir Control","Affinity","Burn"))put(JSONObject().put("name",name))}
+        val payload=JSONObject().put("opponents",pool).put("players",4)
+        for(format in listOf("pauper","duel","commander","cedh")) {
+            payload.put("format",format)
+            val expected=if(format in listOf("commander","cedh"))listOf("Burn","Dimir Control","Affinity") else listOf("Burn")
+            assertEquals(format,expected,MatchOpponents.names(payload,47))
+            assertEquals("Dimir Control",MatchOpponents.names(payload,48).first())
+        }
+        assertTrue(MatchOpponents.names(JSONObject(),47).isEmpty())
+        assertTrue(MatchOpponents.names(payload,-1).isEmpty())
+    }
     private fun isolated(): Context {
         val base=InstrumentationRegistry.getInstrumentation().targetContext
         val folder=File(base.cacheDir,"timing-${UUID.randomUUID()}").apply { mkdirs() }

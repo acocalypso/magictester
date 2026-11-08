@@ -73,12 +73,16 @@ class QueueService: Service() {
     }
     private suspend fun runUnit(run: Run,unit: Int,total: Int): java.io.File {
         val request=SimulationRequest.unit(run.payload,unit)
+        val opponents=MatchOpponents.names(run.payload,unit)
+        val matchup="Match ${unit+1}/$total"+if(opponents.isNotEmpty()) " · vs ${opponents.joinToString(", ")}" else ""
         val wake=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MagicTester:match")
         try {
             wake.acquire((request.getInt("clockSeconds")*(if(request.optInt("bestOf")==3) 5 else 1)+480)*CapacityMath.MAX_ENGINES*1000L)
             Diagnostics.event("attempt.started","Starting match ${unit+1}/$total",run.id,details=PerformanceSettings.resources(this).put("unit",unit))
+            store.update(run.id,"running","$matchup · Preparing engine",onlyIfRunning=true)
+            progress("$matchup · Preparing engine")
             return ForgeClient.execute(this,request,run.id,onGame={store.gameEvent(run.id,it)},allowed={store.get(run.id)?.state=="running"}) {label,_->
-                store.update(run.id,"running","Match ${unit+1}/$total · $label",onlyIfRunning=true);progress("${store.get(run.id)?.completed ?: 0}/$total matches saved · $label")
+                store.update(run.id,"running","$matchup · $label",onlyIfRunning=true);progress("${store.get(run.id)?.completed ?: 0}/$total saved · $matchup · $label")
             }
         } finally {if(wake.isHeld) wake.release()}
     }
