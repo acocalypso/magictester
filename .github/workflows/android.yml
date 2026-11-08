@@ -141,6 +141,8 @@ jobs:
           PYTOOLS
           cat "$ANDROID_HOME/cmdline-tools/latest/source.properties"
       - name: Fetch the published persistent-key upgrade baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: ${{ fromJSON(needs.build.outputs.code) > 104 }}
         run: |
           python3 android/tools/fetch_upgrade_baseline.py android/artifacts/upgrade-probe.apk
