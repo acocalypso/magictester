@@ -5,7 +5,7 @@ val forgeVersion = forgeRelease["version"] as String
 val prepareForge = tasks.register<Exec>("prepareForge") {
     workingDir(rootProject.projectDir)
     commandLine("python3", "tools/prepare_engine.py")
-    inputs.dir(rootProject.file("engine/src")); inputs.file(rootProject.file("engine/release.json")); inputs.file(rootProject.file("engine/patches.json")); inputs.file(rootProject.file("tools/prepare_engine.py"))
+    inputs.dir(rootProject.file("../engine-ai/src/main/java")); inputs.dir(rootProject.file("engine/src")); inputs.file(rootProject.file("engine/release.json")); inputs.file(rootProject.file("engine/patches.json")); inputs.file(rootProject.file("tools/prepare_engine.py"))
     outputs.file(rootProject.file("engine/build/forge-engine.jar")); outputs.file(file("src/main/assets/forge-data.zip"))
 }
 android {

@@ -50,7 +50,7 @@ public class AndroidForgeBridge {
     static final Gson JSON = new GsonBuilder().serializeNulls().create();
     static void emit(Object value) {output.accept(JSON.toJson(value));}
     static class Request {
-        String[] decks,companions;
+        String[] decks,companions,aiPolicies;
         int[] indices;
         int games,seed,clockSeconds,startIndex,bestOf,maxMatchGames;
         boolean sideboarding,captureDecisions;
@@ -95,6 +95,7 @@ public class AndroidForgeBridge {
         ObservedGame game=new ObservedGame(registered,match.getRules(),match);game.setNoGUIUser();
         Recorder recorder=new Recorder(game,registered,previous,request,gameIndex);game.recorder=recorder;game.subscribeToEvents(recorder);
         ActionRecorder actions=new ActionRecorder(game,recorder);game.getGameLog().addObserver(actions);
+        org.magictester.ai.AiPolicies.open(game,request.aiPolicies);
         org.magictester.ai.ForgeDecisionTrace.open(game,request.captureDecisions,gameSeed);
         emit(Map.of("type","game_started","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"bridgeVersion",VERSION));
         long started=System.nanoTime();String termination="normal";
@@ -124,6 +125,7 @@ public class AndroidForgeBridge {
         result.put("sideboardChanges",recorder.setupComplete?new ArrayList<>(recorder.sideboardChanges):null);
         result.put("commanderColors",recorder.setupComplete?new ArrayList<>(recorder.commanderColors):null);
         result.put("companionSelections",recorder.setupComplete?new ArrayList<>(recorder.companionSelections):null);
+        result.put("ai",org.magictester.ai.AiPolicies.close(game));
         result.put("actionLog",actions.finish(termination.equals("normal") || termination.equals("rule_draw")));
         var decisionTrace=org.magictester.ai.ForgeDecisionTrace.close(game,termination.equals("normal") || termination.equals("rule_draw"));
         if(decisionTrace!=null) result.put("decisionTrace",decisionTrace);
@@ -139,6 +141,7 @@ public class AndroidForgeBridge {
             forge.StaticData.instance().setMulliganRule(forge.MulliganDefs.MulliganRule.London);
             Request request=JSON.fromJson(requestJson,Request.class);
             if(request.decks.length<2 || request.decks.length>4 || request.games<1 || request.clockSeconds<1) throw new IllegalArgumentException("Invalid bridge request");
+            org.magictester.ai.AiPolicies.validate(request.aiPolicies,request.decks.length);
             if(request.bestOf!=0 && request.bestOf!=1 && request.bestOf!=3) throw new IllegalArgumentException("Unsupported match mode");
             int bestOf=request.bestOf==3?3:1,limit=request.maxMatchGames==0?5:request.maxMatchGames;
             if(bestOf==3 && (request.decks.length!=2 || limit<3 || limit>9)) throw new IllegalArgumentException("Invalid BO3 limits");

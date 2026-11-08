@@ -1,0 +1,893 @@
+{
+  "schemaVersion": 1,
+  "assertions": 21,
+  "seed": 90817,
+  "engineVersion": "2.0.15",
+  "fixtures": [
+    {
+      "id": "duel-available-lethal",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      }
+    },
+    {
+      "id": "multiplayer-hexproof-lowest",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "Grizzly Bears"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 1,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-2"
+        ]
+      }
+    },
+    {
+      "id": "multiplayer-cannot-lose-lowest",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 2,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-2"
+        ]
+      }
+    },
+    {
+      "id": "multiplayer-life-cannot-change",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 2,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-2"
+        ]
+      }
+    },
+    {
+      "id": "multiplayer-prevented-lowest",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 2,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-2"
+        ]
+      }
+    },
+    {
+      "id": "ordinary-nonlethal-fallback",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "Grizzly Bears"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "Grizzly Bears"
+        ]
+      }
+    },
+    {
+      "id": "no-lethal-when-loss-protected",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      }
+    },
+    {
+      "id": "infect-is-not-life-lethal",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      }
+    },
+    {
+      "id": "creature-only-fallback",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "Grizzly Bears"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "Grizzly Bears"
+        ]
+      }
+    },
+    {
+      "id": "dynamic-damage-fallback",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      }
+    },
+    {
+      "id": "multi-target-fallback",
+      "baseline": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      },
+      "candidate": {
+        "ai": {
+          "evaluationCountsAreAppliedActions": false,
+          "seats": [
+            {
+              "policyRevision": "damage-lethal-1",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 0,
+              "experimental": true,
+              "id": "tactical-v1"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 1,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 2,
+              "experimental": false,
+              "id": "stable"
+            },
+            {
+              "policyRevision": "forge-native",
+              "lethalPriorityEvaluations": 0,
+              "profile": "Default",
+              "seat": 3,
+              "experimental": false,
+              "id": "stable"
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "willPlay": true,
+        "targets": [
+          "player-1"
+        ]
+      }
+    }
+  ],
+  "verification": {
+    "date": "2026-11-08",
+    "runtime": "Temurin OpenJDK 21.0.13+9, Linux x64 desktop JVM",
+    "sourceLanguageRelease": 17,
+    "adapter": "Android headless bridge on desktop JVM; not Android ART",
+    "forgeSourceCommit": "4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676",
+    "patchManifestSha256": "49bcdc69cfd803c54e4a5d1578d52173fb4d40bfe9d8ab042a1b2ec2b9aa8e7d",
+    "limitations": [
+      "Curated tactical fixtures, not held-out match win-rate evidence",
+      "No physical device performance claim"
+    ]
+  }
+}

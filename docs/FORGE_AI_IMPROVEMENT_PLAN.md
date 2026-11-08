@@ -56,6 +56,10 @@ The recommended approach is a shared, versioned Java AI layer around Forge: reta
 
    Adapt upstream's [FlatMonteCarloBenchmark](https://github.com/Card-Forge/forge/blob/98d79231ccbe78f0083db907fdc875034665ba38/forge-gui-desktop/src/test/java/forge/ai/FlatMonteCarloBenchmark.java), which already balances two-player decks/seats, but keep MagicTester's separate error and timeout accounting. Report confidence intervals, tactical accuracy, legal-action violations, game completion, decision latency percentiles, allocation/PSS and thermal events. Predefine acceptable regressions and sample sizes; a few wins or self-play win rates alone do not demonstrate stronger play. Never silently drop failures or unfinished games from the evidence.
 
+## Implementation checkpoint: November 8, 2026
+
+The shared recorder and a first per-seat experimental `tactical-v1` policy are implemented under [`engine-ai/`](../engine-ai/README.md). The policy fixes tested simple multiplayer burn ranking cases behind an opt-in flag; native stable behavior remains the reference. Eleven native tactical positions and two completed transport/provenance games pass on a desktop JVM. This is a narrow heuristic correction, not the proposed FlatMC backport, trained model, complete decision corpus or a demonstrated overall playing-strength gain. See the module README for exact scope and evidence.
+
 ## First three reviewable changes
 
 1. Shared AI policy/provenance schema, decision diagnostics and a small tactical corpus, without changing the default policy.

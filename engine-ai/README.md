@@ -1,8 +1,18 @@
 # Forge AI improvement foundation
 
-Shared Java instrumentation for Android, desktop and Docker Forge bridges. This first milestone collects observations of native AI choices; it does not change the AI policy or establish improved playing strength.
+Shared Java instrumentation for Android, desktop and Docker Forge bridges. The default policy remains native Forge. An opt-in experimental policy now corrects one tested class of multiplayer burn-target errors; this does not establish a general playing-strength gain.
 
-## Current coverage
+## Experimental policy: tactical-v1
+
+Native requests accept `"aiPolicies": ["tactical-v1", "stable", "stable", "stable"]`, with exactly one entry per seat. Omitting the field retains `stable` for every seat; unknown policies and incorrect seat counts are rejected before games start. These developer requests work in all three native bridges. Product API schemas are not yet expanded for policy selection.
+
+`tactical-v1` ranks legal, predicted-lethal opponents consistently in the two native burn targeting paths. Stable Forge can use one targetable opponent in its damage chooser while its “should hit a player” check examines the lowest-life opponent regardless of targetability. It can also favor a player whose life cannot change, whose damage is prevented, or who cannot lose. The candidate uses Forge's own targetability, prevention/replacement prediction, loss restrictions and infect rules to prefer another opponent who would die from that damage.
+
+Scope is deliberately limited to positive, constant, simple, single-target player-capable `DealDamage` abilities. Dynamic/X damage, special AI logic, chained abilities, divided/multi-target damage and alternate damage sources fall back to native behavior. No hidden cards, extra search, new threads or random samples are used. Four-player elimination priority is a heuristic, not proof of the best table strategy. If no eligible lethal opponent exists, native behavior is preserved, including existing weaknesses. Simulation copies without a policy registration use stable behavior.
+
+Each native game result includes `ai` provenance: per-seat policy ID/revision, native `Default` profile, experimental flag and evaluation suggestion count. Counts describe heuristic evaluations, **not applied actions**. Existing engine version and compiled bridge/engine hashes identify the actual executable; do not treat the policy name alone as a complete build fingerprint. BO3 stores this provenance separately in each game.
+
+## Current recorder coverage
 
 Set `"captureDecisions": true` in a **native bridge JSON request** to attach `decisionTrace` to each game result (inside each game for BO3). Recording defaults to off. This developer interface is not yet exposed in the app UI or public analysis API; those result schemas do not retain this additional field. Save native output directly when collecting diagnostics.
 
@@ -29,7 +39,19 @@ Run the bounded journal contracts with a full JDK (17 or later) and an installed
 python3 engine-ai/tools/check.py --forge-jar /path/to/forge-gui-desktop-2.0.15-jar-with-dependencies.jar
 ```
 
-Use `--java /path/to/jdk/bin/java` if needed. `tests/ForgeTraceContracts.java` additionally exercises real Forge visibility and opt-in behavior using the Android bridge on a desktop JVM. Compile it against the prepared Android bridge, shared sources and Forge dependencies, then pass the Forge home as its only argument. These local contracts do not substitute for Android device acceptance tests.
+Use `--java /path/to/jdk/bin/java` if needed. To run all native contracts after engine preparation:
+
+```sh
+python3 engine-ai/tools/check.py \
+  --forge-jar android/engine/build/upstream.jar \
+  --native-home android/engine/build/data \
+  --bridge-classes android/engine/build/classes \
+  --report android/artifacts/ai-tactical-report.json
+```
+
+Android CI runs this command and uploads the report with its artifacts. Gradle declares the shared Java directory as an engine-preparation input, so incremental builds cannot reuse an engine compiled before a shared policy edit.
+
+ `tests/ForgeTraceContracts.java` additionally exercises real Forge visibility and opt-in behavior using the Android bridge on a desktop JVM. Compile it against the prepared Android bridge, shared sources and Forge dependencies, then pass the Forge home as its only argument. These local contracts do not substitute for Android device acceptance tests.
 
 ## Initial local verification
 
@@ -41,6 +63,12 @@ Against the pinned Forge 2.0.15 dependency JAR on November 7, 2026:
 - A real constructed fixture records six native choices, zero drops and zero pending callbacks before its 60-second timeout. Its trace correctly reports incomplete coverage; disabled output omits the trace. Both full-game trials timed out, so this experiment does **not** establish full-game equivalence or measure playing strength.
 
 These are desktop JVM checks of the shared/native implementation, not a claim of device acceptance or exhaustive information-security coverage. Face-down/reveal mechanics and additional decision families still require dedicated fixtures.
+
+## Tactical verification: November 8, 2026
+
+The [versioned fixtures](fixtures/damage-tactics-v1.json) exercise actual Forge 2.0.15 card scripts, static effects and native `DamageDealAi` targeting. Eleven positions pass 21 assertions; the [archived report](../docs/benchmarks/damage-tactics-v1-jvm.json) records both policies' choices. In four multiplayer regressions, the candidate selects the other legal lethal opponent instead of a protected lowest-life player or a creature. Other fixtures verify native fallbacks, existing two-player lethal, loss protection, infect and scope boundaries. Source-level Java 17 compilation, both bridge implementations, the Android engine packaging build, journal/visibility contracts and two completed native bridge games also pass locally on a Java 21 desktop JVM. Those two games use only basic lands to verify request transport and provenance; they are not strength tests.
+
+These checks do not establish full-format coverage, Android device performance, a match win-rate improvement or exhaustive prevention/replacement correctness. Stable remains the default. Further adoption needs held-out tactical positions and a balanced league, not promotion from these eleven fixtures alone.
 
 ## Next milestones
 

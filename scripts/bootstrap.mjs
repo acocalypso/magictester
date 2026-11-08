@@ -252,7 +252,7 @@ const bridgeSource = new URL(
 );
 const bridgeBytes = await readFile(bridgeSource);
 const aiSourceRoot = new URL("../engine-ai/src/main/java/", import.meta.url);
-const aiSources = await Promise.all(["org/magictester/ai/DecisionJournal.java", "org/magictester/ai/ForgeDecisionTrace.java"].map(async (path) => ({path,bytes:await readFile(new URL(path,aiSourceRoot))})));
+const aiSources = await Promise.all(["org/magictester/ai/DecisionJournal.java", "org/magictester/ai/ForgeDecisionTrace.java", "org/magictester/ai/AiPolicies.java", "org/magictester/ai/TacticalDamage.java"].map(async (path) => ({path,bytes:await readFile(new URL(path,aiSourceRoot))})));
 
 let patchBytes = await readFile(
   new URL("../services/forge-runner/bridge/patches.json", import.meta.url),

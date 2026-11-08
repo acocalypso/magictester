@@ -57,8 +57,8 @@ jobs:
       - name: Build native app, unit tests and Android tests
         working-directory: android
         run: ./gradlew --no-daemon -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ steps.version.outputs.code }} assembleDebug assembleDebugAndroidTest assembleRelease testDebugUnitTest lintDebug
-      - name: Check shared AI decision journal
-        run: python3 engine-ai/tools/check.py --forge-jar android/engine/build/upstream.jar
+      - name: Check shared AI policies and native tactical positions
+        run: python3 engine-ai/tools/check.py --forge-jar android/engine/build/upstream.jar --native-home android/engine/build/data --bridge-classes android/engine/build/classes --report android/artifacts/ai-tactical-report.json
       - name: Collect APKs and signing tool
         run: |
           mkdir -p android/artifacts

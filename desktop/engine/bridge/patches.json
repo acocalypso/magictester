@@ -50,5 +50,21 @@
     "find": "        Collections.shuffle(cards, MyRandom.getRandom());",
     "replace": "        String requested = System.getProperty(\"magictester.companion.\" + ai.getLobbyPlayer().getName());\n        if (requested != null) {\n            for (Card card : cards) if (card.getName().equals(requested)) return card;\n            return null; // Do not silently substitute a different companion.\n        }\n        Collections.shuffle(cards, MyRandom.getRandom());",
     "purpose": "Honor the submitted companion candidate; decline rather than substitute another card if it is not eligible after sideboarding."
+  },
+  {
+    "path": "forge/ai/ability/DamageAiBase.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DamageAiBase.java",
+    "sha256": "141910237c17f06466d0c437b1616a28a91bd3689edadf749383965022a5a114",
+    "find": "        Player enemy = comp.getWeakestOpponent();\n        boolean dmgByCardsInHand = false;",
+    "replace": "        Player enemy = org.magictester.ai.TacticalDamage.preferLethal(comp, sa, d, comp.getWeakestOpponent());\n        boolean dmgByCardsInHand = false;",
+    "purpose": "Opt-in per-seat tactical-v1 policy: rank legal predicted-lethal opponents consistently in simple single-target burn; preserve native stable policy."
+  },
+  {
+    "path": "forge/ai/ability/DamageDealAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DamageDealAi.java",
+    "sha256": "5c298a91077b3d86c53a92735ae2e8f872a5e9cda2bfb53f5cd1c433b05d0fc2",
+    "find": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }",
+    "replace": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }\n        enemy = org.magictester.ai.TacticalDamage.preferLethal(ai, sa, dmg, enemy);",
+    "purpose": "Opt-in per-seat tactical-v1 policy: rank legal predicted-lethal opponents consistently in simple single-target burn; preserve native stable policy."
   }
 ]
