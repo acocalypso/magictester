@@ -35,6 +35,15 @@ jobs:
           java-version: '21'
       - uses: android-actions/setup-android@v4.0.4
       - uses: gradle/actions/setup-gradle@v6.4.1
+      - name: Cache pinned Forge archive
+        uses: actions/cache@v6.1.0
+        with:
+          path: android/engine/build/forge.tar.bz2
+          key: forge-archive-${{ runner.os }}-${{ hashFiles('android/engine/release.json') }}
+      - name: Fetch and verify official Forge asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 android/tools/fetch_engine_archive.py
       - name: Install SDK
         run: sdkmanager "platforms;android-37.2" "build-tools;36.0.0"
       - name: Determine APK version
