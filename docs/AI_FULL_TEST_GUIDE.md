@@ -28,7 +28,7 @@ Keep unfinished attempts in your review. A timeout or engine error is not a game
 
 The expanded native suite passes **32 scenarios in four actor seats: 128 positions and 412 assertions**, with hidden-card identity permutations and legacy-policy parity checks. **26 scenarios use actual printed Forge card abilities**. The original 13-position Tactical v1 suite and cancellation/visibility/transport contracts also pass. Local app/test APK compilation, **19 Android JVM tests** and lint pass. The separate request/comparison logic checks pass on the JVM as well.
 
-These are curated checks, not a broad win-rate result. Physical Android acceptance is performed by the release workflow and your device test; it was not run in this local environment. Combat, mulligans, counterspell strategy, mana sequencing and combo search remain native Forge. No external training corpus or learned model is bundled. See the [implementation details](../engine-ai/README.md) and [archived tactical evidence](benchmarks/expanded-v2-summary.json).
+These are curated checks, not a broad win-rate result. Android emulator acceptance runs in the release workflow. Physical-device acceptance still requires a test on your phone; it was not performed in this local environment. Combat, mulligans, counterspell strategy, mana sequencing and combo search remain native Forge. No external training corpus or learned model is bundled. See the [implementation details](../engine-ai/README.md) and [archived tactical evidence](benchmarks/expanded-v2-summary.json).
 
 ## Reading the comparison summary (Android 0.1.9)
 
