@@ -57,11 +57,15 @@ class WorkbenchUiTest {
     @Test fun firstRunAndNavigationAreReadable() {
         compose.onNodeWithText("MagicTester").assertIsDisplayed()
         compose.onNodeWithText("Setup",useUnmergedTree=true).performClick()
-        compose.onNodeWithText("Set up local engine").assertIsDisplayed()
+        // Setup is scrollable; a restored scroll offset or a small viewport must
+        // not be mistaken for a missing control as more settings are added.
+        compose.onNodeWithText("Set up local engine").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Export diagnostic logs").performScrollTo().performClick()
         compose.onNodeWithText("Include complete decklists").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Import exported analyses").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Open battery optimization settings").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Open MagicTester app settings").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Performance & parallel games").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Run device performance test").assertExists()
         compose.onNodeWithText("Pools",useUnmergedTree=true).performClick()
