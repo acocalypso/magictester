@@ -118,6 +118,24 @@ class WorkbenchUiTest {
             if(preview!==screen)preview.recycle();screen.recycle()
         } finally {store.delete(id);store.close()}
     }
+    @Test fun incompleteAnalysisShowsChartAndOffersRetryWithSettings() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext;val store=RunStore(context)
+        val payload=org.json.JSONObject().put("title","Timeout retry fixture").put("format","pauper").put("deck",Examples.burn).put("games",2).put("players",2).put("clockSeconds",120).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().put(org.json.JSONObject().put("name","Timeout opponent").put("text",Examples.burn)))
+        val id=store.create(payload)
+        try {
+            store.update(id,"incomplete","Scheduled matches attempted · 1/2 finished · 1 unfinished. Retry unfinished matches with a longer limit.",1)
+            compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Timeout retry fixture").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Timeout retry fixture").performScrollTo().performClick()
+            compose.onNodeWithText("1 unfinished.",substring=true).assertExists()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Hide matchup chart"))
+            compose.onNodeWithText("Hide matchup chart").assertIsDisplayed()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Resume with these settings"))
+            compose.onNodeWithText("Resume with these settings").assertIsDisplayed()
+            compose.onNodeWithText("Resume unfinished matches · 120 seconds per game").assertExists()
+        } finally {store.delete(id);store.close()}
+    }
     @Test fun phoneBackReturnsFromGameToRunThenListAndPreviousTab() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val store=RunStore(context)

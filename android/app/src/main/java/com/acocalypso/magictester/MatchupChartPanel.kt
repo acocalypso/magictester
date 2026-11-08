@@ -61,7 +61,7 @@ object MatchupChartLabels {
             } finally {saving=false}
         }
     }
-    LaunchedEffect(peer?.id,peer?.completed,peer?.state) {
+    LaunchedEffect(peer?.id,peer?.completed,peer?.state,peer?.label) {
         peerResults=withContext(Dispatchers.IO) {peer?.let {model.store.results(it.id)} ?: emptyList()}
     }
     val data=chart ?: return

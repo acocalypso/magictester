@@ -19,12 +19,12 @@ import org.json.JSONObject
     val run = model.runs.firstOrNull { it.id == id } ?: return
     var results by remember(id) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var selectedGame by remember(id) { mutableStateOf<Pair<Int,JSONObject>?>(null) }
-    var chartExpanded by remember(id) {mutableStateOf(run.state=="complete")}
+    var chartExpanded by remember(id) {mutableStateOf(run.state in listOf("complete","incomplete"))}
     var timeout by remember(id) { mutableIntStateOf(run.payload.optInt("clockSeconds",120)) }
     val listState=rememberLazyListState()
     BackHandler { if(selectedGame!=null) selectedGame=null else previous() }
-    LaunchedEffect(id,run.completed,run.state) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
-    LaunchedEffect(run.state) {if(run.state=="complete")chartExpanded=true}
+    LaunchedEffect(id,run.completed,run.state,run.label) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
+    LaunchedEffect(run.state) {if(run.state in listOf("complete","incomplete"))chartExpanded=true}
     selectedGame?.let { (unit,game) -> GameActions(game,run.payload,unit) { selectedGame=null };return }
     val counts=remember(results,run.payload) {MatchupCharts.totals(run.payload,results)}
     LazyColumn(Modifier.fillMaxSize(),state=listState,contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -67,7 +67,7 @@ import org.json.JSONObject
         item {
             if(run.state=="queued") OutlinedButton(onClick={model.restartPendingQueue()}) {Text("Start queued analyses")}
             if(run.state in listOf("queued","running")) OutlinedButton(onClick={model.cancel(id)}) { Text("Cancel analysis") }
-            if(run.state in listOf("failed","interrupted","cancelled")) {
+            if(run.state in listOf("failed","interrupted","cancelled","incomplete")) {
                 val benchmark=run.payload.optString("kind")=="benchmark"
                 Text(if(benchmark) "Rerun performance test · $timeout seconds per game" else "Resume unfinished matches · $timeout seconds per game")
                 GameTimeoutControl(run.payload.getString("format"),timeout) {timeout=it}

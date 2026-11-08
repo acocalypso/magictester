@@ -8,7 +8,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.*
 import org.json.JSONObject
-import java.util.concurrent.atomic.AtomicInteger
 
 class QueueService: Service() {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
@@ -67,36 +66,20 @@ class QueueService: Service() {
     }
     private suspend fun analysis(run: Run) {
         val payload=run.payload;val total=payload.getInt("games")
-        val done=store.successfulIndices(run.id).toMutableSet()
-        val count=AtomicInteger(done.size)
-        val pending=(0 until total).filter {it !in done}.toMutableList()
         val profile=PerformanceSettings.profile(payload.getString("format"),payload.optInt("players",4))
-        while(pending.isNotEmpty() && store.get(run.id)?.state=="running") {
-            val limit=minOf(PerformanceSettings.limit(this,profile),PerformanceSettings.candidates(this,profile).coerceAtLeast(1))
-            val wave=pending.take(limit);repeat(wave.size) {pending.removeAt(0)}
-            Diagnostics.event("parallel.wave","Scheduling ${wave.size} isolated games",run.id,details=JSONObject().put("configured",PerformanceSettings.selected(this)).put("effectiveLimit",limit))
-            val outcomes=supervisorScope {wave.map {unit->async {runCatching {runUnit(run,unit,count,total)}}}.awaitAll()}
-            outcomes.firstOrNull {it.isFailure}?.exceptionOrNull()?.let {throw it}
-        }
-        store.update(run.id,"complete","All requested matches have recorded outcomes",count.get(),onlyIfRunning=true)
+        AnalysisRunner.run(store,run,
+            parallelism={minOf(PerformanceSettings.limit(this,profile),PerformanceSettings.candidates(this,profile).coerceAtLeast(1))},
+            execute={unit->runUnit(run,unit,total)},progress={progress(it)})
     }
-    private suspend fun runUnit(run: Run,unit: Int,count: AtomicInteger,total: Int) {
-        if(store.get(run.id)?.state!="running") return
+    private suspend fun runUnit(run: Run,unit: Int,total: Int): java.io.File {
         val request=SimulationRequest.unit(run.payload,unit)
         val wake=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MagicTester:match")
         try {
             wake.acquire((request.getInt("clockSeconds")*(if(request.optInt("bestOf")==3) 5 else 1)+480)*CapacityMath.MAX_ENGINES*1000L)
             Diagnostics.event("attempt.started","Starting match ${unit+1}/$total",run.id,details=PerformanceSettings.resources(this).put("unit",unit))
-            val result=ForgeClient.execute(this,request,run.id,onGame={store.gameEvent(run.id,it)},allowed={store.get(run.id)?.state=="running"}) {label,_->
-                store.update(run.id,"running","Match ${unit+1}/$total · $label",count.get(),onlyIfRunning=true);progress("${count.get()}/$total matches saved · $label")
+            return ForgeClient.execute(this,request,run.id,onGame={store.gameEvent(run.id,it)},allowed={store.get(run.id)?.state=="running"}) {label,_->
+                store.update(run.id,"running","Match ${unit+1}/$total · $label",onlyIfRunning=true);progress("${store.get(run.id)?.completed ?: 0}/$total matches saved · $label")
             }
-            val destination=try {store.saveAttempt(run.id,result,unit)} finally {result.delete()}
-            if(destination==null) return
-            val events=destination.readLines().filter {it.isNotBlank()}.map {JSONObject(it)}
-            events.firstOrNull {it.optString("type")=="error"}?.let {error(it.optString("message"))}
-            val outcome=events.firstOrNull {it.optString("type")=="result"}?.getJSONObject("result") ?: error("Forge returned no game evidence")
-            require(outcome.optString("termination") in listOf("normal","rule_draw")) {"Match ${unit+1}: ${outcome.optString("termination").replace('_',' ')}. Review evidence or resume with a longer timeout."}
-            store.update(run.id,"running","Saved ${count.incrementAndGet()}/$total matches",count.get(),onlyIfRunning=true)
         } finally {if(wake.isHeld) wake.release()}
     }
     override fun onBind(intent: Intent?)=null

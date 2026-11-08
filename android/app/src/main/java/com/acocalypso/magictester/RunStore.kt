@@ -196,7 +196,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         }
         payload.put("importedFromRunId",archive.optString("runId")).put("importedAt",java.time.Instant.now().toString())
         val sourceState=archive.optString("state")
-        val restoredState=if(sourceState in listOf("complete","failed","cancelled","interrupted")) sourceState else "interrupted"
+        val restoredState=if(sourceState in listOf("complete","incomplete","failed","cancelled","interrupted")) sourceState else "interrupted"
         val db=writableDatabase
         var id: String?=null;var committed=false
         db.beginTransaction()
