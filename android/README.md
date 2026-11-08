@@ -131,3 +131,9 @@ From 0.1.4 onward, release acceptance downloads the published 0.1.3 APK, verifie
 Match cards and observed-game pages label the submitted deck **You**, with distinct **Opponent 1/2/3** labels and a legend containing each actual deck name. Action histories apply the same display aliases to earlier saved games. BO3 game views retain the parent match index when choosing opponent names. Stored engine identities and exported evidence are preserved.
 
 The Android 15 acceptance job uses the official full AOSP system image. The Google API image's Pixel Launcher produced background ANR dialogs that intercepted system Back during UI tests; app failures remain visible and are not dismissed or suppressed. Android 8 and the Android 17 16 KiB checks retain their Google API images.
+
+### Experimental AI policy
+
+In **Test → Analysis settings**, “Try experimental burn targeting” selects Tactical v1. Native Forge remains the default. The same policy pilots your deck and all opponents; saved settings, game evidence and exports identify it. Retrying a run retains its original policy, including older runs that default to native Forge. Start a new analysis to change policy. Device calibration continues to use native Forge.
+
+Tactical v1 fixes a narrow class of simple multiplayer burn-target choices: it can choose a legal lethal opponent instead of a protected lower-life player. All other decisions fall back to Forge. Eleven curated native positions pass locally, but an overall win-rate improvement has not been established. See the [shared AI module](../engine-ai/README.md) for scope, fixtures and verification limits.

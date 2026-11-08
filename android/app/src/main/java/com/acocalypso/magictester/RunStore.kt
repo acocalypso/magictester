@@ -150,6 +150,8 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         require(archive.optInt("schemaVersion")==1 && archive.optString("application")=="MagicTester Android") {"Choose an analysis JSON from Runs → Export results and game evidence, not a diagnostic ZIP."}
         val payload=JSONObject(archive.getJSONObject("settings").toString())
         require(payload.optString("format") in DeckText.formats && payload.opt("deck") is String && payload.optString("deck").isNotBlank()) {"The export has no readable deck/format settings."}
+        val importedPolicy=AiPolicy.checked(payload.optString("aiPolicy",AiPolicy.STABLE))
+        require(payload.optString("kind")!="benchmark" || importedPolicy==AiPolicy.STABLE) {"Device calibration exports must use the native Forge AI policy."}
         val total=payload.optInt("games")
         require(total in 1..100 && GameTimeouts.accepts(payload.optString("format"),payload.optInt("clockSeconds")) && payload.optString("engineVersion").isNotBlank()) {"The export has invalid analysis settings."}
         require(payload.has("seed") && payload.optInt("players",4) in 2..4 && payload.optInt("bestOf",1) in listOf(1,3)) {"The export has invalid seed/player/match settings."}

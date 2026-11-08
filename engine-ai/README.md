@@ -4,7 +4,7 @@ Shared Java instrumentation for Android, desktop and Docker Forge bridges. The d
 
 ## Experimental policy: tactical-v1
 
-Native requests accept `"aiPolicies": ["tactical-v1", "stable", "stable", "stable"]`, with exactly one entry per seat. Omitting the field retains `stable` for every seat; unknown policies and incorrect seat counts are rejected before games start. These developer requests work in all three native bridges. Product API schemas are not yet expanded for policy selection.
+Native requests accept `"aiPolicies": ["tactical-v1", "stable", "stable", "stable"]`, with exactly one entry per seat. Omitting the field retains `stable` for every seat; unknown policies and incorrect seat counts are rejected before games start. These developer requests work in all three native bridges. Android exposes the policy under Test → Analysis settings and applies one policy equally to every seat. Existing and retried runs preserve their selected policy. The desktop/web product API schemas are not yet expanded for policy selection.
 
 `tactical-v1` ranks legal, predicted-lethal opponents consistently in the two native burn targeting paths. Stable Forge can use one targetable opponent in its damage chooser while its “should hit a player” check examines the lowest-life opponent regardless of targetability. It can also favor a player whose life cannot change, whose damage is prevented, or who cannot lose. The candidate uses Forge's own targetability, prevention/replacement prediction, loss restrictions and infect rules to prefer another opponent who would die from that damage.
 

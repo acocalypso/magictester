@@ -118,6 +118,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
 @Composable private fun FormatPicker(model: Workbench) { var expanded by remember { mutableStateOf(false) };Box { OutlinedButton(onClick={expanded=true},enabled=!model.busy) { Text("Format: ${model.format.replaceFirstChar { it.uppercase() }} ▾") };DropdownMenu(expanded,onDismissRequest={expanded=false}) { DeckText.formats.forEach { format -> DropdownMenuItem(text={Text(format)},onClick={model.chooseFormat(format);expanded=false}) } } } }
 @Composable private fun TestScreen(model: Workbench, open: () -> Unit, pools: () -> Unit, library: () -> Unit, newDeck: () -> Unit) {
     var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(GameTimeouts.defaultSeconds(model.format)) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
+    var aiPolicy by remember { mutableStateOf(AiPolicy.STABLE) }
     LaunchedEffect(model.format) { timeout=GameTimeouts.defaultSeconds(model.format) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageTitle("01 / Prepare","Put your deck\nto the test.","Real Forge AI games, saved locally. Compare your list with selected opponents and inspect every recorded turn.")
@@ -144,12 +145,13 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         Text("$games matches · ${if(bestOf && !DeckText.commander(model.format)) "best of three" else "single games"}")
         Slider(games.toFloat(),{games=it.toInt().coerceIn(1,100)},valueRange=1f..100f,steps=98)
         GameTimeoutControl(model.format,timeout) {timeout=it}
+        AiPolicyControl(aiPolicy,!model.busy) {aiPolicy=it}
         if(!DeckText.commander(model.format)) Row(verticalAlignment=Alignment.CenterVertically) { Switch(bestOf,{bestOf=it});Spacer(Modifier.width(10.dp));Text("Best of three · native AI sideboarding") }
         if(model.format in listOf("commander","cedh")) { Text("Commander table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1) }
         OutlinedTextField(seed,{seed=it.filter(Char::isDigit).take(10)},label={Text("Random seed")},supportingText={Text("Saved with the run for reproducibility.")},singleLine=true,modifier=Modifier.fillMaxWidth())
         Text("${model.selected.size} opponent decks selected. Opponents rotate equally across matches; this is a selected-pool comparison, not a metagame-weighted win rate.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         TextButton(onClick=pools) { Text("Choose opponents →") }
-        Button(onClick={model.enqueue(games,timeout,if(bestOf) 3 else 1,players,seed.toIntOrNull() ?: 12345)},enabled=!model.busy && !model.firstSetup && model.deck.isNotBlank() && model.selected.isNotEmpty(),modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(6.dp)) { Text("Queue analysis") }
+        Button(onClick={model.enqueue(games,timeout,if(bestOf) 3 else 1,players,seed.toIntOrNull() ?: 12345,aiPolicy)},enabled=!model.busy && !model.firstSetup && model.deck.isNotBlank() && model.selected.isNotEmpty(),modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(6.dp)) { Text("Queue analysis") }
         Text("How it works: current legality and Forge card support are checked first. Forge then pilots every seat. A timeout is shown as unfinished evidence and never counted as a loss. AI results estimate matchup behavior; they do not predict human tournament performance.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -158,7 +160,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         item { PageTitle("02 / Observe","Your analyses","Queue progress, recorded outcomes, and the evidence behind each result.") }
         if(model.runs.isEmpty()) item { Text("No analyses yet. Add a deck and opponents, then queue your first run.",Modifier.padding(vertical=24.dp)) }
         items(model.runs,key={it.id}) { run -> OutlinedCard(onClick={select(run.id)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)) {
-            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true);TextButton(onClick={delete(run.id)}) {Text("Delete analysis")} }
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);Text(AiPolicy.label(run.payload.optString("aiPolicy",AiPolicy.STABLE)),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true);TextButton(onClick={delete(run.id)}) {Text("Delete analysis")} }
         } }
     }
 }

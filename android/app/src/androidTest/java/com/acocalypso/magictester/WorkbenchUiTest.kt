@@ -17,6 +17,14 @@ class WorkbenchUiTest {
         }
         compose.waitForIdle()
     }
+    @Test fun experimentalPolicyStartsOffAndCanBeSelectedForANewAnalysis() {
+        compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
+        compose.onNodeWithContentDescription("Try experimental burn targeting").performScrollTo().assertIsOff()
+        compose.onNodeWithText("AI: Native Forge").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Try experimental burn targeting").performClick()
+        compose.onNodeWithText("AI: Tactical v1 · experimental").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Try experimental burn targeting").performClick().assertIsOff()
+    }
     @Test fun firstRunAndNavigationAreReadable() {
         compose.onNodeWithText("MagicTester").assertIsDisplayed()
         compose.onNodeWithText("Setup",useUnmergedTree=true).performClick()

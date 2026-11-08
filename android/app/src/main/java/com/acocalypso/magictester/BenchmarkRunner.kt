@@ -14,6 +14,7 @@ object BenchmarkRunner {
         // A failed older benchmark may have reduced its display total to one saved game.
         // Every fresh calibration still needs all possible trial indices.
         val payload=JSONObject(run.payload.toString()).put("games",CapacityMath.MAX_ENGINES*(CapacityMath.MAX_ENGINES+1))
+        require(payload.optString("aiPolicy",AiPolicy.STABLE)==AiPolicy.STABLE) {"Device calibration requires the native Forge AI policy. Start a new performance test."}
         val profile=PerformanceSettings.profile(payload.getString("format"),payload.optInt("players",4))
         val samples=JSONArray()
         val report=JSONObject().put("identity",PerformanceSettings.identity(context)).put("profile",profile).put("measuredAt",System.currentTimeMillis()).put("samples",samples).put("recommended",1).put("maxStable",0).put("processBudgetMiB",PerformanceSettings.processBudgetMiB(context,profile))

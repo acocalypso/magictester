@@ -30,6 +30,7 @@ import kotlin.math.sqrt
     val wins=decisive.count { !it.isNull("winner") && it.optInt("winner",-1) == 0 }
     LazyColumn(Modifier.fillMaxSize(),state=listState,contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { TextButton(onClick=back) { Text("← All analyses") };Text(run.payload.optString("title"),fontSize=28.sp,fontWeight=FontWeight.Medium);Text("${run.payload.optString("format")} · Forge ${run.payload.optString("engineVersion")} · ${run.state}",fontSize=13.sp);Spacer(Modifier.height(10.dp));Text(run.label,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Text("AI setting: ${AiPolicy.label(run.payload.optString("aiPolicy",AiPolicy.STABLE))} · all seats",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { LiveGamePanel(run) }
         if(run.payload.optString("kind")=="benchmark") item {run.payload.optJSONObject("benchmarkReport")?.let {report ->
             Text("Device performance result",fontSize=20.sp)
@@ -91,6 +92,7 @@ import kotlin.math.sqrt
     val visible=if(keyOnly) entries.filter { it.optString("kind") !in listOf("PHASE","MANA") } else entries
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         item { TextButton(onClick=back) {Text("← Match evidence")};Text("Observed game",fontSize=28.sp);Text("${game.optInt("turns")} turns · ${game.optString("termination").replace('_',' ')}",fontSize=13.sp)
+            GameAiDetails(game,payload)
             Row { Checkbox(keyOnly,{keyOnly=it});Text("Hide phase and mana details",Modifier.padding(top=12.dp),fontSize=13.sp) }
             Text(if(log?.optBoolean("complete") == true) "Complete recorded action history." else "Partial history: the game stopped or reached the log size limit. Omitted actions cannot be reconstructed.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text("You: ${payload.optString("title","Your deck")}",fontSize=13.sp,color=MaterialTheme.colorScheme.primary)

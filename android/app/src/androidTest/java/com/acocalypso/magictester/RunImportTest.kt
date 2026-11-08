@@ -53,6 +53,23 @@ class RunImportTest {
             assertEquals(1,store.all().size)
         } finally {store.close()}
     }
+    @Test fun selectedPolicySurvivesExportImportAndRetryAndUnknownPolicyIsRejected() {
+        val store=RunStore(isolated())
+        try {
+            val settings=JSONObject().put("title","Experimental policy fixture").put("format","pauper").put("deck",Examples.burn)
+                .put("games",1).put("clockSeconds",120).put("seed",12345).put("engineVersion",BuildConfig.FORGE_VERSION)
+                .put("aiPolicy",AiPolicy.TACTICAL).put("opponents",JSONArray().put(JSONObject().put("name","Opponent").put("text",Examples.burn)))
+            val archive=JSONObject().put("schemaVersion",1).put("application","MagicTester Android").put("state","interrupted").put("settings",settings).put("results",JSONArray())
+            val original=store.importExport(archive.toString())
+            val copy=store.importExport(store.export(original))
+            store.resume(copy,180)
+            val policies=SimulationRequest.unit(store.get(copy)!!.payload,0).getJSONArray("aiPolicies")
+            assertEquals(AiPolicy.TACTICAL,policies.getString(0));assertEquals(AiPolicy.TACTICAL,policies.getString(1))
+            settings.put("aiPolicy","unknown-policy")
+            try {store.importExport(archive.toString());fail("Unknown policy imported")} catch(_:IllegalArgumentException) {}
+            assertEquals(2,store.all().size)
+        } finally {store.close()}
+    }
     @Test fun unrelatedOrMalformedJsonDoesNotCreateAnAnalysis() {
         val store=RunStore(isolated())
         try {

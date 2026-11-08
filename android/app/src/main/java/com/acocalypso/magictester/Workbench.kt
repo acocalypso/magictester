@@ -156,8 +156,9 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         withContext(Dispatchers.IO) { Metagame(app).refresh(format,true) { status=it } }
         loadPool();message="Opponent pool refreshed. Select the decks you want to test against."
     }
-    fun enqueue(games: Int, clock: Int, bestOf: Int, players: Int, seed: Int) = launchWork {
+    fun enqueue(games: Int, clock: Int, bestOf: Int, players: Int, seed: Int,aiPolicy: String=AiPolicy.STABLE) = launchWork {
         require(games in 1..100 && GameTimeouts.accepts(format,clock) && players in 2..4)
+        val submittedPolicy=AiPolicy.checked(aiPolicy)
         val submittedDeck=deck;val submittedTitle=title;val submittedFormat=format
         val chosen=opponents.filter { it.getString("name") in selected }.map { JSONObject(it.toString()) }
         require(chosen.isNotEmpty()) { "Add and select an opponent deck in Pools." }
@@ -166,7 +167,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         val legality=withContext(Dispatchers.IO) { ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(submittedDeck)+chosen.map { it.getString("text") },submittedFormat) { status=it } }
         saveDraft()
         val payload=JSONObject().put("title",submittedTitle).put("deck",submittedDeck).put("format",submittedFormat).put("games",games).put("clockSeconds",clock)
-            .put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("aiPolicy",submittedPolicy).put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
         withContext(Dispatchers.IO) { store.create(payload) };startQueue();message="Analysis queued. Follow it in Runs; completed evidence is saved after every match."
     }
@@ -236,7 +237,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         }
         status="Checking the benchmark workload"
         val legality=withContext(Dispatchers.IO) {ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(benchmarkDeck)+chosen.map {it.getString("text")},benchmarkFormat) {status=it}}
-        val payload=JSONObject().put("kind","benchmark").put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",benchmarkClock).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)
+        val payload=JSONObject().put("kind","benchmark").put("aiPolicy",AiPolicy.STABLE).put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",benchmarkClock).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)
         withContext(Dispatchers.IO) {store.create(payload)};startQueue();message="Performance test queued. Follow its real games in Runs; settings update after each measured stage."
     }
     fun deleteRun(id: String) {
