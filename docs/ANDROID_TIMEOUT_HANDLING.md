@@ -48,3 +48,21 @@ release suite also runs real isolated Forge games and in-place update checks.
 
 This fixes analysis scheduling after a timeout. It does not claim to eliminate
 slow or stalled Forge AI evaluations inside an individual game.
+
+## Verified release
+
+[Android 0.1.12](https://github.com/acocalypso/magictester/releases/tag/android-v0.1.12)
+was published from `47fc631`.
+[Release workflow](https://github.com/acocalypso/magictester/actions/runs/42519433039)
+passed 26 JVM tests, lint, shared/native AI checks, and 7 UI plus 55 engine/runtime
+tests on each of API 26, 35 and 37.2. This includes the five analysis-continuation
+regressions, the incomplete/retry UI check, real Forge games and in-place
+update/private-data retention checks. These are emulator checks; no physical
+OnePlus testing is claimed.
+
+The downloaded published APK was independently verified:
+
+- Version: 0.1.12 / code 113.
+- APK SHA-256: `381c6256c41a7e4aa51c86e3847db94df4a6c950bbc6554b04afe9c65e6bdf26`.
+- Signing certificate SHA-256: `a12aa61ccbe6ceb0973da544ce5b09dc07a50306afe8338ca61c356fe5f68f07` (persistent debug identity).
+- Engine JAR SHA-256: `137d5a8948620a7c2ebd7d9908f61b08e2d0be2e4f999dea49102c033ec60466` (unchanged Forge 2.0.15 / Strategic AI strategy-1).
