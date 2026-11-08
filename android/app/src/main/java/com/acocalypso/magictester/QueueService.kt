@@ -43,6 +43,7 @@ class QueueService: Service() {
                 currentId=run.id
                 try {
                     require(run.payload.getString("engineVersion")==BuildConfig.FORGE_VERSION) {"This run uses a different Forge version. Create a new analysis."}
+                    EngineBuild.requireExpected(run.payload.optString("engineBuildSha256"),EngineBuild.fingerprint(this))
                     require(getSystemService(ActivityManager::class.java).largeMemoryClass>=384) {"This device must allow a large heap of at least 384 MiB for Forge."}
                     ForgeRelease.requireCurrent(this)
                     Diagnostics.event("run.started","Starting local work",run.id,details=DiagnosticExporter.device(this))

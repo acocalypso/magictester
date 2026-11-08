@@ -19,6 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -50,12 +52,14 @@ class MainActivity : ComponentActivity() {
     var deletingRun by remember { mutableStateOf<String?>(null) }
     var selectedRun by remember { mutableStateOf<String?>(null) }
     val tabHistory=remember {mutableStateListOf<Int>()}
+    val runHistory=remember {mutableStateListOf<String>()}
+    fun previousRun() {selectedRun=if(runHistory.isEmpty()) null else runHistory.removeAt(runHistory.lastIndex)}
     fun navigateTab(next: Int) {
         if(next!=tab) {if(tabHistory.size>=20) tabHistory.removeAt(0);tabHistory.add(tab);tab=next}
-        selectedRun=null
+        selectedRun=null;runHistory.clear()
     }
     BackHandler(enabled=(tab==1 && selectedRun!=null) || tabHistory.isNotEmpty()) {
-        if(tab==1 && selectedRun!=null) selectedRun=null else tab=tabHistory.removeAt(tabHistory.lastIndex)
+        if(tab==1 && selectedRun!=null) previousRun() else tab=tabHistory.removeAt(tabHistory.lastIndex)
     }
     var deckDialog by remember { mutableStateOf<Pair<String,String>?>(null) }
     var exportRun by remember { mutableStateOf<String?>(null) }
@@ -94,7 +98,7 @@ class MainActivity : ComponentActivity() {
             if(model.message.isNotEmpty()) Surface(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(8.dp)) { Row(Modifier.padding(12.dp)) { Text(model.message,Modifier.weight(1f).heightIn(max=180.dp).verticalScroll(rememberScrollState()),fontSize=13.sp);TextButton(onClick={model.message=""}) { Text("×") } } }
             when(tab) {
                 0 -> TestScreen(model,{ open.launch(arrayOf("text/*","application/octet-stream")) },{navigateTab(2)},{model.message="";showDeckLibrary=true},{if(model.hasUnsavedDeck) confirmNewDeck=true else model.newDeck()})
-                1 -> if(selectedRun == null) RunsScreen(model,{selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it})
+                1 -> if(selectedRun == null) RunsScreen(model,{runHistory.clear();selectedRun=it},{deletingRun=it}) else RunDetail(model,selectedRun!!,{runHistory.clear();selectedRun=null},{deckDialog=it},{exportRun=it;export.launch("magictester-$it.json")},{includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(it)},{deletingRun=it},{next -> if(next!=selectedRun) {selectedRun?.let {if(runHistory.size>=20) runHistory.removeAt(0);runHistory.add(it)};selectedRun=next}},{previousRun()})
                 2 -> PoolsScreen(model) { deckDialog=it }
                 else -> SetupScreen(model,diagnostics={ includeDiagnosticDecks=false;diagnosticRequest=DiagnosticRequest(null) },restore={restoreRuns.launch(arrayOf("application/json","text/plain","application/octet-stream"))})
             }
@@ -102,7 +106,7 @@ class MainActivity : ComponentActivity() {
     }
     if(showDeckLibrary) DeckLibraryDialog(model,onLoad={id ->model.loadSavedDeck(id);navigateTab(0);showDeckLibrary=false},onDismiss={showDeckLibrary=false})
     if(confirmNewDeck) AlertDialog(onDismissRequest={confirmNewDeck=false},title={Text("Start a new deck?")},text={Text("Save the current draft to the library first if you want to keep it.")},confirmButton={TextButton(onClick={model.newDeck();confirmNewDeck=false}) {Text("New deck")}},dismissButton={TextButton(onClick={confirmNewDeck=false}) {Text("Keep editing")}})
-    deletingRun?.let { id -> AlertDialog(onDismissRequest={deletingRun=null},title={Text("Delete analysis?")},text={Text("This stops its active games and deletes its saved results and decklists. Export anything you want to keep first.")},confirmButton={TextButton(onClick={model.deleteRun(id);if(selectedRun==id) selectedRun=null;deletingRun=null}) {Text("Delete")}},dismissButton={TextButton(onClick={deletingRun=null}) {Text("Keep")}}) }
+    deletingRun?.let { id -> AlertDialog(onDismissRequest={deletingRun=null},title={Text("Delete analysis?")},text={Text("This stops its active games and deletes its saved results and decklists. Export anything you want to keep first.")},confirmButton={TextButton(onClick={model.deleteRun(id);runHistory.removeAll {it==id};if(selectedRun==id) previousRun();deletingRun=null}) {Text("Delete")}},dismissButton={TextButton(onClick={deletingRun=null}) {Text("Keep")}}) }
     diagnosticRequest?.let { request ->
         AlertDialog(onDismissRequest={diagnosticRequest=null},title={Text("Export diagnostic logs")},text={Column {
             Text(if(request.runId==null) "Save startup, setup and recent run diagnostics." else "Save the selected run's settings, errors and engine evidence.")
@@ -118,7 +122,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
 @Composable private fun FormatPicker(model: Workbench) { var expanded by remember { mutableStateOf(false) };Box { OutlinedButton(onClick={expanded=true},enabled=!model.busy) { Text("Format: ${model.format.replaceFirstChar { it.uppercase() }} ▾") };DropdownMenu(expanded,onDismissRequest={expanded=false}) { DeckText.formats.forEach { format -> DropdownMenuItem(text={Text(format)},onClick={model.chooseFormat(format);expanded=false}) } } } }
 @Composable private fun TestScreen(model: Workbench, open: () -> Unit, pools: () -> Unit, library: () -> Unit, newDeck: () -> Unit) {
     var games by remember { mutableIntStateOf(10) };var timeout by remember { mutableIntStateOf(GameTimeouts.defaultSeconds(model.format)) };var bestOf by remember { mutableStateOf(false) };var players by remember { mutableIntStateOf(4) };var seed by remember { mutableStateOf("12345") }
-    var aiPolicy by remember { mutableStateOf(AiPolicy.STABLE) }
+    val aiPolicy=model.aiPolicy;val compareAi=model.compareAi
     LaunchedEffect(model.format) { timeout=GameTimeouts.defaultSeconds(model.format) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         PageTitle("01 / Prepare","Put your deck\nto the test.","Real Forge AI games, saved locally. Compare your list with selected opponents and inspect every recorded turn.")
@@ -145,13 +149,17 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         Text("$games matches · ${if(bestOf && !DeckText.commander(model.format)) "best of three" else "single games"}")
         Slider(games.toFloat(),{games=it.toInt().coerceIn(1,100)},valueRange=1f..100f,steps=98)
         GameTimeoutControl(model.format,timeout) {timeout=it}
-        AiPolicyControl(aiPolicy,!model.busy) {aiPolicy=it}
+        AiPolicyControl(aiPolicy,!model.busy) {model.chooseAiPolicy(it)}
+        if(aiPolicy!=AiPolicy.STABLE) {
+            Row(verticalAlignment=Alignment.CenterVertically) {Checkbox(compareAi,{model.compareAi=it},enabled=!model.busy,modifier=Modifier.semantics {contentDescription="Also queue a native comparison"});Text("Also queue a native comparison",fontSize=14.sp)}
+            if(compareAi) Text("Two analyses, ${games*2} matches total: native baseline, then this policy for your deck against native opponents. Both keep the same decks, seed and clock. Your deck stays in seat 0.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(!DeckText.commander(model.format)) Row(verticalAlignment=Alignment.CenterVertically) { Switch(bestOf,{bestOf=it});Spacer(Modifier.width(10.dp));Text("Best of three · native AI sideboarding") }
         if(model.format in listOf("commander","cedh")) { Text("Commander table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1) }
         OutlinedTextField(seed,{seed=it.filter(Char::isDigit).take(10)},label={Text("Random seed")},supportingText={Text("Saved with the run for reproducibility.")},singleLine=true,modifier=Modifier.fillMaxWidth())
         Text("${model.selected.size} opponent decks selected. Opponents rotate equally across matches; this is a selected-pool comparison, not a metagame-weighted win rate.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         TextButton(onClick=pools) { Text("Choose opponents →") }
-        Button(onClick={model.enqueue(games,timeout,if(bestOf) 3 else 1,players,seed.toIntOrNull() ?: 12345,aiPolicy)},enabled=!model.busy && !model.firstSetup && model.deck.isNotBlank() && model.selected.isNotEmpty(),modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(6.dp)) { Text("Queue analysis") }
+        Button(onClick={model.enqueue(games,timeout,if(bestOf) 3 else 1,players,seed.toIntOrNull() ?: 12345,aiPolicy,compareAi)},enabled=!model.busy && !model.firstSetup && model.deck.isNotBlank() && model.selected.isNotEmpty(),modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(6.dp)) { Text(if(compareAi) "Queue comparison" else "Queue analysis") }
         Text("How it works: current legality and Forge card support are checked first. Forge then pilots every seat. A timeout is shown as unfinished evidence and never counted as a loss. AI results estimate matchup behavior; they do not predict human tournament performance.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -160,7 +168,7 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         item { PageTitle("02 / Observe","Your analyses","Queue progress, recorded outcomes, and the evidence behind each result.") }
         if(model.runs.isEmpty()) item { Text("No analyses yet. Add a deck and opponents, then queue your first run.",Modifier.padding(vertical=24.dp)) }
         items(model.runs,key={it.id}) { run -> OutlinedCard(onClick={select(run.id)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)) {
-            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);Text(AiPolicy.label(run.payload.optString("aiPolicy",AiPolicy.STABLE)),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true);TextButton(onClick={delete(run.id)}) {Text("Delete analysis")} }
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Row { Text(run.payload.optString("title","My deck"),Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(run.state.uppercase(),fontSize=10.sp,color=accent) };Text("${run.payload.optString("format")} · ${run.completed}/${run.payload.optInt("games")} matches",fontSize=13.sp);Text(AiPolicy.label(run.payload.optString("aiPolicy",AiPolicy.STABLE)),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.payload.has("comparisonId")) Text("Comparison ${run.payload.optString("comparisonId").take(8)} · ${run.payload.optString("comparisonRole")}",fontSize=11.sp,color=accent);LinearProgressIndicator(progress={run.completed.toFloat()/run.payload.optInt("games",1)},modifier=Modifier.fillMaxWidth());Text(run.label,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);if(run.liveGame!=null) LiveGamePanel(run,true);TextButton(onClick={delete(run.id)}) {Text("Delete analysis")} }
         } }
     }
 }

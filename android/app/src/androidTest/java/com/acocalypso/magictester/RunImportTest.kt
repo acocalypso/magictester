@@ -70,6 +70,15 @@ class RunImportTest {
             assertEquals(2,store.all().size)
         } finally {store.close()}
     }
+    @Test fun pairedCreationRollsBackBothRowsWhenOnePayloadCannotBeStored() {
+        val context=isolated();val store=RunStore(context)
+        try {
+            try {store.createBatch(listOf(JSONObject().put("title","First"),JSONObject().put("oversized","x".repeat(1000001))));fail("Oversized pair accepted")}
+            catch(_:IllegalArgumentException) {}
+            assertTrue(store.all().isEmpty())
+            assertTrue(File(context.filesDir,"runs").listFiles().orEmpty().isEmpty())
+        } finally {store.close()}
+    }
     @Test fun unrelatedOrMalformedJsonDoesNotCreateAnAnalysis() {
         val store=RunStore(isolated())
         try {

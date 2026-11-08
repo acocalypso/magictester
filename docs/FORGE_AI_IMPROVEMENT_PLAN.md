@@ -58,7 +58,11 @@ The recommended approach is a shared, versioned Java AI layer around Forge: reta
 
 ## Implementation checkpoint: November 8, 2026
 
-The shared recorder and a first per-seat experimental `tactical-v1` policy are implemented under [`engine-ai/`](../engine-ai/README.md). The policy fixes tested simple multiplayer burn ranking cases behind an opt-in flag; native stable behavior remains the reference. Thirteen native tactical positions (including Worship and Lich's Mirror fallbacks) and two completed transport/provenance games pass on a desktop JVM. Android app/test APK compilation, 18 JVM unit tests and lint also pass locally; physical-device acceptance and a balanced strength league remain outstanding. This is a narrow heuristic correction, not the proposed FlatMC backport, trained model, complete decision corpus or a demonstrated overall playing-strength gain. See the module README for exact scope and evidence.
+Shared opt-in policies, the bounded decision recorder and cancellation safeguards are implemented under [`engine-ai/`](../engine-ai/README.md). Tactical v1 remains the narrow burn correction; Expanded v2 adds life-loss, discard, mill, draw, poison and supported dynamic-burn corrections. The expanded suite passes 32 scenarios rotated through four actor seats (128 positions, 412 assertions), including 26 scenarios using printed card abilities. The original 13-position suite, visibility, native transport and interruption contracts also pass.
+
+Android exposes policy selection, a controlled two-run comparison against fixed native opponents, readable planning/error metadata and exact engine-build pinning. App/test APK compilation, 19 JVM tests and lint pass locally. Release acceptance and physical-device testing remain distinct. See the [full-test guide](AI_FULL_TEST_GUIDE.md).
+
+The cancellation work adds cooperative checks to three measured hot-path families and removes unsupported forced thread stopping. It does not establish transactional rollback of every speculative state or a measured universal speedup. Bounded FlatMC, a learned evaluator, broader combat/mana/mulligan scenarios, full recorder coverage and a balanced held-out strength league remain future work. Stable Forge is still the engine channel and native policy reference.
 
 ## First three reviewable changes
 

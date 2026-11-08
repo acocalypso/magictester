@@ -37,6 +37,19 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         Diagnostics.event("run.$initialState",if(initialState=="queued") "Analysis added to the local queue" else "Restoring an exported analysis",id,details=JSONObject().put("format",payload.optString("format")).put("games",payload.optInt("games")).put("clockSeconds",payload.optInt("clockSeconds")).put("seed",payload.optInt("seed")))
         RunEvents.changed();return id
     }
+    fun createBatch(payloads: List<JSONObject>): List<String> {
+        require(payloads.size in 1..2)
+        val ids=mutableListOf<String>();val db=writableDatabase
+        db.beginTransaction()
+        try {
+            for(payload in payloads) ids+=create(payload)
+            db.setTransactionSuccessful()
+        } catch(error: Throwable) {
+            for(id in ids) File(directory,id).deleteRecursively()
+            throw error
+        } finally {db.endTransaction();RunEvents.changed()}
+        return ids
+    }
     fun claim(id: String): Boolean {
         val updated=writableDatabase.update("runs",ContentValues().apply {put("state","running");put("label","Checking device resources")},"id=? AND state='queued'",arrayOf(id))>0
         if(updated) RunEvents.changed()
@@ -120,7 +133,9 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
     fun resume(id: String, clock: Int) {
         val run = get(id) ?: return
         require(run.state !in listOf("running", "queued", "complete")); require(GameTimeouts.accepts(run.payload.getString("format"),clock))
-        val payload = run.payload.put("clockSeconds",clock)
+        val payload = run.payload
+        if(payload.has("comparisonId") && payload.optInt("clockSeconds")!=clock) payload.put("comparisonSettingsChanged",true)
+        payload.put("clockSeconds",clock)
         writableDatabase.update("runs",ContentValues().apply { put("payload",payload.toString());putNull("live_game");put("state","queued");put("label",if(payload.optString("kind")=="benchmark") "Rerunning device performance measurements" else "Resuming unfinished matches") },"id=?",arrayOf(id))
         Diagnostics.event("run.resumed","Unfinished matches requeued",id,details=JSONObject().put("clockSeconds",clock))
         RunEvents.changed()
@@ -151,6 +166,7 @@ class RunStore(private val appContext: Context) : SQLiteOpenHelper(appContext, "
         val payload=JSONObject(archive.getJSONObject("settings").toString())
         require(payload.optString("format") in DeckText.formats && payload.opt("deck") is String && payload.optString("deck").isNotBlank()) {"The export has no readable deck/format settings."}
         val importedPolicy=AiPolicy.checked(payload.optString("aiPolicy",AiPolicy.STABLE))
+        AiPolicy.checkedScope(payload.optString("aiScope",AiPolicy.ALL))
         require(payload.optString("kind")!="benchmark" || importedPolicy==AiPolicy.STABLE) {"Device calibration exports must use the native Forge AI policy."}
         val total=payload.optInt("games")
         require(total in 1..100 && GameTimeouts.accepts(payload.optString("format"),payload.optInt("clockSeconds")) && payload.optString("engineVersion").isNotBlank()) {"The export has invalid analysis settings."}

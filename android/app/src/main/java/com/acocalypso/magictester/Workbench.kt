@@ -23,6 +23,13 @@ class Workbench(application: Application) : AndroidViewModel(application) {
     var deck by mutableStateOf(prefs.getString("deck","") ?: "")
     var title by mutableStateOf(prefs.getString("title","My deck") ?: "My deck")
     var format by mutableStateOf(prefs.getString("format","pauper") ?: "pauper")
+    var aiPolicy by mutableStateOf(prefs.getString("preferredAiPolicy",AiPolicy.STABLE)?.takeIf {it in AiPolicy.options} ?: AiPolicy.STABLE)
+        private set
+    var compareAi by mutableStateOf(false)
+    fun chooseAiPolicy(policy: String) {
+        aiPolicy=AiPolicy.checked(policy);if(policy==AiPolicy.STABLE) compareAi=false
+        prefs.edit().putString("preferredAiPolicy",policy).apply()
+    }
     var opponents by mutableStateOf<List<JSONObject>>(emptyList())
     var selected by mutableStateOf<Set<String>>(emptySet())
     var runs by mutableStateOf<List<Run>>(emptyList())
@@ -156,9 +163,10 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         withContext(Dispatchers.IO) { Metagame(app).refresh(format,true) { status=it } }
         loadPool();message="Opponent pool refreshed. Select the decks you want to test against."
     }
-    fun enqueue(games: Int, clock: Int, bestOf: Int, players: Int, seed: Int,aiPolicy: String=AiPolicy.STABLE) = launchWork {
+    fun enqueue(games: Int, clock: Int, bestOf: Int, players: Int, seed: Int,aiPolicy: String=AiPolicy.STABLE,compare: Boolean=false) = launchWork {
         require(games in 1..100 && GameTimeouts.accepts(format,clock) && players in 2..4)
         val submittedPolicy=AiPolicy.checked(aiPolicy)
+        require(!compare || submittedPolicy!=AiPolicy.STABLE) {"Choose an experimental policy for a comparison."}
         val submittedDeck=deck;val submittedTitle=title;val submittedFormat=format
         val chosen=opponents.filter { it.getString("name") in selected }.map { JSONObject(it.toString()) }
         require(chosen.isNotEmpty()) { "Add and select an opponent deck in Pools." }
@@ -167,9 +175,10 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         val legality=withContext(Dispatchers.IO) { ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(submittedDeck)+chosen.map { it.getString("text") },submittedFormat) { status=it } }
         saveDraft()
         val payload=JSONObject().put("title",submittedTitle).put("deck",submittedDeck).put("format",submittedFormat).put("games",games).put("clockSeconds",clock)
-            .put("aiPolicy",submittedPolicy).put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("aiPolicy",submittedPolicy).put("aiScope",AiPolicy.ALL).put("engineBuildSha256",EngineBuild.fingerprint(app)).put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
-        withContext(Dispatchers.IO) { store.create(payload) };startQueue();message="Analysis queued. Follow it in Runs; completed evidence is saved after every match."
+        withContext(Dispatchers.IO) { store.createBatch(if(compare) AiComparison.prepare(payload) else listOf(payload)) }
+        startQueue();message=if(compare) "Two linked analyses queued: native baseline and your candidate against native opponents. Find both in Runs." else "Analysis queued. Follow it in Runs; completed evidence is saved after every match."
     }
     fun importAnalyses(uris: List<android.net.Uri>) = launchWork {
         require(uris.size in 1..100) {"Choose up to 100 analysis JSON exports at a time."}
@@ -237,7 +246,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
         }
         status="Checking the benchmark workload"
         val legality=withContext(Dispatchers.IO) {ForgeRelease.requireCurrent(app);CurrentLegality(app).check(listOf(benchmarkDeck)+chosen.map {it.getString("text")},benchmarkFormat) {status=it}}
-        val payload=JSONObject().put("kind","benchmark").put("aiPolicy",AiPolicy.STABLE).put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",benchmarkClock).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)
+        val payload=JSONObject().put("kind","benchmark").put("aiPolicy",AiPolicy.STABLE).put("engineBuildSha256",EngineBuild.fingerprint(app)).put("title","Device performance test").put("deck",benchmarkDeck).put("format",benchmarkFormat).put("games",20).put("clockSeconds",benchmarkClock).put("bestOf",1).put("players",if(benchmarkFormat=="duel") 2 else players).put("seed",24681357).put("engineVersion",BuildConfig.FORGE_VERSION).put("opponents",JSONArray(chosen)).put("legality",legality)
         withContext(Dispatchers.IO) {store.create(payload)};startQueue();message="Performance test queued. Follow its real games in Runs; settings update after each measured stage."
     }
     fun deleteRun(id: String) {

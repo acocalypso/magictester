@@ -34,6 +34,8 @@ open class EngineService : Service() {
                 fun metrics() { sample();send(5,JSONObject().put("pid",Process.myPid()).put("peakPssKiB",peakPss.get()).put("heapUsedMiB",(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/1048576).toString()) }
                 try {
                     val request = JSONObject(requestFile.readText())
+                    val engineBuild=EngineBuild.fingerprint(this@EngineService)
+                    EngineBuild.requireExpected(request.optString("expectedEngineBuildSha256"),engineBuild)
                     val requestRunId=request.optString("diagnosticRunId","engine")
                     runId=requestRunId
                     console=Diagnostics.captureConsole(this@EngineService,requestRunId)
@@ -79,7 +81,10 @@ open class EngineService : Service() {
                             request.put("decks", paths).put("companions", companions)
                         }
                         resultFile.bufferedWriter().use { writer ->
-                            AndroidForgeBridge.execute(request.toString()) { event -> writer.appendLine(event); writer.flush(); val json = JSONObject(event)
+                            AndroidForgeBridge.execute(request.toString()) { event ->
+                                val json = JSONObject(event)
+                                EngineBuild.annotate(json,engineBuild,BuildConfig.VERSION_NAME)
+                                writer.appendLine(json.toString());writer.flush()
                                 when(json.optString("type")) {
                                     "game_started" -> {
                                         json.put("startedAtEpochMs",System.currentTimeMillis()).put("startedElapsedMs",SystemClock.elapsedRealtime()).put("clockSeconds",request.optInt("clockSeconds"))

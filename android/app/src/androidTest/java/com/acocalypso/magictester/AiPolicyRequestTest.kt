@@ -24,6 +24,11 @@ class AiPolicyRequestTest {
             for(i in 0 until seats) assertEquals("tactical-v1",candidate.getJSONArray("aiPolicies").getString(i))
             assertEquals(1,candidate.getJSONArray("indices").getInt(0))
             assertEquals(123,candidate.getInt("seed"))
+            source.put("aiPolicy",AiPolicy.EXPANDED).put("aiScope",AiPolicy.YOUR_DECK).put("engineBuildSha256","frozen")
+            val expanded=SimulationRequest.unit(source,1)
+            assertEquals(AiPolicy.EXPANDED,expanded.getJSONArray("aiPolicies").getString(0))
+            for(i in 1 until seats) assertEquals(AiPolicy.STABLE,expanded.getJSONArray("aiPolicies").getString(i))
+            assertEquals("frozen",expanded.getString("expectedEngineBuildSha256"))
         }
     }
     @Test fun unsupportedPolicyFailsBeforeEngineWork() {

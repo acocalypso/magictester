@@ -10,12 +10,21 @@ class AiPolicyTest {
         }
     }
     @Test fun unknownImportedPoliciesAndUnsupportedTablesAreRejected() {
-        for(id in listOf("","strongest","tactical-v2")) {
+        for(id in listOf("","strongest","tactical-v3")) {
             try {AiPolicy.checked(id);fail("Unknown imported policy accepted")} catch(_:IllegalArgumentException) {}
         }
         for(count in listOf(1,5)) {
             try {AiPolicy.seats(AiPolicy.STABLE,count);fail("Unsupported table accepted")} catch(_:IllegalArgumentException) {}
         }
+    }
+    @Test fun expandedComparisonKeepsOpponentsNativeAtEveryTableSize() {
+        for(count in 2..4) {
+            assertEquals(List(count) {AiPolicy.EXPANDED},AiPolicy.seats(AiPolicy.EXPANDED,count))
+            val paired=AiPolicy.seats(AiPolicy.EXPANDED,count,AiPolicy.YOUR_DECK)
+            assertEquals(AiPolicy.EXPANDED,paired.first())
+            assertTrue(paired.drop(1).all {it==AiPolicy.STABLE})
+        }
+        try {AiPolicy.seats(AiPolicy.EXPANDED,4,"unknown");fail("Invalid scope accepted")}catch(_:IllegalArgumentException) {}
     }
     @Test fun labelsDistinguishExperimentalAndUnknownEvidence() {
         assertEquals("Native Forge",AiPolicy.label(AiPolicy.STABLE))

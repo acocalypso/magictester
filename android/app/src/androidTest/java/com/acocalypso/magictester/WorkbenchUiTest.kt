@@ -17,13 +17,42 @@ class WorkbenchUiTest {
         }
         compose.waitForIdle()
     }
-    @Test fun experimentalPolicyStartsOffAndCanBeSelectedForANewAnalysis() {
+    @Test fun expandedPolicyAndPairedComparisonCanBeSelectedForANewAnalysis() {
         compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
-        compose.onNodeWithContentDescription("Try experimental burn targeting").performScrollTo().assertIsOff()
-        compose.onNodeWithText("AI: Native Forge").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Try experimental burn targeting").performClick()
-        compose.onNodeWithText("AI: Tactical v1 · experimental").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Try experimental burn targeting").performClick().assertIsOff()
+        compose.onNodeWithText("Choose AI policy").performScrollTo().performClick()
+        compose.onNodeWithText("Expanded v2 · experimental").performClick()
+        compose.onNodeWithText("AI: Expanded v2 · experimental").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Also queue a native comparison").performScrollTo().assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithText("Queue comparison").performScrollTo().assertExists()
+        compose.onNodeWithText("Pools",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Test",useUnmergedTree=true).performClick()
+        compose.onNodeWithText("Choose AI policy").performScrollTo()
+        compose.onNodeWithText("AI: Expanded v2 · experimental").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Also queue a native comparison").performScrollTo().assertIsOn()
+        compose.onNodeWithText("Choose AI policy").performScrollTo().performClick()
+        compose.onNodeWithText("Native Forge").performClick()
+        compose.onNodeWithText("Queue analysis").performScrollTo().assertExists()
+    }
+    @Test fun linkedComparisonReturnsToThePreviousRunOnPhoneBack() {
+        val store=RunStore(InstrumentationRegistry.getInstrumentation().targetContext)
+        val source=org.json.JSONObject().put("title","Comparison fixture").put("format","pauper").put("deck",Examples.burn)
+            .put("games",1).put("clockSeconds",120).put("seed",55).put("aiPolicy",AiPolicy.EXPANDED).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().put(org.json.JSONObject().put("name","Opponent").put("text",Examples.burn)))
+        val pair=AiComparison.prepare(source)
+        pair[0].put("title","Linked native fixture");pair[1].put("title","Linked candidate fixture")
+        val ids=store.createBatch(pair)
+        try {
+            for(id in ids) store.update(id,"interrupted","Navigation fixture")
+            compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
+            compose.waitUntil(5000) {compose.onAllNodesWithText("Linked candidate fixture").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Linked candidate fixture").performClick()
+            compose.onNodeWithText("Open Native Forge").performScrollTo().performClick()
+            compose.onNodeWithText("Linked native fixture").assertIsDisplayed()
+            phoneBack()
+            compose.onNodeWithText("Linked candidate fixture").assertIsDisplayed()
+            phoneBack()
+            compose.onNodeWithText("Your analyses").assertIsDisplayed()
+        } finally {for(id in ids) store.delete(id);store.close()}
     }
     @Test fun firstRunAndNavigationAreReadable() {
         compose.onNodeWithText("MagicTester").assertIsDisplayed()
