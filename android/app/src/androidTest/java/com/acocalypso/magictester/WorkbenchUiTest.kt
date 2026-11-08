@@ -80,6 +80,44 @@ class WorkbenchUiTest {
         val destination=File(instrumentation.targetContext.filesDir,"acceptance-ui.png")
         destination.outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) }
     }
+    @Test fun completedRunShowsReadableMatchupChartAndCellDetails() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext;val store=RunStore(context)
+        val payload=org.json.JSONObject().put("title","Matchup chart fixture").put("format","pauper").put("deck",Examples.burn).put("games",6).put("players",2).put("clockSeconds",120).put("engineVersion",BuildConfig.FORGE_VERSION)
+            .put("opponents",org.json.JSONArray().apply {for(name in listOf("Dimir Control","Affinity","Burn"))put(org.json.JSONObject().put("name",name).put("text",Examples.burn))})
+        val id=store.create(payload)
+        try {
+            store.update(id,"running","Chart fixture")
+            for(i in 0..5) {
+                val result=org.json.JSONObject().put("index",i).put("termination",if(i==2) "rule_draw" else "normal").put("winner",if(i==2) org.json.JSONObject.NULL else if(i in listOf(1,3))1 else 0)
+                val file=File(context.cacheDir,"chart-$i.jsonl").apply {writeText(org.json.JSONObject().put("type","result").put("result",result).toString()+"\n")}
+                store.saveAttempt(id,file,i);file.delete()
+            }
+            store.update(id,"complete","Chart fixture",6)
+            compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText("Matchup chart fixture").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithText("Matchup chart fixture").performScrollTo().performClick()
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Pauper matchup chart"))
+            compose.onNodeWithText("Hide matchup chart").assertExists()
+            // This fixture has no comparison or benchmark items: the chart is
+            // item four. Position its first matchup cell inside small viewports.
+            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4)
+            compose.onNode(hasScrollToIndexAction()).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.ScrollBy) {it(0f,200f*context.resources.displayMetrics.density)}
+            compose.onNodeWithTag("matchup-cell-0-0").assertIsDisplayed().performClick()
+            compose.onNodeWithText("Matchup details").assertIsDisplayed()
+            compose.onNodeWithText("95% confidence interval:",substring=true).assertIsDisplayed()
+            phoneBack()
+            compose.onNodeWithText("Matchup details").assertDoesNotExist()
+            compose.onNodeWithTag("matchup-cell-0-0").assertIsDisplayed()
+            val screen=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            val preview=Bitmap.createScaledBitmap(screen,540,screen.height*540/screen.width,true)
+            val bytes=java.io.ByteArrayOutputStream();preview.compress(Bitmap.CompressFormat.PNG,100,bytes)
+            File(context.filesDir,"acceptance-matchups-ui.png").writeBytes(bytes.toByteArray())
+            android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP).chunked(2000).forEachIndexed {index,chunk->
+                InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply {putString("stream","MT_CHART_UI_PREVIEW:$index:$chunk\n")})
+            }
+            if(preview!==screen)preview.recycle();screen.recycle()
+        } finally {store.delete(id);store.close()}
+    }
     @Test fun phoneBackReturnsFromGameToRunThenListAndPreviousTab() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val store=RunStore(context)

@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import kotlin.math.sqrt
 
 @Composable fun RunDetail(model: Workbench, id: String, back: () -> Unit, deck: (Pair<String,String>) -> Unit, export: (String) -> Unit, diagnostics: (String) -> Unit, delete: (String) -> Unit, openRun: (String) -> Unit={}, previous: () -> Unit=back) {
     val run = model.runs.firstOrNull { it.id == id } ?: return
@@ -25,9 +24,7 @@ import kotlin.math.sqrt
     BackHandler { if(selectedGame!=null) selectedGame=null else previous() }
     LaunchedEffect(id,run.completed,run.state) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
     selectedGame?.let { (unit,game) -> GameActions(game,run.payload,unit) { selectedGame=null };return }
-    val completed=results.filter { it.optString("termination") in listOf("normal","rule_draw") }.distinctBy { it.optInt("index") }
-    val decisive=completed.filter { it.optString("termination") == "normal" }
-    val wins=decisive.count { !it.isNull("winner") && it.optInt("winner",-1) == 0 }
+    val counts=remember(results,run.payload) {MatchupCharts.totals(run.payload,results)}
     LazyColumn(Modifier.fillMaxSize(),state=listState,contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         item { TextButton(onClick=back) { Text("← All analyses") };Text(run.payload.optString("title"),fontSize=28.sp,fontWeight=FontWeight.Medium);Text("${run.payload.optString("format")} · Forge ${run.payload.optString("engineVersion")} · ${run.state}",fontSize=13.sp);Spacer(Modifier.height(10.dp));Text(run.label,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { Text("AI setting: ${AiPolicy.label(run.payload.optString("aiPolicy",AiPolicy.STABLE))} · ${AiPolicy.scopeLabel(run.payload.optString("aiScope",AiPolicy.ALL))}",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -57,9 +54,10 @@ import kotlin.math.sqrt
             if(report.has("stoppedReason")) Text(report.getString("stoppedReason"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }}
         item {
-            Row(horizontalArrangement=Arrangement.spacedBy(24.dp)) { Column { Text("${completed.size}",fontSize=36.sp);Text("finished matches",fontSize=12.sp) };Column { Text(if(decisive.isEmpty()) "—" else "${wins*100/decisive.size}%",fontSize=36.sp);Text("observed wins",fontSize=12.sp) } }
-            if(decisive.isNotEmpty()) { val n=decisive.size.toDouble();val p=wins/n;val d=1+3.8416/n;val mid=(p+1.9208/n)/d;val radius=1.96*sqrt(p*(1-p)/n+0.9604/(n*n))/d;Text("95% Wilson interval: ${((mid-radius)*100).toInt()}–${((mid+radius)*100).toInt()}%. Selected-pool estimate; unfinished attempts are excluded.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row(horizontalArrangement=Arrangement.spacedBy(24.dp)) { Column { Text("${counts.finished}",fontSize=36.sp);Text("finished matches",fontSize=12.sp) };Column { Text(MatchupChartLabels.rate(counts),fontSize=36.sp);Text("match win rate",fontSize=12.sp) } }
+            if(counts.finished>0)Text("95% Wilson interval: ${MatchupChartLabels.interval(counts)}. Draws count as finished matches, not wins. Unfinished attempts are excluded.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if(run.payload.optString("kind")!="benchmark") item {MatchupChartPanel(model,run,results)}
         item { OutlinedButton(onClick={deck(run.payload.optString("title") to run.payload.getString("deck"))}) { Text("Your decklist") }
             val opponents=run.payload.getJSONArray("opponents")
             for(i in 0 until opponents.length()) { val opponent=opponents.getJSONObject(i);TextButton(onClick={deck(opponent.getString("name") to opponent.getString("text"))}) { Text("Opponent: ${opponent.getString("name")}") } }

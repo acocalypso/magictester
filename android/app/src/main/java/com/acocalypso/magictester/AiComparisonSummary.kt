@@ -15,7 +15,7 @@ data class AiComparisonScore(val pairs: Int,val defaultWins: Int,val experimenta
     }
 }
 
-data class AiComparisonSummary(val score: AiComparisonScore?=null,val message: String,val excludedPairs: Int=0)
+data class AiComparisonSummary(val score: AiComparisonScore?=null,val message: String,val excludedPairs: Int=0,val matchedIndices: Set<Int> = emptySet())
 
 object AiComparisonEvidence {
     private fun successful(rows: List<JSONObject>)=rows.filter {it.optString("termination") in listOf("normal","rule_draw")}
@@ -44,16 +44,17 @@ object AiComparisonEvidence {
         }
         val goodDefaults=mutableMapOf<Int,Boolean>();val goodExperiments=mutableMapOf<Int,Boolean>()
         var excluded=0
+        fun validOutcome(row: JSONObject)=row.optString("termination")=="rule_draw" || (!row.isNull("winner") && row.optInt("winner",-1) in 0 until seats)
         for(index in defaults.keys.intersect(experiments.keys)) {
             val a=defaults.getValue(index);val b=experiments.getValue(index)
             val comparable=index in 0 until baseline.optInt("games") &&
                 listOf("gameSeed","clockSeconds","unit","engineVersion","engineBuildSha256").all {a.has(it) && a.opt(it)?.toString()==b.opt(it)?.toString()} &&
-                a.optString("engineBuildSha256").isNotBlank() && policiesMatch(a,AiPolicy.STABLE) && policiesMatch(b,candidate.getString("aiPolicy"))
+                a.optString("engineBuildSha256").isNotBlank() && validOutcome(a) && validOutcome(b) && policiesMatch(a,AiPolicy.STABLE) && policiesMatch(b,candidate.getString("aiPolicy"))
             if(!comparable) {excluded++;continue}
-            goodDefaults[index]=!a.isNull("winner") && a.optInt("winner",-1)==0
-            goodExperiments[index]=!b.isNull("winner") && b.optInt("winner",-1)==0
+            goodDefaults[index]=a.optString("termination")=="normal" && !a.isNull("winner") && a.optInt("winner",-1)==0
+            goodExperiments[index]=b.optString("termination")=="normal" && !b.isNull("winner") && b.optInt("winner",-1)==0
         }
         val score=AiComparisonScore.calculate(goodDefaults,goodExperiments)
-        return AiComparisonSummary(score,if(score.pairs==0) "Waiting for comparable finished matches in both analyses." else "Observed results for the same match indices. This measures your deck in the selected pool, not overall AI strength.",excluded)
+        return AiComparisonSummary(score,if(score.pairs==0) "Waiting for comparable finished matches in both analyses." else "Observed results for the same match indices. This measures your deck in the selected pool, not overall AI strength.",excluded,goodDefaults.keys.toSet())
     }
 }

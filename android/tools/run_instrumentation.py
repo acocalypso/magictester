@@ -45,3 +45,5 @@ finally:
     # Test fixtures only: retain the app's bounded engine/error logs when instrumentation fails.
     with (output/'engine-diagnostics.tar').open('wb') as logs:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','tar','-cf','-','files/diagnostics'],stdout=logs,stderr=subprocess.DEVNULL)
     with (output/'performance-settings.xml').open('wb') as settings:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','shared_prefs/performance.xml'],stdout=settings,stderr=subprocess.DEVNULL)
+    for filename in ('acceptance-matchups.pdf','acceptance-matchups.png','acceptance-matchups-ui.png'):
+        with (output/filename).open('wb') as chart:subprocess.run(['adb','exec-out','run-as','com.acocalypso.magictester','cat','files/'+filename],stdout=chart,stderr=subprocess.DEVNULL)
