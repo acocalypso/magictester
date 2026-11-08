@@ -160,3 +160,11 @@ Diagnostics include these settings, recovery counts and AI comparison identifier
 
 Implementation references: [Android service restart semantics](https://developer.android.com/reference/android/app/Service#START_STICKY)
 and [Doze and App Standby](https://developer.android.com/training/monitoring-device-state/doze-standby).
+
+### Matchup charts (0.1.11)
+
+Completed run details include an opponent-by-policy heatmap with win rates,
+W–L–D counts, sample sizes and 95% intervals. Linked comparisons use verified
+matched outcomes; multiplayer Commander uses whole-pod outcomes. Existing history
+is supported. Tap cells for details or save a paginated PDF using local system
+fonts. See [the matchup chart guide](../docs/MATCHUP_CHART_GUIDE.md).
