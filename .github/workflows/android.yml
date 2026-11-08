@@ -179,9 +179,10 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+          FORCE_DEBUG: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_debug }}
         run: |
           mkdir -p release
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+          if [ "$FORCE_DEBUG" = true ] || [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
             cp artifacts/app-debug.apk "release/MagicTester-${RELEASE_TAG}-debug.apk"
             java -jar artifacts/apksigner.jar verify --verbose --print-certs "release/MagicTester-${RELEASE_TAG}-debug.apk" > release/signing-certificate.txt
             echo 'debug=true' >> "$GITHUB_OUTPUT"
