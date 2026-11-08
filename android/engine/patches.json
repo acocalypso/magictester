@@ -126,7 +126,11 @@
       },
       {
         "find": "            } else if (mandatory) {\n                // no better choice but better than hitting himself",
-        "replace": "            } else if (!mandatory && org.magictester.ai.TacticalPlayers.optionalPoison(ai, sa)) {\n                return org.magictester.ai.TacticalPlayers.declinePoison(ai);\n            } else if (mandatory) {\n                // no better choice but better than hitting himself"
+        "replace": "            } else if (!mandatory && org.magictester.ai.TacticalPlayers.optionalPoison(ai, sa)) {\n                return org.magictester.ai.TacticalPlayers.poisonFallback(ai, sa);\n            } else if (mandatory) {\n                // no better choice but better than hitting himself"
+      },
+      {
+        "find": "    private boolean tgtPlayer(Player ai, SpellAbility sa, boolean mandatory) {\n        PlayerCollection tgts = ai.getOpponents().filter(PlayerPredicates.isTargetableBy(sa));",
+        "replace": "    private boolean tgtPlayer(Player ai, SpellAbility sa, boolean mandatory) {\n        Boolean goal = org.magictester.ai.TacticalPlayers.poisonToGoal(ai, sa, mandatory);\n        if (goal != null) return goal;\n        PlayerCollection tgts = ai.getOpponents().filter(PlayerPredicates.isTargetableBy(sa));"
       }
     ],
     "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."

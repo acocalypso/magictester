@@ -11,7 +11,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-skip-hexproof",
@@ -31,7 +32,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-skip-emperion",
@@ -51,7 +53,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-skip-angel",
@@ -71,7 +74,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-nonlethal-native",
@@ -83,7 +87,8 @@
       10,
       30
     ],
-    "unchanged": true
+    "unchanged": true,
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-replacement-native",
@@ -101,7 +106,8 @@
         "name": "Lich's Mirror"
       }
     ],
-    "unchanged": true
+    "unchanged": true,
+    "printedApi": "LoseLife"
   },
   {
     "id": "life-loss-dynamic-native",
@@ -130,7 +136,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "Discard"
   },
   {
     "id": "discard-respect-hexproof",
@@ -150,7 +157,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "Discard"
   },
   {
     "id": "discard-respect-tamiyo",
@@ -170,7 +178,8 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "Discard"
   },
   {
     "id": "discard-empty-hands-native",
@@ -182,7 +191,8 @@
       0,
       0
     ],
-    "unchanged": true
+    "unchanged": true,
+    "printedApi": "Discard"
   },
   {
     "id": "discard-restricted-card-type-native",
@@ -215,7 +225,8 @@
     "expected": [
       "seat-2"
     ],
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "mill-avoid-jace-draw-win",
@@ -236,7 +247,8 @@
     "expected": [
       "seat-2"
     ],
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "mill-avoid-loss-protected",
@@ -257,7 +269,8 @@
     "expected": [
       "seat-2"
     ],
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "mill-avoid-public-recycling",
@@ -279,7 +292,8 @@
     "expected": [
       "seat-2"
     ],
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "mill-decline-only-combo-opponent",
@@ -299,7 +313,8 @@
     ],
     "expected": [],
     "willPlay": false,
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "mill-close-to-depletion",
@@ -314,11 +329,12 @@
     "expected": [
       "seat-2"
     ],
-    "apiCheck": true
+    "apiCheck": true,
+    "printedApi": "Mill"
   },
   {
     "id": "draw-equal-library-is-not-a-loss",
-    "source": "Blue Sun's Zenith",
+    "source": "Ancestral Recall",
     "ability": "SP$ Draw | Cost$ 0 | ValidTgts$ Player | NumCards$ 3",
     "library": [
       20,
@@ -328,11 +344,12 @@
     ],
     "expected": [
       "seat-0"
-    ]
+    ],
+    "printedApi": "Draw"
   },
   {
     "id": "draw-over-library-takes-win",
-    "source": "Blue Sun's Zenith",
+    "source": "Ancestral Recall",
     "ability": "SP$ Draw | Cost$ 0 | ValidTgts$ Player | NumCards$ 3",
     "library": [
       20,
@@ -342,11 +359,12 @@
     ],
     "expected": [
       "seat-1"
-    ]
+    ],
+    "printedApi": "Draw"
   },
   {
     "id": "draw-do-not-give-jace-win",
-    "source": "Blue Sun's Zenith",
+    "source": "Ancestral Recall",
     "ability": "SP$ Draw | Cost$ 0 | ValidTgts$ Player | NumCards$ 3",
     "library": [
       20,
@@ -362,11 +380,12 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "Draw"
   },
   {
     "id": "draw-do-not-give-lab-maniac-win",
-    "source": "Blue Sun's Zenith",
+    "source": "Ancestral Recall",
     "ability": "SP$ Draw | Cost$ 0 | ValidTgts$ Player | NumCards$ 3",
     "library": [
       20,
@@ -382,11 +401,12 @@
     ],
     "expected": [
       "seat-2"
-    ]
+    ],
+    "printedApi": "Draw"
   },
   {
     "id": "draw-no-immediate-kill-self-draw",
-    "source": "Blue Sun's Zenith",
+    "source": "Ancestral Recall",
     "ability": "SP$ Draw | Cost$ 0 | ValidTgts$ Player | NumCards$ 3",
     "library": [
       20,
@@ -397,7 +417,8 @@
     "expected": [
       "seat-0"
     ],
-    "unchanged": true
+    "unchanged": true,
+    "printedApi": "Draw"
   },
   {
     "id": "poison-decline-immune-opponents",
@@ -477,7 +498,8 @@
     ],
     "svars": {
       "X": "Count$Metalcraft.4.2"
-    }
+    },
+    "printedApi": "DealDamage"
   },
   {
     "id": "burn-metalcraft-with-three-artifacts",
@@ -512,11 +534,12 @@
     ],
     "svars": {
       "X": "Count$Metalcraft.4.2"
-    }
+    },
+    "printedApi": "DealDamage"
   },
   {
     "id": "burn-paid-x-target-public-lethal",
-    "source": "Fireball",
+    "source": "Banefire",
     "ability": "SP$ DealDamage | Cost$ X R | ValidTgts$ Creature,Planeswalker,Player | NumDmg$ X",
     "life": [
       40,
@@ -560,6 +583,71 @@
     "svars": {
       "X": "Count$xPaid"
     },
-    "paidX": 5
+    "paidX": 5,
+    "printedApi": "DealDamage"
+  },
+  {
+    "id": "poison-preserve-counter-setup-through-loss-protection",
+    "source": "Virulent Wound",
+    "ability": "SP$ Poison | Cost$ 0 | ValidTgts$ Player | Num$ 1",
+    "poison": [
+      0,
+      1,
+      8,
+      3
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      },
+      {
+        "seat": 2,
+        "name": "Platinum Angel"
+      },
+      {
+        "seat": 3,
+        "name": "Platinum Angel"
+      }
+    ],
+    "expected": [
+      "seat-2"
+    ],
+    "willPlay": true,
+    "apiCheck": true
+  },
+  {
+    "id": "poison-goal-use-printed-vraska",
+    "source": "Vraska, Betrayal's Sting",
+    "printedApi": "Poison",
+    "sourceZone": "Battlefield",
+    "loyalty": 9,
+    "poison": [
+      0,
+      9,
+      0,
+      8
+    ],
+    "expected": [
+      "seat-2"
+    ],
+    "willPlay": true,
+    "apiCheck": true
+  },
+  {
+    "id": "poison-goal-do-not-waste-ultimate",
+    "source": "Vraska, Betrayal's Sting",
+    "printedApi": "Poison",
+    "sourceZone": "Battlefield",
+    "loyalty": 9,
+    "poison": [
+      0,
+      9,
+      9,
+      9
+    ],
+    "expected": [],
+    "willPlay": false,
+    "apiCheck": true
   }
 ]

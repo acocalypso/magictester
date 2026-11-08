@@ -63,7 +63,7 @@ public final class AiPolicies {
                 boolean expanded=EXPANDED.equals(context.seats.get(i));
                 boolean tactical=!STABLE.equals(context.seats.get(i));
                 seats.add(Map.of("seat",i,"id",context.seats.get(i),"profile","Default",
-                    "policyRevision",expanded?"expanded-1":tactical?"damage-lethal-2":"forge-native",
+                    "policyRevision",expanded?"expanded-2":tactical?"damage-lethal-2":"forge-native",
                     "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i],
                     "features",expanded?List.of("burn-lethal","x-paid-and-metalcraft","life-loss-lethal","mill-public-protection","draw-library-boundary","discard-card-count","poison-immune-targets"):tactical?List.of("burn-lethal"):List.of(),
                     "evaluationSuggestions",Map.copyOf(context.suggestions.get(i)),"evaluationTimeouts",context.timeouts[i]));

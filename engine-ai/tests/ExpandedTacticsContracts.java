@@ -42,8 +42,14 @@ public final class ExpandedTacticsContracts {
             var permanent=entry.getAsJsonObject();Card c=card(logical.get(permanent.get("seat").getAsInt()),permanent.get("name").getAsString(),ZoneType.Battlefield);
             if(permanent.has("attachTo")) c.setEntityAttachedTo(logical.get(permanent.get("attachTo").getAsInt()));
         }
-        var source=card(actor,f.get("source").getAsString(),ZoneType.Hand);
-        var ability=AbilityFactory.getAbility(f.get("ability").getAsString(),source);ability.setActivatingPlayer(actor);
+        var source=card(actor,f.get("source").getAsString(),f.has("sourceZone")?ZoneType.valueOf(f.get("sourceZone").getAsString()):ZoneType.Hand);
+        if(f.has("loyalty")) source.setCounters(CounterEnumType.LOYALTY,f.get("loyalty").getAsInt());
+        forge.game.spellability.SpellAbility ability=null;
+        if(f.has("printedApi")) {
+            for(var option:source.getSpellAbilities()) if(option.getApi()!=null && option.getApi().name().equals(f.get("printedApi").getAsString())) {ability=option;break;}
+            check(ability!=null,"Actual printed native ability exists: "+f.get("source"));
+        } else ability=AbilityFactory.getAbility(f.get("ability").getAsString(),source);
+        ability.setActivatingPlayer(actor);
         if(f.has("svars")) for(var entry:f.getAsJsonObject("svars").entrySet()) source.setSVar(entry.getKey(),entry.getValue().getAsString());
         if(f.has("paidX")) ability.setXManaCostPaid(f.get("paidX").getAsInt());
         game.getAction().checkStaticAbilities();

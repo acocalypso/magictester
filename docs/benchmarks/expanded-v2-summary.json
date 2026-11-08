@@ -1,22 +1,26 @@
 {
-  "changedPositions": 50,
-  "positions": 116,
-  "assertions": 364,
-  "policy": "tactical-v2",
-  "scenarios": 29,
   "engineVersion": "2.0.15",
+  "scenarios": 32,
+  "policy": "tactical-v2",
+  "assertions": 412,
+  "positions": 128,
+  "changedPositions": 59,
   "schemaVersion": 1,
   "verification": {
-    "runtime": "Temurin 21.0.13 desktop JVM, Android headless adapter",
     "date": "2026-11-08",
+    "runtime": "Temurin 21.0.13 desktop JVM, Android headless adapter",
     "forgeSourceCommit": "4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676",
-    "patchManifestSha256": "5d8f24f1446d7ceb5d758d1a57b190344c2e8a8482d7345254d3860e60b8c069",
+    "printedAbilityScenarios": 26,
+    "fixtureSha256": "07fd6c07d6824a170cad98d914e7056e4dadd903aeb73d3a2232dc082c202fdf",
+    "patchManifestSha256": "3ce727eb21f1675b3545c81cff78efc38d2c5c2fd00a48a0eed19ef6e91f20e8",
+    "engineJarSha256": "ec9330623de130a6be5328bcf8343b222e217492e611c2b766cb5143f65885fa",
     "sharedSourceSha256": {
-      "org/magictester/ai/AiPolicies.java": "148a3da0978e58a040ceedfa90787447fdfb9566bc69d2d5c854de737c5f9b00",
+      "org/magictester/ai/AiCancellation.java": "588dc32c9ae9e9e0a4ad172f3d54cff9cd597516e2acfb54a3937133dade287d",
+      "org/magictester/ai/AiPolicies.java": "2642d6fcd6cbcd08aa8dde85877e8947ea4af3b330d83e55085dc45cbce46cec",
       "org/magictester/ai/DecisionJournal.java": "057e5e5d2dff408004cf693caaabbb6a18972e2de90d18f7c7d88821164b5c5c",
       "org/magictester/ai/ForgeDecisionTrace.java": "0c616d62f111a630d2289a9c7fb7d4f031f1123617bbea084e0cf87e2842a113",
       "org/magictester/ai/TacticalDamage.java": "bf4e2f639259ae76ef92b14c0a43f0cd41c8e55475908531c3f5eef5c6b11b22",
-      "org/magictester/ai/TacticalPlayers.java": "4d9ee71675fc39350ef2822ce6e125b9d3658b6c27ff4f4ba299f1a18218cd6f"
+      "org/magictester/ai/TacticalPlayers.java": "ef5525f8d9ab5778ecd8ac079fdb735490dc9687f23b22878cce81b7a27575ee"
     },
     "deviceAcceptance": "not performed in this JVM suite",
     "strengthClaim": "curated tactical checks only; not match win-rate evidence"
@@ -818,7 +822,7 @@
       "id": "mill-close-to-depletion",
       "actorSeat": 0,
       "baseline": [
-        "seat-1"
+        "seat-2"
       ],
       "candidate": [
         "seat-2"
@@ -829,18 +833,6 @@
     {
       "id": "mill-close-to-depletion",
       "actorSeat": 1,
-      "baseline": [
-        "seat-3"
-      ],
-      "candidate": [
-        "seat-2"
-      ],
-      "baselineWillPlay": true,
-      "candidateWillPlay": true
-    },
-    {
-      "id": "mill-close-to-depletion",
-      "actorSeat": 2,
       "baseline": [
         "seat-2"
       ],
@@ -852,9 +844,21 @@
     },
     {
       "id": "mill-close-to-depletion",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-close-to-depletion",
       "actorSeat": 3,
       "baseline": [
-        "seat-1"
+        "seat-2"
       ],
       "candidate": [
         "seat-2"
@@ -1381,6 +1385,142 @@
       ],
       "baselineWillPlay": true,
       "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-counter-setup-through-loss-protection",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-counter-setup-through-loss-protection",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-counter-setup-through-loss-protection",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-counter-setup-through-loss-protection",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-goal-use-printed-vraska",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": false,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-goal-use-printed-vraska",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": false,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-goal-use-printed-vraska",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": false,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-goal-use-printed-vraska",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": false,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-goal-do-not-waste-ultimate",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-goal-do-not-waste-ultimate",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-goal-do-not-waste-ultimate",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-goal-do-not-waste-ultimate",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
     }
   ]
 }

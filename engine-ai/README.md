@@ -81,20 +81,20 @@ The [dataset review](../docs/research/MTG_GAME_DATA_REVIEW.md) and [AI improveme
 
 ## Expanded test policy: tactical-v2
 
-The `tactical-v2` native policy (revision `expanded-1`) includes Tactical v1 and adds these independently gated corrections:
+The `tactical-v2` native policy (revision `expanded-2`) includes Tactical v1 and adds these independently gated corrections:
 
 | Decision | Expanded behavior | Boundaries |
 | --- | --- | --- |
 | Life loss | Prefer an eligible opponent within range of a simple lethal life-loss effect. | Constant, single-target, unchained effects; unsupported public loss replacements delegate to native. |
-| Discard | Prefer a player who can actually discard the greatest number of cards. | Public hand counts only; respect targetability and discard restrictions. Restricted card types, special modes and complex scripts delegate. Native shuffle RNG consumption is preserved. |
+| Discard | Prefer a player who can actually discard the greatest number of cards. | Public hand counts only; respect targetability and discard restrictions. Restricted card types, nonstandard modes and complex scripts delegate. Ordinary `TgtChoose` and random discard are supported. Native shuffle RNG consumption is preserved. |
 | Mill | Avoid visible draw-to-win replacements and public graveyard-to-library recycling; prefer eligible libraries nearest depletion. | Library sizes only. Hidden reshufflers are not inspected. Complex scripts delegate; mandatory effects retain native fallbacks. Emptying a library is not described as an immediate win. |
 | Targeted draw | Drawing exactly the remaining library is not treated as decking; avoid giving a visible draw-to-win replacement its win. | Simple, single-target draw. No speculative modeling of complex replacement chains. |
-| Poison | Decline an optional simple poison spell if every available opponent is immune or cannot lose through poison. | Mandatory targets still use the native required-target fallback. |
+| Poison | Decline an optional simple poison spell only if no legal opponent can receive counters; preserve counter setup through loss protection. Recognize the printed “raise poison to a goal” pattern used by Vraska’s ultimate and avoid zero-effect activations. | Mandatory targets still use the native required-target fallback. |
 | Burn | Extend the lethal-opponent correction to already-computed paid X and own-board Metalcraft amounts. | Arbitrary dynamic damage and target-dependent damage formulas still delegate. |
 
 The policy does not alter native combat, mulligan, counterspell, mana sequencing or combo search. It is a broader heuristic test candidate, not a learned model or a claim of stronger play in every format. Existing `stable` and `tactical-v1` requests remain valid. Native result metadata lists enabled features and counts planning suggestions; those counts are not spells cast or verified applied actions.
 
-The expanded native suite contains 29 authored scenarios, each rotated through four actor seats (116 positions). It also swaps hidden card identities at fixed counts and checks legacy-policy parity. Exact assertions and changed-choice totals are archived in the benchmark evidence. The original 13-position Tactical v1 suite remains a separate regression check.
+The expanded native suite contains 32 authored scenarios (26 using printed native card abilities), each rotated through four actor seats (128 positions). It also swaps hidden card identities at fixed counts and checks legacy-policy parity. Exact assertions and changed-choice totals are archived in the benchmark evidence. The original 13-position Tactical v1 suite remains a separate regression check.
 
 ## Evaluation cancellation safeguards
 
@@ -102,4 +102,4 @@ All policies share cooperative interrupt checks in native amount calculation, ma
 
 Native metadata counts internal `evaluationTimeouts` per seat separately from the whole-game clock. These are deadline events, not fabricated game losses. Cancellation checks do not provide transactional rollback of all speculative AI state or guarantee that every native loop is interruptible; a noncooperative evaluation still ends the isolated attempt. No general speedup is claimed.
 
-Contracts exercise a cooperative mutating worker, a worker that ignores interruption, preservation of interrupt status, and the actual patched native amount/mana/replacement entry points. The 13-position legacy and 116-position expanded decision suites also pass with these safeguards compiled.
+Contracts exercise a cooperative mutating worker, a worker that ignores interruption, preservation of interrupt status, and the actual patched native amount/mana/replacement entry points. The 13-position legacy and 128-position expanded decision suites also pass with these safeguards compiled.

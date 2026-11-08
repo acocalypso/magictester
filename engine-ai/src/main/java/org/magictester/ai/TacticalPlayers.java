@@ -2,6 +2,7 @@
 package org.magictester.ai;
 
 import forge.game.ability.ApiType;
+import forge.game.card.CounterEnumType;
 import forge.game.player.GameLossReason;
 import forge.game.player.Player;
 import forge.game.replacement.ReplacementType;
@@ -48,7 +49,7 @@ public final class TacticalPlayers {
     }
     public static Player discard(Player actor,SpellAbility ability) {
         if(!simple(actor,ability,ApiType.Discard) || ability.hasParam("DiscardValid")
-                || ability.hasParam("Mode") || ability.hasParam("AnyNumber") || ability.hasParam("UnlessCost")) return null;
+                || (ability.hasParam("Mode") && !"TgtChoose".equals(ability.getParam("Mode")) && !"Random".equals(ability.getParam("Mode"))) || ability.hasParam("AnyNumber") || ability.hasParam("UnlessCost")) return null;
         int amount=constant(ability,"NumCards");if(amount<=0) return null;
         Player best=null;int value=0;
         for(Player p:actor.getOpponents()) {
@@ -107,6 +108,34 @@ public final class TacticalPlayers {
         boolean lethal=cards>library && !drawWin(actor,target) && !visibleLossReplacement(actor,false);
         if(cards>=library && !lethal) AiPolicies.note(actor,"draw-library-boundary");
         return lethal;
+    }
+    public static Boolean poisonToGoal(Player actor,SpellAbility ability,boolean mandatory) {
+        if(!simple(actor,ability,ApiType.Poison)) return null;
+        String variable=ability.getParam("ConditionCheckSVar");
+        String comparison=ability.getParam("ConditionSVarCompare");
+        String number=ability.getParam("Num");
+        if(variable==null || number==null || comparison==null || !comparison.matches("LT[0-9]{1,2}")
+                || !"TargetedPlayer$Counters.Poison".equals(ability.getSVar(variable))) return null;
+        int goal=Integer.parseInt(comparison.substring(2));
+        if(!("Number$"+goal+"/Minus."+variable).equals(ability.getSVar(number))) return null;
+        Player best=null;
+        for(Player p:actor.getOpponents()) {
+            if(p.getPoisonCounters()<goal && ability.canTarget(p) && p.canReceiveCounters(CounterEnumType.POISON)
+                    && (best==null || p.getPoisonCounters()<best.getPoisonCounters())) best=p;
+        }
+        if(best==null) return mandatory?null:Boolean.FALSE;
+        ability.resetTargets();ability.getTargets().add(best);AiPolicies.note(actor,"poison-counter-goal");return true;
+    }
+    public static boolean poisonFallback(Player actor,SpellAbility ability) {
+        // Loss protection does not make poison counters useless: they can enable corrupted
+        // or become lethal after protection is removed. Only immunity makes this pointless.
+        Player best=null;
+        for(Player p:actor.getOpponents()) {
+            if(ability.canTarget(p) && p.canReceiveCounters(CounterEnumType.POISON)
+                    && (best==null || p.getPoisonCounters()>best.getPoisonCounters())) best=p;
+        }
+        if(best==null) return declinePoison(actor);
+        ability.getTargets().add(best);AiPolicies.note(actor,"poison-counter-setup");return true;
     }
     public static boolean declinePoison(Player actor) {AiPolicies.note(actor,"poison-immune-targets");return false;}
     public static boolean optionalPoison(Player actor,SpellAbility ability) {
