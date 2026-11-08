@@ -98,12 +98,17 @@ public class AndroidForgeBridge {
         org.magictester.ai.AiPolicies.open(game,request.aiPolicies);
         org.magictester.ai.ForgeDecisionTrace.open(game,request.captureDecisions,gameSeed);
         emit(Map.of("type","game_started","index",unitIndex,"gameIndex",gameIndex,"gameSeed",gameSeed,"bridgeVersion",VERSION));
-        long started=System.nanoTime();String termination="normal";
+        long started=System.nanoTime();String termination="normal";Map<String,Object> engineFailure=null;
         ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"forge-game");t.setDaemon(true);return t;});
         Future<?> running=executor.submit(()->match.startGame(game,recorder::captureSetup));
         try {running.get(request.clockSeconds,TimeUnit.SECONDS);}
         catch(TimeoutException timeout) {termination="timeout";running.cancel(true);}
-        catch(ExecutionException error) {termination="engine_error";error.getCause().printStackTrace();}
+        catch(ExecutionException error) {
+            termination="engine_error";error.getCause().printStackTrace();
+            boolean stalled=error.getCause() instanceof org.magictester.ai.AiCancellation.EvaluationAborted;
+            engineFailure=Map.of("code",stalled?"ai_evaluation_aborted":"forge_execution_failed",
+                "message",stalled?"The AI evaluation could not stop cleanly. This isolated attempt was stopped; no winner is inferred.":"Forge could not complete a game action. Export diagnostic logs to inspect the engine error.");
+        }
         finally {executor.shutdownNow();}
         boolean ended=termination.equals("normal") && game.isGameOver() && game.getOutcome()!=null;
         if(termination.equals("normal") && (!ended || recorder.eventError)) termination="engine_error";
@@ -115,6 +120,7 @@ public class AndroidForgeBridge {
         }
         if(!termination.equals("normal")) winner=null;
         Map<String,Object> result=new LinkedHashMap<>();
+        if(engineFailure!=null) result.put("engineFailure",engineFailure);
         result.put("unit","game");result.put("index",resultIndex);result.put("batchIndex",resultIndex);
         result.put("engine","forge");result.put("engineVersion",EngineVersion.VALUE);result.put("bridgeVersion",VERSION);
         result.put("clockSeconds",request.clockSeconds);result.put("mode",request.mode);result.put("mulliganRule","London");result.put("seed",resultSeed);result.put("gameSeed",gameSeed);

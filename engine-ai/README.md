@@ -95,3 +95,11 @@ The `tactical-v2` native policy (revision `expanded-1`) includes Tactical v1 and
 The policy does not alter native combat, mulligan, counterspell, mana sequencing or combo search. It is a broader heuristic test candidate, not a learned model or a claim of stronger play in every format. Existing `stable` and `tactical-v1` requests remain valid. Native result metadata lists enabled features and counts planning suggestions; those counts are not spells cast or verified applied actions.
 
 The expanded native suite contains 29 authored scenarios, each rotated through four actor seats (116 positions). It also swaps hidden card identities at fixed counts and checks legacy-policy parity. Exact assertions and changed-choice totals are archived in the benchmark evidence. The original 13-position Tactical v1 suite remains a separate regression check.
+
+## Evaluation cancellation safeguards
+
+All policies share cooperative interrupt checks in native amount calculation, mana-source grouping and replacement scanning. The existing native AI evaluation deadline is retained. On cancellation the caller waits up to two seconds for the evaluator to exit; unsupported `Thread.stop()` is no longer called. If the evaluator remains alive or the game caller is interrupted, the isolated attempt aborts instead of letting the game continue with a concurrent evaluator. A stalled evaluation yields `engineFailure.code=ai_evaluation_aborted`, with no inferred winner. Existing process isolation disposes of that attempt.
+
+Native metadata counts internal `evaluationTimeouts` per seat separately from the whole-game clock. These are deadline events, not fabricated game losses. Cancellation checks do not provide transactional rollback of all speculative AI state or guarantee that every native loop is interruptible; a noncooperative evaluation still ends the isolated attempt. No general speedup is claimed.
+
+Contracts exercise a cooperative mutating worker, a worker that ignores interruption, preservation of interrupt status, and the actual patched native amount/mana/replacement entry points. The 13-position legacy and 116-position expanded decision suites also pass with these safeguards compiled.

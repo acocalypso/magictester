@@ -19,18 +19,19 @@ root = Path(__file__).resolve().parents[1]
 jar = args.forge_jar.resolve(strict=True)
 with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
     sources = sorted((root / 'src/main/java').rglob('*.java'))
-    sources += [root / 'tests/DecisionJournalContracts.java', root / 'tests/AiPolicyContracts.java']
+    sources += [root / 'tests/DecisionJournalContracts.java', root / 'tests/AiPolicyContracts.java', root / 'tests/CancellationContracts.java']
     dependencies = [str(jar)]
     if args.native_home:
         dependencies.insert(0, str(args.bridge_classes.resolve(strict=True)))
-        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java']
+        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java', root / 'tests/NativeCancellationContracts.java']
     subprocess.run([args.java, '-m', 'jdk.compiler/com.sun.tools.javac.Main', '--release', '17',
                     '-cp', os.pathsep.join(dependencies), '-d', classes, *map(str, sources)], check=True)
     cp = os.pathsep.join([classes, *dependencies])
-    for contract in ['DecisionJournalContracts', 'AiPolicyContracts']:
+    for contract in ['DecisionJournalContracts', 'AiPolicyContracts', 'org.magictester.ai.CancellationContracts']:
         subprocess.run([args.java, '-cp', cp, contract], check=True, timeout=30)
     if args.native_home:
         home = str(args.native_home.resolve(strict=True))
+        subprocess.run([args.java, '-Xmx512m', '-cp', cp, 'NativeCancellationContracts', home], check=True, timeout=120)
         subprocess.run([args.java, '-Xmx512m', '-cp', cp, 'ForgeTraceContracts', home], check=True, timeout=120)
         subprocess.run([args.java, '-Xmx512m', '-cp', cp, 'NativePolicyBridgeContracts', home], check=True, timeout=120)
         command = [args.java, '-Xmx512m', '-cp', cp, 'DamageTacticsContracts', home,

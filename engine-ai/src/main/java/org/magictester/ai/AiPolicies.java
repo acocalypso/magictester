@@ -11,9 +11,9 @@ public final class AiPolicies {
     private static final Map<Game,Context> ACTIVE=Collections.synchronizedMap(new WeakHashMap<>());
     private static final class Context {
         final List<String> seats;
-        final long[] evaluations;
+        final long[] evaluations,timeouts;
         final List<Map<String,Long>> suggestions=new ArrayList<>();
-        Context(List<String> seats) {this.seats=seats;this.evaluations=new long[seats.size()];for(String ignored:seats) suggestions.add(new TreeMap<>());}
+        Context(List<String> seats) {this.seats=seats;this.evaluations=new long[seats.size()];this.timeouts=new long[seats.size()];for(String ignored:seats) suggestions.add(new TreeMap<>());}
     }
     private AiPolicies() {}
     public static List<String> validate(String[] requested,int players) {
@@ -46,6 +46,10 @@ public final class AiPolicies {
         Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
         if(context!=null && seat>=0) synchronized(context) {context.suggestions.get(seat).merge(feature,1L,Long::sum);}
     }
+    public static void evaluationTimedOut(Player actor) {
+        Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
+        if(context!=null && seat>=0) synchronized(context) {context.timeouts[seat]++;}
+    }
     static void suggested(Player actor) {
         Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
         if(context!=null && seat>=0) synchronized(context) {context.evaluations[seat]++;context.suggestions.get(seat).merge("burn-lethal",1L,Long::sum);}
@@ -62,9 +66,10 @@ public final class AiPolicies {
                     "policyRevision",expanded?"expanded-1":tactical?"damage-lethal-2":"forge-native",
                     "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i],
                     "features",expanded?List.of("burn-lethal","x-paid-and-metalcraft","life-loss-lethal","mill-public-protection","draw-library-boundary","discard-card-count","poison-immune-targets"):tactical?List.of("burn-lethal"):List.of(),
-                    "evaluationSuggestions",Map.copyOf(context.suggestions.get(i))));
+                    "evaluationSuggestions",Map.copyOf(context.suggestions.get(i)),"evaluationTimeouts",context.timeouts[i]));
             }
         }
-        return Map.of("schemaVersion",1,"seats",seats,"evaluationCountsAreAppliedActions",false);
+        return Map.of("schemaVersion",1,"seats",seats,"evaluationCountsAreAppliedActions",false,
+            "executionSafeguards",List.of("interrupt-checkpoints","no-forced-thread-stop","abort-stalled-evaluation"));
     }
 }

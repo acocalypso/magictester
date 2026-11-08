@@ -130,5 +130,37 @@
       }
     ],
     "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
+  },
+  {
+    "path": "forge/ai/AiController.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/AiController.java",
+    "sha256": "7c3801ff392a720450358efd6710cc10fbcf7bf339a9a2a8ed520e1c757ff8e2",
+    "find": "            future.cancel(true);\n            try {\n                t.join(2000); //2 seconds wait\n            } catch (InterruptedException ie) {\n                Thread.currentThread().interrupt();\n            }\n            if (t.isAlive()) {\n                // last resort, see #8302: the eval thread may be stuck inside a single\n                // evaluation or an infinite loop and never reach the cooperative exit\n                try {\n                    t.stop();\n                } catch (UnsupportedOperationException | NoSuchMethodError ex) {\n                    // Stop support: dropped by Android and Java 20 / 26 removed it completely - so sadly thread will keep running\n                }\n            }\n",
+    "replace": "            if (e instanceof TimeoutException) org.magictester.ai.AiPolicies.evaluationTimedOut(player);\n            if (e instanceof InterruptedException) Thread.currentThread().interrupt();\n            org.magictester.ai.AiCancellation.cancelAndJoin(future, t);\n",
+    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
+  },
+  {
+    "path": "forge/ai/ComputerUtilMana.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ComputerUtilMana.java",
+    "sha256": "9f21cc1b070144e6e8cd648ff6d12a88ecf32b622b4da625c5120f1e389dd591",
+    "find": "        for (final Card sourceCard : getAvailableManaSources(ai, checkPlayable)) {",
+    "replace": "        org.magictester.ai.AiCancellation.checkpoint();\n        for (final Card sourceCard : getAvailableManaSources(ai, checkPlayable)) {\n            org.magictester.ai.AiCancellation.checkpoint();",
+    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
+  },
+  {
+    "path": "forge/game/ability/AbilityUtils.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/ability/AbilityUtils.java",
+    "sha256": "96e9b1a9ddefa81d0c9e3275f4ff6267871f533ceb6462473443872ec07c480d",
+    "find": "    public static int calculateAmount(final Card card, String amount, CardTraitBase ability, boolean maxto) {\n        // return empty strings and constants",
+    "replace": "    public static int calculateAmount(final Card card, String amount, CardTraitBase ability, boolean maxto) {\n        org.magictester.ai.AiCancellation.checkpoint();\n        // return empty strings and constants",
+    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
+  },
+  {
+    "path": "forge/game/replacement/ReplacementHandler.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/replacement/ReplacementHandler.java",
+    "sha256": "499434615a5e75e324863a787fd3e45f6a08abdfbfa00d4abc74c8998cf0e2cc",
+    "find": "        game.forEachCardInGame(crd -> {\n            Card c = preList.get(crd);",
+    "replace": "        game.forEachCardInGame(crd -> {\n            org.magictester.ai.AiCancellation.checkpoint();\n            Card c = preList.get(crd);",
+    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
   }
 ]
