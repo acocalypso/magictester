@@ -78,3 +78,20 @@ These checks do not establish full-format coverage, Android device performance, 
 4. Train off-device only after dataset provenance, schema validation and actor-visible decision context pass review. Evaluate learned policies against that reference before shipping them.
 
 The [dataset review](../docs/research/MTG_GAME_DATA_REVIEW.md) and [AI improvement plan](../docs/FORGE_AI_IMPROVEMENT_PLAN.md) explain source limitations and the evaluation strategy. No external gameplay corpus or model weights are bundled in this module. Code is GPL-3.0-only, consistent with the Forge integration.
+
+## Expanded test policy: tactical-v2
+
+The `tactical-v2` native policy (revision `expanded-1`) includes Tactical v1 and adds these independently gated corrections:
+
+| Decision | Expanded behavior | Boundaries |
+| --- | --- | --- |
+| Life loss | Prefer an eligible opponent within range of a simple lethal life-loss effect. | Constant, single-target, unchained effects; unsupported public loss replacements delegate to native. |
+| Discard | Prefer a player who can actually discard the greatest number of cards. | Public hand counts only; respect targetability and discard restrictions. Restricted card types, special modes and complex scripts delegate. Native shuffle RNG consumption is preserved. |
+| Mill | Avoid visible draw-to-win replacements and public graveyard-to-library recycling; prefer eligible libraries nearest depletion. | Library sizes only. Hidden reshufflers are not inspected. Complex scripts delegate; mandatory effects retain native fallbacks. Emptying a library is not described as an immediate win. |
+| Targeted draw | Drawing exactly the remaining library is not treated as decking; avoid giving a visible draw-to-win replacement its win. | Simple, single-target draw. No speculative modeling of complex replacement chains. |
+| Poison | Decline an optional simple poison spell if every available opponent is immune or cannot lose through poison. | Mandatory targets still use the native required-target fallback. |
+| Burn | Extend the lethal-opponent correction to already-computed paid X and own-board Metalcraft amounts. | Arbitrary dynamic damage and target-dependent damage formulas still delegate. |
+
+The policy does not alter native combat, mulligan, counterspell, mana sequencing or combo search. It is a broader heuristic test candidate, not a learned model or a claim of stronger play in every format. Existing `stable` and `tactical-v1` requests remain valid. Native result metadata lists enabled features and counts planning suggestions; those counts are not spells cast or verified applied actions.
+
+The expanded native suite contains 29 authored scenarios, each rotated through four actor seats (116 positions). It also swaps hidden card identities at fixed counts and checks legacy-policy parity. Exact assertions and changed-choice totals are archived in the benchmark evidence. The original 13-position Tactical v1 suite remains a separate regression check.

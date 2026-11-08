@@ -66,5 +66,69 @@
     "find": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }",
     "replace": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }\n        enemy = org.magictester.ai.TacticalDamage.preferLethal(ai, sa, dmg, enemy);",
     "purpose": "Opt-in per-seat tactical-v1 policy: rank legal predicted-lethal opponents consistently in simple single-target burn; preserve native stable policy."
+  },
+  {
+    "path": "forge/ai/ability/LifeLoseAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/LifeLoseAi.java",
+    "sha256": "d5ddb6dda9edfe51d0831f38cf3a2ad4389de9187960a8b5e61b3a58e638b95f",
+    "replacements": [
+      {
+        "find": "        sa.resetTargets();\n        PlayerCollection opps = ai.getOpponents().filter(PlayerPredicates.isTargetableBy(sa));",
+        "replace": "        sa.resetTargets();\n        Player tactical = org.magictester.ai.TacticalPlayers.lifeLoss(ai, sa);\n        if (tactical != null) { sa.getTargets().add(tactical); return true; }\n        PlayerCollection opps = ai.getOpponents().filter(PlayerPredicates.isTargetableBy(sa));"
+      }
+    ],
+    "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
+  },
+  {
+    "path": "forge/ai/ability/DiscardAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DiscardAi.java",
+    "sha256": "5a50f0142ca78f449be5f93c8365a0df95bb5f0d3ef38c996ef3b68b34ee8cde",
+    "replacements": [
+      {
+        "find": "        final PlayerCollection opps = ai.getOpponents();\n        Collections.shuffle(opps, MyRandom.getRandom());",
+        "replace": "        final PlayerCollection opps = ai.getOpponents();\n        Collections.shuffle(opps, MyRandom.getRandom());\n        Player tactical = org.magictester.ai.TacticalPlayers.discard(ai, sa);\n        if (tactical != null) { sa.resetTargets(); sa.getTargets().add(tactical); return true; }"
+      }
+    ],
+    "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
+  },
+  {
+    "path": "forge/ai/ability/MillAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/MillAi.java",
+    "sha256": "42bc0ed271938d530cba5dee391c51368c40a4e9f7531431a020936be211461a",
+    "replacements": [
+      {
+        "find": "    private boolean targetAI(final Player ai, final SpellAbility sa, final boolean mandatory) {\n        final Card source = sa.getHostCard();",
+        "replace": "    private boolean targetAI(final Player ai, final SpellAbility sa, final boolean mandatory) {\n        Boolean tactical = org.magictester.ai.TacticalPlayers.mill(ai, sa, mandatory);\n        if (tactical != null) return tactical;\n        final Card source = sa.getHostCard();"
+      }
+    ],
+    "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
+  },
+  {
+    "path": "forge/ai/ability/DrawAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DrawAi.java",
+    "sha256": "e52505fb0b43a457ee6e6a9f6398fa0d80d3af68a76aef4350af5ae564bfb797",
+    "replacements": [
+      {
+        "find": "                if (numCards >= oppA.getCardsIn(ZoneType.Library).size()) {",
+        "replace": "                if (org.magictester.ai.TacticalPlayers.drawWouldDeck(ai, sa, numCards, oppA)) {"
+      }
+    ],
+    "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
+  },
+  {
+    "path": "forge/ai/ability/PoisonAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/PoisonAi.java",
+    "sha256": "8dc26b5bb61b0d3fa9f7f483c3c2fe22e9ebf91d045fc015a12b395547f76577",
+    "replacements": [
+      {
+        "find": "            if (tgtPlayer(ai, sa, true)) {",
+        "replace": "            if (tgtPlayer(ai, sa, !org.magictester.ai.TacticalPlayers.optionalPoison(ai, sa))) {"
+      },
+      {
+        "find": "            } else if (mandatory) {\n                // no better choice but better than hitting himself",
+        "replace": "            } else if (!mandatory && org.magictester.ai.TacticalPlayers.optionalPoison(ai, sa)) {\n                return org.magictester.ai.TacticalPlayers.declinePoison(ai);\n            } else if (mandatory) {\n                // no better choice but better than hitting himself"
+      }
+    ],
+    "purpose": "Expanded tactical-v2 opt-in public-information target evaluation. Stable and tactical-v1 retain native behavior."
   }
 ]

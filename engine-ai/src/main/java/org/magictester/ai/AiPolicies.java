@@ -7,12 +7,13 @@ import java.util.*;
 
 /** Per-game/per-seat policy selection. Values never retain the game or its players. */
 public final class AiPolicies {
-    public static final String STABLE="stable", TACTICAL="tactical-v1";
+    public static final String STABLE="stable", TACTICAL="tactical-v1", EXPANDED="tactical-v2";
     private static final Map<Game,Context> ACTIVE=Collections.synchronizedMap(new WeakHashMap<>());
     private static final class Context {
         final List<String> seats;
         final long[] evaluations;
-        Context(List<String> seats) {this.seats=seats;this.evaluations=new long[seats.size()];}
+        final List<Map<String,Long>> suggestions=new ArrayList<>();
+        Context(List<String> seats) {this.seats=seats;this.evaluations=new long[seats.size()];for(String ignored:seats) suggestions.add(new TreeMap<>());}
     }
     private AiPolicies() {}
     public static List<String> validate(String[] requested,int players) {
@@ -20,7 +21,7 @@ public final class AiPolicies {
         List<String> result=new ArrayList<>();
         for(int i=0;i<players;i++) {
             String policy=requested==null?STABLE:requested[i];
-            if(!STABLE.equals(policy) && !TACTICAL.equals(policy)) throw new IllegalArgumentException("Unknown AI policy: "+policy);
+            if(!STABLE.equals(policy) && !TACTICAL.equals(policy) && !EXPANDED.equals(policy)) throw new IllegalArgumentException("Unknown AI policy: "+policy);
             result.add(policy);
         }
         return List.copyOf(result);
@@ -35,11 +36,19 @@ public final class AiPolicies {
     }
     public static boolean tactical(Player actor) {
         Context context=ACTIVE.get(actor.getGame());if(context==null) return false;int seat=seat(actor);
-        return seat>=0 && TACTICAL.equals(context.seats.get(seat));
+        return seat>=0 && !STABLE.equals(context.seats.get(seat));
+    }
+    public static boolean expanded(Player actor) {
+        Context context=ACTIVE.get(actor.getGame());if(context==null)return false;int seat=seat(actor);
+        return seat>=0 && EXPANDED.equals(context.seats.get(seat));
+    }
+    static void note(Player actor,String feature) {
+        Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
+        if(context!=null && seat>=0) synchronized(context) {context.suggestions.get(seat).merge(feature,1L,Long::sum);}
     }
     static void suggested(Player actor) {
         Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
-        if(context!=null && seat>=0) synchronized(context) {context.evaluations[seat]++;}
+        if(context!=null && seat>=0) synchronized(context) {context.evaluations[seat]++;context.suggestions.get(seat).merge("burn-lethal",1L,Long::sum);}
     }
     public static Map<String,Object> close(Game game) {
         Context context=ACTIVE.remove(game);
@@ -47,10 +56,13 @@ public final class AiPolicies {
         List<Map<String,Object>> seats=new ArrayList<>();
         synchronized(context) {
             for(int i=0;i<context.seats.size();i++) {
-                boolean tactical=TACTICAL.equals(context.seats.get(i));
+                boolean expanded=EXPANDED.equals(context.seats.get(i));
+                boolean tactical=!STABLE.equals(context.seats.get(i));
                 seats.add(Map.of("seat",i,"id",context.seats.get(i),"profile","Default",
-                    "policyRevision",tactical?"damage-lethal-2":"forge-native",
-                    "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i]));
+                    "policyRevision",expanded?"expanded-1":tactical?"damage-lethal-2":"forge-native",
+                    "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i],
+                    "features",expanded?List.of("burn-lethal","x-paid-and-metalcraft","life-loss-lethal","mill-public-protection","draw-library-boundary","discard-card-count","poison-immune-targets"):tactical?List.of("burn-lethal"):List.of(),
+                    "evaluationSuggestions",Map.copyOf(context.suggestions.get(i))));
             }
         }
         return Map.of("schemaVersion",1,"seats",seats,"evaluationCountsAreAppliedActions",false);

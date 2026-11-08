@@ -1,0 +1,1386 @@
+{
+  "changedPositions": 50,
+  "positions": 116,
+  "assertions": 364,
+  "policy": "tactical-v2",
+  "scenarios": 29,
+  "engineVersion": "2.0.15",
+  "schemaVersion": 1,
+  "verification": {
+    "runtime": "Temurin 21.0.13 desktop JVM, Android headless adapter",
+    "date": "2026-11-08",
+    "forgeSourceCommit": "4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676",
+    "patchManifestSha256": "5d8f24f1446d7ceb5d758d1a57b190344c2e8a8482d7345254d3860e60b8c069",
+    "sharedSourceSha256": {
+      "org/magictester/ai/AiPolicies.java": "148a3da0978e58a040ceedfa90787447fdfb9566bc69d2d5c854de737c5f9b00",
+      "org/magictester/ai/DecisionJournal.java": "057e5e5d2dff408004cf693caaabbb6a18972e2de90d18f7c7d88821164b5c5c",
+      "org/magictester/ai/ForgeDecisionTrace.java": "0c616d62f111a630d2289a9c7fb7d4f031f1123617bbea084e0cf87e2842a113",
+      "org/magictester/ai/TacticalDamage.java": "bf4e2f639259ae76ef92b14c0a43f0cd41c8e55475908531c3f5eef5c6b11b22",
+      "org/magictester/ai/TacticalPlayers.java": "4d9ee71675fc39350ef2822ce6e125b9d3658b6c27ff4f4ba299f1a18218cd6f"
+    },
+    "deviceAcceptance": "not performed in this JVM suite",
+    "strengthClaim": "curated tactical checks only; not match win-rate evidence"
+  },
+  "choices": [
+    {
+      "id": "life-loss-take-lethal",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-take-lethal",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-take-lethal",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-take-lethal",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-hexproof",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-hexproof",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-hexproof",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-hexproof",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-emperion",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-emperion",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-emperion",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-emperion",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-angel",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-angel",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-angel",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-skip-angel",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-nonlethal-native",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-nonlethal-native",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-nonlethal-native",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-nonlethal-native",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-replacement-native",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-replacement-native",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-replacement-native",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-replacement-native",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-dynamic-native",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-dynamic-native",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-dynamic-native",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "life-loss-dynamic-native",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-maximize-effective-cards",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-maximize-effective-cards",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-maximize-effective-cards",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-maximize-effective-cards",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-hexproof",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-hexproof",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-hexproof",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-hexproof",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-tamiyo",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-tamiyo",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-tamiyo",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-respect-tamiyo",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-empty-hands-native",
+      "actorSeat": 0,
+      "baseline": [],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "discard-empty-hands-native",
+      "actorSeat": 1,
+      "baseline": [],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "discard-empty-hands-native",
+      "actorSeat": 2,
+      "baseline": [],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "discard-empty-hands-native",
+      "actorSeat": 3,
+      "baseline": [],
+      "candidate": [],
+      "baselineWillPlay": false,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "discard-restricted-card-type-native",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-restricted-card-type-native",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-restricted-card-type-native",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "discard-restricted-card-type-native",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-laboratory-maniac",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-laboratory-maniac",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-laboratory-maniac",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-laboratory-maniac",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-jace-draw-win",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-jace-draw-win",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-jace-draw-win",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-jace-draw-win",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-loss-protected",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-loss-protected",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-loss-protected",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-loss-protected",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-public-recycling",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-public-recycling",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-public-recycling",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-avoid-public-recycling",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-decline-only-combo-opponent",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "mill-decline-only-combo-opponent",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "mill-decline-only-combo-opponent",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "mill-decline-only-combo-opponent",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "mill-close-to-depletion",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-close-to-depletion",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-3"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-close-to-depletion",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "mill-close-to-depletion",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-equal-library-is-not-a-loss",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-equal-library-is-not-a-loss",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-equal-library-is-not-a-loss",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-equal-library-is-not-a-loss",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-over-library-takes-win",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-over-library-takes-win",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-over-library-takes-win",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-over-library-takes-win",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-1"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-jace-win",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-jace-win",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-jace-win",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-jace-win",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-lab-maniac-win",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-lab-maniac-win",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-lab-maniac-win",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-do-not-give-lab-maniac-win",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-no-immediate-kill-self-draw",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-0"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-no-immediate-kill-self-draw",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-0"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-no-immediate-kill-self-draw",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-0"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "draw-no-immediate-kill-self-draw",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-0"
+      ],
+      "candidate": [
+        "seat-0"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-decline-immune-opponents",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-decline-immune-opponents",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-decline-immune-opponents",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-decline-immune-opponents",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [],
+      "baselineWillPlay": true,
+      "candidateWillPlay": false
+    },
+    {
+      "id": "poison-target-vulnerable-player",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-target-vulnerable-player",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-target-vulnerable-player",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-target-vulnerable-player",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-highest-counter-priority",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-highest-counter-priority",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-highest-counter-priority",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "poison-preserve-highest-counter-priority",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-2"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-without-three-artifacts",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-without-three-artifacts",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-without-three-artifacts",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-without-three-artifacts",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-with-three-artifacts",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-with-three-artifacts",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-with-three-artifacts",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-metalcraft-with-three-artifacts",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-paid-x-target-public-lethal",
+      "actorSeat": 0,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-paid-x-target-public-lethal",
+      "actorSeat": 1,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-paid-x-target-public-lethal",
+      "actorSeat": 2,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    },
+    {
+      "id": "burn-paid-x-target-public-lethal",
+      "actorSeat": 3,
+      "baseline": [
+        "seat-1"
+      ],
+      "candidate": [
+        "seat-2"
+      ],
+      "baselineWillPlay": true,
+      "candidateWillPlay": true
+    }
+  ]
+}

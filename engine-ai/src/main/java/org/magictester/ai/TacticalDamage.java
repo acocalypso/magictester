@@ -20,7 +20,11 @@ public final class TacticalDamage {
                 || ability.isDividedAsYouChoose()) return baseline;
         // Dynamic damage, chained effects and special card scripts need their own tactical fixtures.
         String amount=ability.getParam("NumDmg");
-        if(amount==null || !amount.matches("[0-9]{1,6}")) return baseline;
+        boolean numeric=amount!=null && amount.matches("[0-9]{1,6}");
+        boolean paidX=AiPolicies.expanded(actor) && "X".equals(amount) && "Count$xPaid".equals(ability.getSVar("X"))
+            && ability.getRootAbility().getXManaCostPaid()!=null;
+        boolean metalcraft=AiPolicies.expanded(actor) && "X".equals(amount) && ability.getSVar("X").matches("Count\\$Metalcraft\\.[0-9]{1,6}\\.[0-9]{1,6}");
+        if(!numeric && !paidX && !metalcraft) return baseline;
         for(String parameter:new String[]{"AILogic","DamageSource","DivideEvenly","DividerOnResolution","Radiance"}) {
             if(ability.hasParam(parameter)) return baseline;
         }

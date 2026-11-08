@@ -4,6 +4,7 @@ import { existsSync, createReadStream } from "node:fs";
 import {
   mkdir,
   readFile,
+  readdir,
   writeFile,
   rename,
   rm,
@@ -273,7 +274,9 @@ const bridgeSource = new URL(
 );
 const bridgeBytes = await readFile(bridgeSource);
 const aiSourceRoot = new URL(existsSync(new URL("./ai-source/",import.meta.url)) ? "./ai-source/" : "../../engine-ai/src/main/java/", import.meta.url);
-const aiSources = await Promise.all(["org/magictester/ai/DecisionJournal.java", "org/magictester/ai/ForgeDecisionTrace.java", "org/magictester/ai/AiPolicies.java", "org/magictester/ai/TacticalDamage.java"].map(async (path) => ({path,bytes:await readFile(new URL(path,aiSourceRoot))})));
+const aiPaths = (await readdir(aiSourceRoot, { recursive: true }))
+  .filter(path => path.endsWith(".java")).map(path => path.replaceAll("\\", "/")).sort();
+const aiSources = await Promise.all(aiPaths.map(async path => ({path, bytes: await readFile(new URL(path, aiSourceRoot))})));
 
 let patchBytes = await readFile(
   new URL("./bridge/patches.json", import.meta.url),
