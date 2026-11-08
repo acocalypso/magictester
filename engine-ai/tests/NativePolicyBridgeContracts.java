@@ -37,7 +37,11 @@ public final class NativePolicyBridgeContracts {
             check(expanded.get("termination").getAsString().equals("normal"),"Expanded policy game completes");
             var expandedSeat=expanded.getAsJsonObject("ai").getAsJsonArray("seats").get(0).getAsJsonObject();
             check(expandedSeat.get("id").getAsString().equals("tactical-v2") && expandedSeat.getAsJsonArray("features").size()>=7,"Expanded capabilities recorded");
-            System.out.println("Native policy bridge contracts passed: three completed engine-only games");
+            policies.set(0,new JsonPrimitive("strategic-v1"));
+            var strategic=execute(request);
+            check(strategic.get("termination").getAsString().equals("normal"),"Strategic policy game completes");
+            check(strategic.getAsJsonObject("ai").getAsJsonArray("seats").get(0).getAsJsonObject().get("id").getAsString().equals("strategic-v1"),"Strategic policy transported to native engine");
+            System.out.println("Native policy bridge contracts passed: four completed engine-only games");
         } finally {
             try(var files=Files.list(directory)) {for(var file:files.toList()) Files.delete(file);}Files.delete(directory);
         }

@@ -7,6 +7,8 @@ class AiPolicyTest {
         for(count in 2..4) {
             assertEquals(List(count) {"stable"},AiPolicy.seats(AiPolicy.STABLE,count))
             assertEquals(List(count) {"tactical-v1"},AiPolicy.seats(AiPolicy.TACTICAL,count))
+            assertEquals(List(count) {"strategic-v1"},AiPolicy.seats(AiPolicy.STRATEGIC,count))
+            assertEquals(listOf(AiPolicy.STRATEGIC)+List(count-1) {AiPolicy.STABLE},AiPolicy.seats(AiPolicy.STRATEGIC,count,AiPolicy.YOUR_DECK))
         }
     }
     @Test fun unknownImportedPoliciesAndUnsupportedTablesAreRejected() {

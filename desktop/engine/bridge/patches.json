@@ -40,6 +40,22 @@
       {
         "find": "        return SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);",
         "replace": "        org.magictester.ai.DecisionJournal.Choice trace = org.magictester.ai.ForgeDecisionTrace.begin(player, optionList, sa, isOptional);\n        try {\n            T selected = SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);\n            org.magictester.ai.ForgeDecisionTrace.complete(trace, selected, player);\n            return selected;\n        } catch (RuntimeException | Error error) {\n            if (trace != null) trace.failed();\n            throw error;\n        }"
+      },
+      {
+        "find": "        return !ComputerUtil.wantMulligan(player, cardsToReturn);",
+        "replace": "        return org.magictester.ai.StrategicHand.keep(player, cardsToReturn, !ComputerUtil.wantMulligan(player, cardsToReturn));"
+      },
+      {
+        "find": "    public CardCollectionView tuckCardsViaMulligan(CardCollectionView hand, int cardsToReturn) {\n",
+        "replace": "    public CardCollectionView tuckCardsViaMulligan(CardCollectionView hand, int cardsToReturn) {\n        CardCollection strategic = org.magictester.ai.StrategicHand.bottom(player, hand, cardsToReturn);\n        if (strategic != null) return strategic;\n"
+      },
+      {
+        "find": "        brains.declareAttackers(attacker, combat);",
+        "replace": "        brains.declareAttackers(attacker, combat);\n        if (attacker == player) org.magictester.ai.StrategicCombat.attack(player, combat);"
+      },
+      {
+        "find": "        brains.declareBlockersFor(defender, combat);",
+        "replace": "        brains.declareBlockersFor(defender, combat);\n        if (defender == player) org.magictester.ai.StrategicCombat.block(player, combat);"
       }
     ]
   },
@@ -139,9 +155,17 @@
     "path": "forge/ai/AiController.java",
     "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/AiController.java",
     "sha256": "7c3801ff392a720450358efd6710cc10fbcf7bf339a9a2a8ed520e1c757ff8e2",
-    "find": "            future.cancel(true);\n            try {\n                t.join(2000); //2 seconds wait\n            } catch (InterruptedException ie) {\n                Thread.currentThread().interrupt();\n            }\n            if (t.isAlive()) {\n                // last resort, see #8302: the eval thread may be stuck inside a single\n                // evaluation or an infinite loop and never reach the cooperative exit\n                try {\n                    t.stop();\n                } catch (UnsupportedOperationException | NoSuchMethodError ex) {\n                    // Stop support: dropped by Android and Java 20 / 26 removed it completely - so sadly thread will keep running\n                }\n            }\n",
-    "replace": "            if (e instanceof TimeoutException) org.magictester.ai.AiPolicies.evaluationTimedOut(player);\n            if (e instanceof InterruptedException) Thread.currentThread().interrupt();\n            org.magictester.ai.AiCancellation.cancelAndJoin(future, t);\n",
-    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
+    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged.",
+    "replacements": [
+      {
+        "find": "            future.cancel(true);\n            try {\n                t.join(2000); //2 seconds wait\n            } catch (InterruptedException ie) {\n                Thread.currentThread().interrupt();\n            }\n            if (t.isAlive()) {\n                // last resort, see #8302: the eval thread may be stuck inside a single\n                // evaluation or an infinite loop and never reach the cooperative exit\n                try {\n                    t.stop();\n                } catch (UnsupportedOperationException | NoSuchMethodError ex) {\n                    // Stop support: dropped by Android and Java 20 / 26 removed it completely - so sadly thread will keep running\n                }\n            }\n",
+        "replace": "            if (e instanceof TimeoutException) org.magictester.ai.AiPolicies.evaluationTimedOut(player);\n            if (e instanceof InterruptedException) Thread.currentThread().interrupt();\n            org.magictester.ai.AiCancellation.cancelAndJoin(future, t);\n"
+      },
+      {
+        "find": "        FutureTask<SpellAbility> future = new FutureTask<>(() -> {",
+        "replace": "        org.magictester.ai.StrategicSequencing.order(player, all);\n\n        FutureTask<SpellAbility> future = new FutureTask<>(() -> {"
+      }
+    ]
   },
   {
     "path": "forge/ai/ComputerUtilMana.java",
@@ -166,5 +190,13 @@
     "find": "        game.forEachCardInGame(crd -> {\n            Card c = preList.get(crd);",
     "replace": "        game.forEachCardInGame(crd -> {\n            org.magictester.ai.AiCancellation.checkpoint();\n            Card c = preList.get(crd);",
     "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
+  },
+  {
+    "path": "forge/ai/ComputerUtil.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ComputerUtil.java",
+    "sha256": "ed3dd76219f81c67fcdb11b9c9d48fb37ce2caf886eecce71096db4b972f828d",
+    "find": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {",
+    "replace": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {\n        if (org.magictester.ai.StrategicSequencing.beforeCombat(ai, sa)) return true;",
+    "purpose": "Opt-in Strategic v1: conditional haste, mana refund and team haste setup before combat. Native policies unchanged."
   }
 ]

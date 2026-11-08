@@ -19,6 +19,7 @@ import org.json.JSONObject
             }
         }
         Text(when(policy) {
+            AiPolicy.STRATEGIC -> "Strategic v1 adds mana-aware opening hands, London bottom selection, conditional haste and team-haste sequencing, plus bounded search for simple two-player combat. Complex hands and combat retain native Forge logic. Includes Expanded v2 corrections."
             AiPolicy.EXPANDED -> "Expanded v2 adds life-loss lethal, safer mill and draw targets, discard value, poison immunity, paid-X and Metalcraft burn. Combat, mulligans and combo search remain native Forge."
             AiPolicy.TACTICAL -> "Tactical v1 improves simple burn-target choices against protected players. Other decisions use Forge's native AI."
             else -> "Native Forge is the reference policy. Choose an experimental policy to test the new tactical corrections."
@@ -48,7 +49,7 @@ import org.json.JSONObject
         }
         if(suggestions.values.any {it>0}) {
             Text("AI planning suggestions · checks may repeat before a spell is cast",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            val labels=mapOf("burn-lethal" to "Burn target priority","life-loss-lethal" to "Lethal life-loss target","discard-card-count" to "Discard value target","mill-public-protection" to "Mill target with public protection checked","draw-library-boundary" to "Draw-to-deck proposal rejected","poison-immune-targets" to "Poison against immune players declined")
+            val labels=mapOf("burn-lethal" to "Burn target priority","life-loss-lethal" to "Lethal life-loss target","discard-card-count" to "Discard value target","mill-public-protection" to "Mill target with public protection checked","draw-library-boundary" to "Draw-to-deck proposal rejected","poison-immune-targets" to "Poison against immune players declined","mulligan-keep-changed" to "Opening-hand decision changed","mulligan-bottom-selected" to "London bottom selection","conditional-haste-main1" to "Conditional haste evaluated before combat","mana-refund-main1" to "Mana-refund creature evaluated before combat","team-haste-setup-main1" to "Creature setup before team haste","team-haste-order" to "Team-haste spell reordered","combat-guaranteed-lethal" to "Guaranteed lethal attack found","combat-block-search" to "Blocking assignment improved")
             for((key,count) in suggestions) if(count>0) Text("${labels[key] ?: key.replace('-',' ')}: $count",fontSize=12.sp)
         }
         game.optString("engineBuildSha256").takeIf {it.isNotEmpty()}?.let {Text("Engine build ${it.take(12)}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}

@@ -103,3 +103,33 @@ All policies share cooperative interrupt checks in native amount calculation, ma
 Native metadata counts internal `evaluationTimeouts` per seat separately from the whole-game clock. These are deadline events, not fabricated game losses. Cancellation checks do not provide transactional rollback of all speculative AI state or guarantee that every native loop is interruptible; a noncooperative evaluation still ends the isolated attempt. No general speedup is claimed.
 
 Contracts exercise a cooperative mutating worker, a worker that ignores interruption, preservation of interrupt status, and the actual patched native amount/mana/replacement entry points. The 13-position legacy and 128-position expanded decision suites also pass with these safeguards compiled.
+
+## Strategic v1
+
+`strategic-v1` retains Expanded v2 target corrections and adds decision hooks in
+`PlayerControllerAi`, `AiController` and `ComputerUtil`. Native, Tactical v1 and
+Expanded v2 retain their existing behavior. Shared pinned patches are maintained
+for Android, desktop and the Docker runner; the Android UI exposes the selector.
+
+- Opening hands: distinguish real color/pip access from land count. Permit a
+  basic-land, four-one-drop hand; reject a six/seven-card hand that has lands but
+  no playable early spells. Preserve native decisions at five cards or fewer.
+  Search up to 128 kept subsets for London bottom selection. Conditional mana,
+  restricted mana, cycling, alternate faces, X, snow and Phyrexian costs fall back
+  to native hand logic. No opponent hand or library order is inspected.
+- Sequencing: recognize simple self-only conditional haste (including Goblin
+  Tomb Raider with an artifact), use Forge's `FreeSpellAI` mana-refund hint before
+  combat, and put affordable creature setup ahead of applicable team haste.
+  Forge still decides whether a spell is legal, affordable and worth playing.
+- Combat: search basic two-player constructed combat for guaranteed lethal
+  attacks and better single-block assignments. At most six attackers/four
+  blockers for attack search and five attackers/four blockers for block search.
+  Combat with triggers, nonbasic effects, special damage keywords, marked damage,
+  prevention/regeneration/shields, Commander rules or complex blocks falls back
+  to native Forge. Search considers public board state, life preservation and
+  creature trades. It does not predict hidden tricks or future draws.
+
+This is an opt-in heuristic policy, not a trained model or a universal strength
+claim. Planning counters may repeat; public action signatures and paired outcomes
+are the evidence that a game actually changed. See
+[the Strategic test guide](../docs/STRATEGIC_AI_TEST_GUIDE.md).

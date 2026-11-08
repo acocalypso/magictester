@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
     dependencies = [str(jar)]
     if args.native_home:
         dependencies.insert(0, str(args.bridge_classes.resolve(strict=True)))
-        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java', root / 'tests/NativeCancellationContracts.java']
+        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java', root / 'tests/NativeCancellationContracts.java', root / 'tests/StrategicContracts.java']
     subprocess.run([args.java, '-m', 'jdk.compiler/com.sun.tools.javac.Main', '--release', '17',
                     '-cp', os.pathsep.join(dependencies), '-d', classes, *map(str, sources)], check=True)
     cp = os.pathsep.join([classes, *dependencies])
@@ -45,3 +45,7 @@ with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
         if args.report:
             expanded.append(str(args.report.with_name(args.report.stem + '-expanded.json').resolve()))
         subprocess.run(expanded, check=True, timeout=180)
+        strategic=[args.java, '-Xmx512m', '-cp', cp, 'StrategicContracts', home]
+        if args.report:
+            strategic.append(str(args.report.with_name(args.report.stem + '-strategic.json').resolve()))
+        subprocess.run(strategic, check=True, timeout=120)

@@ -1,5 +1,8 @@
 # Expanded AI test build: Android 0.1.8
 
+For the newer mulligan, sequencing and bounded combat policy, see the
+[Strategic v1 / Android 0.1.10 guide](STRATEGIC_AI_TEST_GUIDE.md).
+
 This preview adds an opt-in **Expanded v2** policy while retaining Native Forge and Tactical v1. Forge still runs independently on the phone. Windows/Linux/Docker native bridges accept the same policy ID, but their product interfaces do not yet expose this selector.
 
 ## Run your test

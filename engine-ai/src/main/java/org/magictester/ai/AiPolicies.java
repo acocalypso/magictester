@@ -7,7 +7,7 @@ import java.util.*;
 
 /** Per-game/per-seat policy selection. Values never retain the game or its players. */
 public final class AiPolicies {
-    public static final String STABLE="stable", TACTICAL="tactical-v1", EXPANDED="tactical-v2";
+    public static final String STABLE="stable", TACTICAL="tactical-v1", EXPANDED="tactical-v2", STRATEGIC="strategic-v1";
     private static final Map<Game,Context> ACTIVE=Collections.synchronizedMap(new WeakHashMap<>());
     private static final class Context {
         final List<String> seats;
@@ -21,7 +21,7 @@ public final class AiPolicies {
         List<String> result=new ArrayList<>();
         for(int i=0;i<players;i++) {
             String policy=requested==null?STABLE:requested[i];
-            if(!STABLE.equals(policy) && !TACTICAL.equals(policy) && !EXPANDED.equals(policy)) throw new IllegalArgumentException("Unknown AI policy: "+policy);
+            if(!STABLE.equals(policy) && !TACTICAL.equals(policy) && !EXPANDED.equals(policy) && !STRATEGIC.equals(policy)) throw new IllegalArgumentException("Unknown AI policy: "+policy);
             result.add(policy);
         }
         return List.copyOf(result);
@@ -40,7 +40,11 @@ public final class AiPolicies {
     }
     public static boolean expanded(Player actor) {
         Context context=ACTIVE.get(actor.getGame());if(context==null)return false;int seat=seat(actor);
-        return seat>=0 && EXPANDED.equals(context.seats.get(seat));
+        return seat>=0 && (EXPANDED.equals(context.seats.get(seat)) || STRATEGIC.equals(context.seats.get(seat)));
+    }
+    public static boolean strategic(Player actor) {
+        Context context=ACTIVE.get(actor.getGame());if(context==null)return false;int seat=seat(actor);
+        return seat>=0 && STRATEGIC.equals(context.seats.get(seat));
     }
     static void note(Player actor,String feature) {
         Context context=ACTIVE.get(actor.getGame());int seat=seat(actor);
@@ -60,12 +64,13 @@ public final class AiPolicies {
         List<Map<String,Object>> seats=new ArrayList<>();
         synchronized(context) {
             for(int i=0;i<context.seats.size();i++) {
-                boolean expanded=EXPANDED.equals(context.seats.get(i));
+                boolean strategic=STRATEGIC.equals(context.seats.get(i));
+                boolean expanded=EXPANDED.equals(context.seats.get(i)) || strategic;
                 boolean tactical=!STABLE.equals(context.seats.get(i));
                 seats.add(Map.of("seat",i,"id",context.seats.get(i),"profile","Default",
-                    "policyRevision",expanded?"expanded-2":tactical?"damage-lethal-2":"forge-native",
+                    "policyRevision",strategic?"strategy-1":expanded?"expanded-2":tactical?"damage-lethal-2":"forge-native",
                     "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i],
-                    "features",expanded?List.of("burn-lethal","x-paid-and-metalcraft","life-loss-lethal","mill-public-protection","draw-library-boundary","discard-card-count","poison-immune-targets"):tactical?List.of("burn-lethal"):List.of(),
+                    "features",strategic?List.of("expanded-v2","mana-aware-mulligans","london-bottom-search","conditional-haste-timing","mana-refund-sequencing","team-haste-sequencing","bounded-combat-search"):expanded?List.of("burn-lethal","x-paid-and-metalcraft","life-loss-lethal","mill-public-protection","draw-library-boundary","discard-card-count","poison-immune-targets"):tactical?List.of("burn-lethal"):List.of(),
                     "evaluationSuggestions",Map.copyOf(context.suggestions.get(i)),"evaluationTimeouts",context.timeouts[i]));
             }
         }

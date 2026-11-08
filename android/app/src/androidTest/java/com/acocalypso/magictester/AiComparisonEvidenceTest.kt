@@ -36,4 +36,9 @@ class AiComparisonEvidenceTest {
         val report=AiComparisonEvidence.summarize(fresh[0],fresh[1],listOf(result(0,AiPolicy.STABLE,1)),listOf(result(0,AiPolicy.EXPANDED,0).put("engineBuildSha256","different")))
         assertEquals(0,report.score!!.pairs);assertEquals(1,report.excludedPairs)
     }
+    @Test fun strategicPolicyCanBeComparedAgainstNativeOpponents() {
+        val pair=pair();pair[1].put("aiPolicy",AiPolicy.STRATEGIC)
+        val report=AiComparisonEvidence.summarize(pair[0],pair[1],listOf(result(0,AiPolicy.STABLE,1)),listOf(result(0,AiPolicy.STRATEGIC,0)))
+        assertEquals(1,report.score!!.pairs);assertEquals(1,report.score.extraWins)
+    }
 }

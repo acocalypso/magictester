@@ -25,7 +25,7 @@ object AiComparisonEvidence {
         val group=baseline.optString("comparisonId")
         if(group.isBlank() || candidate.optString("comparisonId")!=group || baseline.optString("comparisonRole")!="baseline" || candidate.optString("comparisonRole")!="candidate")
             return AiComparisonSummary(message="A linked native and experimental analysis is required.")
-        if(baseline.optString("aiPolicy")!=AiPolicy.STABLE || candidate.optString("aiPolicy") !in listOf(AiPolicy.TACTICAL,AiPolicy.EXPANDED) || candidate.optString("aiScope")!=AiPolicy.YOUR_DECK)
+        if(baseline.optString("aiPolicy")!=AiPolicy.STABLE || candidate.optString("aiPolicy") !in AiPolicy.options.filter {it!=AiPolicy.STABLE} || candidate.optString("aiScope")!=AiPolicy.YOUR_DECK)
             return AiComparisonSummary(message="These analyses do not isolate experimental AI on your deck against native opponents.")
         for(key in listOf("deck","format","players","games","bestOf","seed","engineVersion","engineBuildSha256","opponents")) {
             if(baseline.opt(key)?.toString()!=candidate.opt(key)?.toString()) return AiComparisonSummary(message="Comparison unavailable: the $key settings differ. Start a new linked comparison.")

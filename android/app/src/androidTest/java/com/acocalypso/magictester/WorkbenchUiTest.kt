@@ -32,6 +32,9 @@ class WorkbenchUiTest {
         compose.onNodeWithText("Choose AI policy").performScrollTo().performClick()
         compose.onNodeWithText("Native Forge").performClick()
         compose.onNodeWithText("Queue analysis").performScrollTo().assertExists()
+        compose.onNodeWithText("Choose AI policy").performScrollTo().performClick()
+        compose.onNodeWithText("Strategic v1 · experimental").performClick()
+        compose.onNodeWithText("AI: Strategic v1 · experimental").assertIsDisplayed()
     }
     @Test fun linkedComparisonReturnsToThePreviousRunOnPhoneBack() {
         val store=RunStore(InstrumentationRegistry.getInstrumentation().targetContext)
