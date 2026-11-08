@@ -53,6 +53,11 @@ public final class DamageTacticsContracts {
         for(var c:ability.getTargets().getTargetCards()) targets.add(c.getName());
         var provenance=AiPolicies.close(game);
         check(!AiPolicies.tactical(actor),"Policy registration removed after game");
+        if(fixture.has("verifyLifeReplacementSeat")) {
+            var protectedPlayer=game.getRegisteredPlayers().get(fixture.get("verifyLifeReplacementSeat").getAsInt());
+            protectedPlayer.loseLife(3,true,false,ability);
+            check(protectedPlayer.getLife()==1,"Actual Forge Worship replacement prevents predicted lethal life loss");
+        }
         return Map.of("targets",targets,"willPlay",decision.willingToPlay(),"ai",provenance);
     }
     public static void main(String[] args)throws Exception {
@@ -69,6 +74,7 @@ public final class DamageTacticsContracts {
                 check(baseline.get("targets").equals(candidate.get("targets")),id+": fallback must preserve native targets");
                 check(baseline.get("willPlay").equals(candidate.get("willPlay")),id+": fallback must preserve willingness");assertions+=2;
             }
+            if(fixture.has("verifyLifeReplacementSeat")) assertions+=2;
             results.add(Map.of("id",id,"baseline",baseline,"candidate",candidate));
         }
         if(args.length>2) Files.writeString(Path.of(args[2]),JSON.toJson(Map.of("schemaVersion",1,"engineVersion","2.0.15","seed",90817,"assertions",assertions,"fixtures",results)));

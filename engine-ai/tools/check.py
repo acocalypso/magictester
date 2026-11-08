@@ -34,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
         subprocess.run([args.java, '-Xmx512m', '-cp', cp, 'ForgeTraceContracts', home], check=True, timeout=120)
         subprocess.run([args.java, '-Xmx512m', '-cp', cp, 'NativePolicyBridgeContracts', home], check=True, timeout=120)
         command = [args.java, '-Xmx512m', '-cp', cp, 'DamageTacticsContracts', home,
-                   str(root / 'fixtures/damage-tactics-v1.json')]
+                   str(root / 'fixtures/damage-tactics-v2.json')]
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             command.append(str(args.report.resolve()))

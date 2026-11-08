@@ -3,6 +3,9 @@ package org.magictester.ai;
 
 import forge.ai.ComputerUtilCombat;
 import forge.game.ability.ApiType;
+import forge.game.replacement.ReplacementType;
+import forge.game.replacement.ReplacementLayer;
+import forge.game.zone.ZoneType;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 
@@ -20,6 +23,18 @@ public final class TacticalDamage {
         if(amount==null || !amount.matches("[0-9]{1,6}")) return baseline;
         for(String parameter:new String[]{"AILogic","DamageSource","DivideEvenly","DividerOnResolution","Radiance"}) {
             if(ability.hasParam(parameter)) return baseline;
+        }
+        // Forge's damage predictor does not model LifeReduced or arbitrary GameLoss replacements.
+        // Do not run a replacement effect while planning: it can prompt or mutate the game.
+        for(ZoneType zone:new ZoneType[]{ZoneType.Battlefield,ZoneType.Command}) {
+            for(var card:actor.getGame().getCardsIn(zone)) {
+                if(!card.getView().canBeShownTo(actor.getView())) continue;
+                for(var replacement:card.getReplacementEffects()) {
+                    boolean unsupported=replacement.getMode()==ReplacementType.LifeReduced
+                        || (replacement.getMode()==ReplacementType.GameLoss && replacement.getLayer()!=ReplacementLayer.CantHappen);
+                    if(unsupported && replacement.zonesCheck(card.getZone())) return baseline;
+                }
+            }
         }
         var source=ability.getHostCard();
         Player preferred=null;

@@ -1,0 +1,247 @@
+[
+  {
+    "id": "duel-available-lethal",
+    "life": [
+      20,
+      3
+    ],
+    "expectedBaseline": "player-1",
+    "expectedCandidate": "player-1",
+    "unchanged": true
+  },
+  {
+    "id": "multiplayer-hexproof-lowest",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Leyline of Sanctity"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "expectedCandidate": "player-2"
+  },
+  {
+    "id": "multiplayer-cannot-lose-lowest",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "expectedBaseline": "player-1",
+    "expectedCandidate": "player-2"
+  },
+  {
+    "id": "multiplayer-life-cannot-change",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Emperion"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "expectedCandidate": "player-2"
+  },
+  {
+    "id": "multiplayer-prevented-lowest",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Glacial Chasm"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "expectedCandidate": "player-2"
+  },
+  {
+    "id": "ordinary-nonlethal-fallback",
+    "life": [
+      20,
+      20
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "unchanged": true
+  },
+  {
+    "id": "no-lethal-when-loss-protected",
+    "life": [
+      20,
+      1
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      },
+      {
+        "seat": 1,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "unchanged": true
+  },
+  {
+    "id": "infect-is-not-life-lethal",
+    "life": [
+      20,
+      0
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Phyrexian Unlife"
+      },
+      {
+        "seat": 1,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "unchanged": true
+  },
+  {
+    "id": "creature-only-fallback",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Grizzly Bears"
+      },
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      }
+    ],
+    "ability": "SP$ DealDamage | Cost$ R | ValidTgts$ Creature | NumDmg$ 3",
+    "unchanged": true
+  },
+  {
+    "id": "dynamic-damage-fallback",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      }
+    ],
+    "ability": "SP$ DealDamage | Cost$ R | ValidTgts$ Creature,Planeswalker,Player | NumDmg$ X",
+    "unchanged": true
+  },
+  {
+    "id": "multi-target-fallback",
+    "life": [
+      40,
+      1,
+      3,
+      40
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Platinum Angel"
+      }
+    ],
+    "ability": "SP$ DealDamage | Cost$ R | ValidTgts$ Creature,Planeswalker,Player | NumDmg$ 3 | TargetMin$ 1 | TargetMax$ 2",
+    "unchanged": true
+  },
+  {
+    "id": "life-loss-replacement-fallback",
+    "life": [
+      40,
+      1,
+      2,
+      3
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Leyline of Sanctity"
+      },
+      {
+        "seat": 2,
+        "name": "Worship"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "unchanged": true,
+    "verifyLifeReplacementSeat": 2
+  },
+  {
+    "id": "game-loss-replacement-fallback",
+    "life": [
+      40,
+      1,
+      2,
+      3
+    ],
+    "permanents": [
+      {
+        "seat": 1,
+        "name": "Leyline of Sanctity"
+      },
+      {
+        "seat": 2,
+        "name": "Lich's Mirror"
+      },
+      {
+        "seat": 2,
+        "name": "Grizzly Bears"
+      }
+    ],
+    "unchanged": true
+  }
+]

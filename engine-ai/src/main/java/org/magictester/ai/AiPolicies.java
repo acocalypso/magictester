@@ -49,7 +49,7 @@ public final class AiPolicies {
             for(int i=0;i<context.seats.size();i++) {
                 boolean tactical=TACTICAL.equals(context.seats.get(i));
                 seats.add(Map.of("seat",i,"id",context.seats.get(i),"profile","Default",
-                    "policyRevision",tactical?"damage-lethal-1":"forge-native",
+                    "policyRevision",tactical?"damage-lethal-2":"forge-native",
                     "experimental",tactical,"lethalPriorityEvaluations",context.evaluations[i]));
             }
         }

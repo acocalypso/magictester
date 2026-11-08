@@ -58,7 +58,7 @@ The recommended approach is a shared, versioned Java AI layer around Forge: reta
 
 ## Implementation checkpoint: November 8, 2026
 
-The shared recorder and a first per-seat experimental `tactical-v1` policy are implemented under [`engine-ai/`](../engine-ai/README.md). The policy fixes tested simple multiplayer burn ranking cases behind an opt-in flag; native stable behavior remains the reference. Eleven native tactical positions and two completed transport/provenance games pass on a desktop JVM. This is a narrow heuristic correction, not the proposed FlatMC backport, trained model, complete decision corpus or a demonstrated overall playing-strength gain. See the module README for exact scope and evidence.
+The shared recorder and a first per-seat experimental `tactical-v1` policy are implemented under [`engine-ai/`](../engine-ai/README.md). The policy fixes tested simple multiplayer burn ranking cases behind an opt-in flag; native stable behavior remains the reference. Thirteen native tactical positions (including Worship and Lich's Mirror fallbacks) and two completed transport/provenance games pass on a desktop JVM. Android app/test APK compilation, 18 JVM unit tests and lint also pass locally; physical-device acceptance and a balanced strength league remain outstanding. This is a narrow heuristic correction, not the proposed FlatMC backport, trained model, complete decision corpus or a demonstrated overall playing-strength gain. See the module README for exact scope and evidence.
 
 ## First three reviewable changes
 

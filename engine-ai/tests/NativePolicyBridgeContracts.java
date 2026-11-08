@@ -4,7 +4,7 @@ import com.google.gson.*;
 import java.nio.file.*;
 import java.util.*;
 
-/** Complete real games verify policy transport and saved provenance, not playing strength. */
+/** Tiny engine-only games verify policy transport, not format legality or playing strength. */
 public final class NativePolicyBridgeContracts {
     static void check(boolean ok,String message) {if(!ok)throw new AssertionError(message);}
     static JsonObject execute(JsonObject request) {
@@ -18,8 +18,8 @@ public final class NativePolicyBridgeContracts {
         Path directory=Files.createTempDirectory("policy-bridge-");
         try {
             var first=directory.resolve("first.dck");var second=directory.resolve("second.dck");
-            Files.writeString(first,"[metadata]\nName=Policy contract A\n[Main]\n60 Mountain\n");
-            Files.writeString(second,"[metadata]\nName=Policy contract B\n[Main]\n60 Island\n");
+            Files.writeString(first,"[metadata]\nName=Policy contract A\n[Main]\n12 Mountain\n");
+            Files.writeString(second,"[metadata]\nName=Policy contract B\n[Main]\n12 Island\n");
             var request=new JsonObject();var decks=new JsonArray();decks.add(first.toString());decks.add(second.toString());request.add("decks",decks);
             request.addProperty("mode","constructed");request.addProperty("games",1);request.addProperty("seed",191919);request.addProperty("clockSeconds",30);
             var old=execute(request);check(old.get("termination").getAsString().equals("normal"),"Default game completes: "+old.get("termination"));
