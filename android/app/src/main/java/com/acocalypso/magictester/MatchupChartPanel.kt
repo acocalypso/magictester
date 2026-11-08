@@ -37,10 +37,12 @@ object MatchupChartLabels {
     }
 }
 
-@Composable fun MatchupChartPanel(model: Workbench,run: Run,results: List<JSONObject>) {
+@Composable fun MatchupChartPanel(model: Workbench,run: Run,results: List<JSONObject>,expanded: Boolean,onExpandedChange: (Boolean)->Unit) {
     val peer=model.runs.firstOrNull {it.id!=run.id && run.payload.optString("comparisonId").isNotBlank() && it.payload.optString("comparisonId")==run.payload.optString("comparisonId") && it.payload.optString("comparisonRole")!=run.payload.optString("comparisonRole")}
-    var chart by remember(run.id) {mutableStateOf<MatchupChartData?>(null)}
-    var expanded by remember(run.id) {mutableStateOf(run.state=="complete")}
+    var peerResults by remember(peer?.id) {mutableStateOf<List<JSONObject>>(emptyList())}
+    // Current results are already loaded by RunDetail. Build their cells immediately
+    // so returning from a game restores the same list height and scroll position.
+    val chart=remember(run,results,peer,peerResults) {MatchupCharts.build(run,results,peer,peerResults)}
     var detail by remember(run.id) {mutableStateOf<Pair<Int,Int>?>(null)}
     var pending by remember {mutableStateOf<MatchupChartData?>(null)}
     var saving by remember {mutableStateOf(false)}
@@ -59,16 +61,15 @@ object MatchupChartLabels {
             } finally {saving=false}
         }
     }
-    LaunchedEffect(run.id,results,peer?.completed,peer?.state) {
-        chart=withContext(Dispatchers.IO) {MatchupCharts.build(run,results,peer,peer?.let {model.store.results(it.id)} ?: emptyList())}
+    LaunchedEffect(peer?.id,peer?.completed,peer?.state) {
+        peerResults=withContext(Dispatchers.IO) {peer?.let {model.store.results(it.id)} ?: emptyList()}
     }
-    LaunchedEffect(run.state) {if(run.state=="complete")expanded=true}
     val data=chart ?: return
     OutlinedCard(Modifier.fillMaxWidth()) {Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(data.title,fontSize=20.sp,fontWeight=FontWeight.Medium)
         Text("Your deck: ${data.deck}",fontSize=13.sp)
         if(run.state!="complete")Text(if(run.state in listOf("running","queued")) "Live snapshot · results may still be incomplete" else "Incomplete analysis · unfinished attempts are excluded",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick={expanded=!expanded}) {Text(if(expanded) "Hide matchup chart" else "Show matchup chart")}
+        TextButton(onClick={onExpandedChange(!expanded)}) {Text(if(expanded) "Hide matchup chart" else "Show matchup chart")}
         if(expanded) {
             Text(data.note,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             BoxWithConstraints(Modifier.fillMaxWidth()) {

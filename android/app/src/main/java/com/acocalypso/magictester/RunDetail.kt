@@ -19,10 +19,12 @@ import org.json.JSONObject
     val run = model.runs.firstOrNull { it.id == id } ?: return
     var results by remember(id) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var selectedGame by remember(id) { mutableStateOf<Pair<Int,JSONObject>?>(null) }
+    var chartExpanded by remember(id) {mutableStateOf(run.state=="complete")}
     var timeout by remember(id) { mutableIntStateOf(run.payload.optInt("clockSeconds",120)) }
     val listState=rememberLazyListState()
     BackHandler { if(selectedGame!=null) selectedGame=null else previous() }
     LaunchedEffect(id,run.completed,run.state) { results=withContext(Dispatchers.IO) { model.store.results(id) } }
+    LaunchedEffect(run.state) {if(run.state=="complete")chartExpanded=true}
     selectedGame?.let { (unit,game) -> GameActions(game,run.payload,unit) { selectedGame=null };return }
     val counts=remember(results,run.payload) {MatchupCharts.totals(run.payload,results)}
     LazyColumn(Modifier.fillMaxSize(),state=listState,contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -57,7 +59,7 @@ import org.json.JSONObject
             Row(horizontalArrangement=Arrangement.spacedBy(24.dp)) { Column { Text("${counts.finished}",fontSize=36.sp);Text("finished matches",fontSize=12.sp) };Column { Text(MatchupChartLabels.rate(counts),fontSize=36.sp);Text("match win rate",fontSize=12.sp) } }
             if(counts.finished>0)Text("95% Wilson interval: ${MatchupChartLabels.interval(counts)}. Draws count as finished matches, not wins. Unfinished attempts are excluded.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if(run.payload.optString("kind")!="benchmark") item {MatchupChartPanel(model,run,results)}
+        if(run.payload.optString("kind")!="benchmark") item {MatchupChartPanel(model,run,results,chartExpanded) {chartExpanded=it}}
         item { OutlinedButton(onClick={deck(run.payload.optString("title") to run.payload.getString("deck"))}) { Text("Your decklist") }
             val opponents=run.payload.getJSONArray("opponents")
             for(i in 0 until opponents.length()) { val opponent=opponents.getJSONObject(i);TextButton(onClick={deck(opponent.getString("name") to opponent.getString("text"))}) { Text("Opponent: ${opponent.getString("name")}") } }
