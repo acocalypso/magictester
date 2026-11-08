@@ -29,3 +29,21 @@ Keep unfinished attempts in your review. A timeout or engine error is not a game
 The expanded native suite passes **32 scenarios in four actor seats: 128 positions and 412 assertions**, with hidden-card identity permutations and legacy-policy parity checks. **26 scenarios use actual printed Forge card abilities**. The original 13-position Tactical v1 suite and cancellation/visibility/transport contracts also pass. Local app/test APK compilation, **19 Android JVM tests** and lint pass. The separate request/comparison logic checks pass on the JVM as well.
 
 These are curated checks, not a broad win-rate result. Physical Android acceptance is performed by the release workflow and your device test; it was not run in this local environment. Combat, mulligans, counterspell strategy, mana sequencing and combo search remain native Forge. No external training corpus or learned model is bundled. See the [implementation details](../engine-ai/README.md) and [archived tactical evidence](benchmarks/expanded-v2-summary.json).
+
+## Reading the comparison summary (Android 0.1.9)
+
+Open either linked analysis to see **Experimental vs default**. It reports each
+policy's match win rate, the experimental policy's extra/fewer wins, and the
+**percentage-point difference**. For example, 4/10 default wins and 6/10
+experimental wins means two extra wins and +20 percentage points. It does not
+mean the AI is proven 20% stronger overall.
+
+Only the same match indices finished on both sides contribute. Draws count as
+finished matches but not wins; timeouts and unfinished attempts count as neither
+wins nor losses. Each pair must have matching recorded seeds, clocks and engine
+builds, with native opponents and the expected per-seat policies. Changed frozen
+decks/settings block the comparison; incompatible evidence is counted as excluded.
+The summary remains provisional while either analysis is unfinished or pairs are
+missing. Small samples, fixed seats and selected opponents limit interpretation;
+repeat across more seeds and opponents before claiming a consistent improvement.
+A normal all-seats experimental run cannot establish improvement over default.
