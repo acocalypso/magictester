@@ -163,7 +163,8 @@ private fun kotlinx.coroutines.CoroutineScope.launchIO(model: Workbench, block: 
         AiPolicyControl(aiPolicy,!model.busy) {model.chooseAiPolicy(it)}
         if(aiPolicy!=AiPolicy.STABLE) {
             Row(verticalAlignment=Alignment.CenterVertically) {Checkbox(compareAi,{model.compareAi=it},enabled=!model.busy,modifier=Modifier.semantics {contentDescription="Also queue a native comparison"});Text("Also queue a native comparison",fontSize=14.sp)}
-            if(compareAi) Text("Two analyses, ${games*2} matches total: native baseline, then this policy for your deck against native opponents. Both keep the same decks, seed and clock. Your deck stays in seat 0.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(compareAi) Text("Two analyses, ${games*2} matches total: native AI for every player, then the selected AI for you and all opponents. Both keep the same decks, seed and clock. Your deck stays in seat 0.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            else Text("The selected AI pilots your deck and every opponent.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if(!DeckText.commander(model.format)) Row(verticalAlignment=Alignment.CenterVertically) { Switch(bestOf,{bestOf=it});Spacer(Modifier.width(10.dp));Text("Best of three · native AI sideboarding") }
         if(model.format in listOf("commander","cedh")) { Text("Commander table: $players players");Slider(players.toFloat(),{players=it.toInt()},valueRange=2f..4f,steps=1) }

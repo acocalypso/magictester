@@ -27,7 +27,7 @@ object MatchupCharts {
         }
         fun row(source: Run,rows: List<JSONObject>,allowed: Set<Int>?=null)=MatchupChartRow(AiPolicy.label(source.payload.optString("aiPolicy",AiPolicy.STABLE)).substringBefore(" ·"),
             MatchupStatistics.group(records(rows),source.payload.optInt("games"),pool.length(),seats,allowed))
-        var rows=listOf(row(run,results));var note="Recorded match wins ÷ finished matches; draws are included in the denominator. Unfinished attempts are excluded."
+        var rows=listOf(row(run,results));var pairScope: String?=null;var note="Recorded match wins ÷ finished matches; draws are included in the denominator. Unfinished attempts are excluded."
         if(peer!=null && payload.optString("comparisonId").isNotBlank()) {
             val baseline=if(payload.optString("comparisonRole")=="baseline")run else peer
             val candidate=if(payload.optString("comparisonRole")=="candidate")run else peer
@@ -36,13 +36,14 @@ object MatchupCharts {
             val comparison=AiComparisonEvidence.summarize(baseline.payload,candidate.payload,defaults,experiments)
             if(comparison.score!=null) {
                 rows=listOf(row(baseline,defaults,comparison.matchedIndices),row(candidate,experiments,comparison.matchedIndices))
-                note="Linked comparison: only matching finished outcomes with the same seed, clock, engine and expected AI policies are included. Draws are not wins."
+                pairScope=candidate.payload.optString("aiScope",AiPolicy.ALL)
+                note="Linked comparison: matching finished outcomes with the same seed, clock, engine and expected AI policies. Draws are not wins. "+AiComparison.scopeSummary(pairScope)+"."
             } else note="Showing this analysis only. ${comparison.message}"
         } else if(payload.has("comparisonId"))note="Showing this analysis only; the linked analysis is unavailable. $note"
         if(multiplayer)note="Pod win rates describe the entire multiplayer table, not individual head-to-head matchups. $note"
         val provenance="Forge ${payload.optString("engineVersion","not recorded")} · configured seed ${payload.optString("seed","not recorded")} · best-of-${payload.optInt("bestOf",1)} · configured limit ${payload.optString("clockSeconds","not recorded")}s"+
             payload.optString("engineBuildSha256").takeIf {it.isNotBlank()}?.let {" · engine ${it.take(12)}"}.orEmpty()
         val format=when(payload.optString("format")) {"cedh"->"cEDH";"duel"->"Duel Commander";else->payload.optString("format").replaceFirstChar {it.uppercase()}}
-        return MatchupChartData("$format matchup chart",payload.optString("title","Your deck"),multiplayer,groups,rows,note,provenance+" · AI: "+if(rows.size==2) "candidate on your deck; native opponents" else AiPolicy.scopeLabel(payload.optString("aiScope",AiPolicy.ALL)))
+        return MatchupChartData("$format matchup chart",payload.optString("title","Your deck"),multiplayer,groups,rows,note,provenance+" · AI: "+if(pairScope!=null) AiComparison.scopeSummary(pairScope) else AiPolicy.scopeLabel(payload.optString("aiScope",AiPolicy.ALL)))
     }
 }

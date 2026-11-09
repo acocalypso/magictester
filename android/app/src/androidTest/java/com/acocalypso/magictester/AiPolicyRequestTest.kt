@@ -33,6 +33,10 @@ class AiPolicyRequestTest {
             val strategic=SimulationRequest.unit(source,1)
             assertEquals(AiPolicy.STRATEGIC,strategic.getJSONArray("aiPolicies").getString(0))
             for(i in 1 until seats) assertEquals(AiPolicy.STABLE,strategic.getJSONArray("aiPolicies").getString(i))
+            val pair=AiComparison.prepare(source)
+            val allStrategic=SimulationRequest.unit(pair[1],1)
+            for(i in 0 until seats) assertEquals(AiPolicy.STRATEGIC,allStrategic.getJSONArray("aiPolicies").getString(i))
+            assertEquals(AiPolicy.YOUR_DECK,source.getString("aiScope")) // Saved legacy settings were not rewritten.
         }
     }
     @Test fun unsupportedPolicyFailsBeforeEngineWork() {

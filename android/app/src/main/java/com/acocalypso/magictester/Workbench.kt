@@ -184,7 +184,7 @@ class Workbench(application: Application) : AndroidViewModel(application) {
             .put("aiPolicy",submittedPolicy).put("aiScope",AiPolicy.ALL).put("engineBuildSha256",EngineBuild.fingerprint(app)).put("bestOf",if(DeckText.commander(submittedFormat)) 1 else bestOf).put("players",players).put("seed",seed).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",JSONArray(chosen)).put("legality",legality).put("createdAt",java.time.Instant.now().toString())
         withContext(Dispatchers.IO) { store.createBatch(if(compare) AiComparison.prepare(payload) else listOf(payload)) }
-        startQueue();message=if(compare) "Two linked analyses queued: native baseline and your candidate against native opponents. Find both in Runs." else "Analysis queued. Follow it in Runs; completed evidence is saved after every match."
+        startQueue();message=if(compare) "Two linked analyses queued: native AI for all players, then the selected AI for you and every opponent. Find both in Runs." else "Analysis queued. Follow it in Runs; completed evidence is saved after every match."
     }
     fun importAnalyses(uris: List<android.net.Uri>) = launchWork {
         require(uris.size in 1..100) {"Choose up to 100 analysis JSON exports at a time."}

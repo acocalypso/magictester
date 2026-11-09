@@ -25,21 +25,22 @@ object AiComparisonEvidence {
         val group=baseline.optString("comparisonId")
         if(group.isBlank() || candidate.optString("comparisonId")!=group || baseline.optString("comparisonRole")!="baseline" || candidate.optString("comparisonRole")!="candidate")
             return AiComparisonSummary(message="A linked native and experimental analysis is required.")
-        if(baseline.optString("aiPolicy")!=AiPolicy.STABLE || candidate.optString("aiPolicy") !in AiPolicy.options.filter {it!=AiPolicy.STABLE} || candidate.optString("aiScope")!=AiPolicy.YOUR_DECK)
-            return AiComparisonSummary(message="These analyses do not isolate experimental AI on your deck against native opponents.")
+        val candidateScope=candidate.optString("aiScope",AiPolicy.ALL)
+        if(baseline.optString("aiPolicy")!=AiPolicy.STABLE || baseline.optString("aiScope",AiPolicy.ALL)!=AiPolicy.ALL || candidate.optString("aiPolicy") !in AiPolicy.options.filter {it!=AiPolicy.STABLE} || candidateScope !in listOf(AiPolicy.ALL,AiPolicy.YOUR_DECK))
+            return AiComparisonSummary(message="These analyses do not have supported native baseline and candidate AI settings.")
         for(key in listOf("deck","format","players","games","bestOf","seed","engineVersion","engineBuildSha256","opponents")) {
             if(baseline.opt(key)?.toString()!=candidate.opt(key)?.toString()) return AiComparisonSummary(message="Comparison unavailable: the $key settings differ. Start a new linked comparison.")
         }
         val defaults=successful(defaultRows);val experiments=successful(experimentalRows)
         val seats=if(candidate.optString("format") in listOf("commander","cedh")) candidate.optInt("players",4) else 2
-        fun policiesMatch(row: JSONObject,policy: String): Boolean {
+        fun policiesMatch(row: JSONObject,policy: String,scope: String): Boolean {
             val games=row.optJSONArray("games")
-            if(games!=null) return games.length()>0 && (0 until games.length()).all {policiesMatch(games.getJSONObject(it),policy)}
+            if(games!=null) return games.length()>0 && (0 until games.length()).all {policiesMatch(games.getJSONObject(it),policy,scope)}
             val evidence=row.optJSONObject("ai")?.optJSONArray("seats") ?: return false
             if(evidence.length()!=seats) return false
             return (0 until seats).all {seat->
                 val entry=evidence.getJSONObject(seat)
-                entry.optInt("seat",-1)==seat && entry.optString("id")==if(seat==0) policy else AiPolicy.STABLE
+                entry.optInt("seat",-1)==seat && entry.optString("id")==if(scope==AiPolicy.YOUR_DECK && seat>0) AiPolicy.STABLE else policy
             }
         }
         val goodDefaults=mutableMapOf<Int,Boolean>();val goodExperiments=mutableMapOf<Int,Boolean>()
@@ -49,12 +50,12 @@ object AiComparisonEvidence {
             val a=defaults.getValue(index);val b=experiments.getValue(index)
             val comparable=index in 0 until baseline.optInt("games") &&
                 listOf("gameSeed","clockSeconds","unit","engineVersion","engineBuildSha256").all {a.has(it) && a.opt(it)?.toString()==b.opt(it)?.toString()} &&
-                a.optString("engineBuildSha256").isNotBlank() && validOutcome(a) && validOutcome(b) && policiesMatch(a,AiPolicy.STABLE) && policiesMatch(b,candidate.getString("aiPolicy"))
+                a.optString("engineBuildSha256").isNotBlank() && validOutcome(a) && validOutcome(b) && policiesMatch(a,AiPolicy.STABLE,AiPolicy.ALL) && policiesMatch(b,candidate.getString("aiPolicy"),candidateScope)
             if(!comparable) {excluded++;continue}
             goodDefaults[index]=a.optString("termination")=="normal" && !a.isNull("winner") && a.optInt("winner",-1)==0
             goodExperiments[index]=b.optString("termination")=="normal" && !b.isNull("winner") && b.optInt("winner",-1)==0
         }
         val score=AiComparisonScore.calculate(goodDefaults,goodExperiments)
-        return AiComparisonSummary(score,if(score.pairs==0) "Waiting for comparable finished matches in both analyses." else "Observed results for the same match indices. This measures your deck in the selected pool, not overall AI strength.",excluded,goodDefaults.keys.toSet())
+        return AiComparisonSummary(score,if(score.pairs==0) "Waiting for comparable finished matches in both analyses." else "Observed results for the same match indices. "+AiComparison.scopeDescription(candidate),excluded,goodDefaults.keys.toSet())
     }
 }

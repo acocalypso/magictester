@@ -20,7 +20,7 @@ class MatchupChartTest {
         .put("aiPolicy",AiPolicy.STRATEGIC).put("opponents",JSONArray().apply {for(i in 0 until pool)put(JSONObject().put("name",listOf("Dimir Control","Affinity","Burn")[i%3]+if(i>2) " $i" else "").put("text","Frozen deck $i"))})
     private fun outcome(index: Int,winner: Int?,termination: String="normal",policy: String=AiPolicy.STRATEGIC)=JSONObject().put("index",index).put("unit","game").put("termination",termination).put("winner",winner ?: JSONObject.NULL)
         .put("gameSeed",index+123).put("clockSeconds",120).put("engineVersion","2.0.15").put("engineBuildSha256","hash")
-        .put("ai",JSONObject().put("seats",JSONArray().put(JSONObject().put("seat",0).put("id",policy)).put(JSONObject().put("seat",1).put("id",AiPolicy.STABLE))))
+        .put("ai",JSONObject().put("seats",JSONArray().put(JSONObject().put("seat",0).put("id",policy)).put(JSONObject().put("seat",1).put("id",policy))))
     @Test fun existingRunsProduceMatchupRowsAndCommanderUsesWholePods() {
         val p=payload();val chart=MatchupCharts.build(Run("old","complete","",6,p),listOf(outcome(0,0),outcome(3,1),outcome(1,null,"rule_draw")))!!
         assertEquals(3,chart.groups.size);assertEquals(0.5,chart.rows.single().groups[0].rate!!,0.0)
@@ -39,6 +39,12 @@ class MatchupChartTest {
         val chart=MatchupCharts.build(candidate,experimental,baseline,native)!!
         assertEquals(2,chart.rows.size);assertEquals(0,chart.rows[0].total.wins);assertEquals(1,chart.rows[1].total.wins)
         assertEquals(1,chart.rows[0].total.finished);assertEquals(1,chart.rows[1].total.unpaired)
+        assertTrue(chart.provenance.contains("candidate for all players"))
+        pair[1].put("aiScope",AiPolicy.YOUR_DECK)
+        val legacyResults=experimental.map {JSONObject(it.toString()).apply {getJSONObject("ai").getJSONArray("seats").getJSONObject(1).put("id",AiPolicy.STABLE)}}
+        val legacyChart=MatchupCharts.build(baseline,native,candidate,legacyResults)!!
+        assertTrue(legacyChart.provenance.contains("legacy: candidate on your deck; native opponents"))
+        pair[1].put("aiScope",AiPolicy.ALL)
         val invalid=AiComparisonEvidence.summarize(pair[0],pair[1],listOf(outcome(0,null,policy=AiPolicy.STABLE)),listOf(outcome(0,0)))
         assertEquals(0,invalid.score!!.pairs);assertTrue(invalid.matchedIndices.isEmpty())
         val draw=AiComparisonEvidence.summarize(pair[0],pair[1],listOf(outcome(0,0,"rule_draw",AiPolicy.STABLE)),listOf(outcome(0,0,"rule_draw")))

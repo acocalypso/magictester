@@ -41,7 +41,7 @@ object MatchupChartPdf {
                 }
                 wrapped(canvas,"W–L–D = wins, losses, draws. Ranges: 95% Wilson intervals. Tint strength increases with the number of matches; small samples remain uncertain.",44f,1300f,990f,14f,2)
                 wrapped(canvas,data.note,44f,1342f,990f,13f,3)
-                text(canvas,data.provenance,44f,1390f,11f)
+                wrapped(canvas,data.provenance,44f,1380f,990f,10f,2)
                 text(canvas,"MagicTester · snapshot $captured · page ${pageIndex+1}/$totalPages",44f,1410f,12f)
                 document.finishPage(page)
             }

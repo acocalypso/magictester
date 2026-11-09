@@ -23,15 +23,17 @@ class ForgeRuntimeTest {
             .put("bestOf",bestOf).put("sideboarding",bestOf==3).put("maxMatchGames",5)
         return command(request).lineSequence().filter { it.isNotBlank() }.map { JSONObject(it) }.toList()
     }
-    @Test fun strategicPolicyRunsInTheIsolatedAndroidEngineAgainstNativeAi() {
-        val request=JSONObject().put("rawDecks",JSONArray(listOf(Examples.burn,Examples.burn))).put("format","pauper").put("games",1).put("seed",9917)
-            .put("clockSeconds",120).put("mode","constructed").put("aiPolicies",JSONArray(listOf(AiPolicy.STRATEGIC,AiPolicy.STABLE)))
+    @Test fun strategicPolicyRunsForBothPlayersInTheIsolatedAndroidEngine() {
+        val source=JSONObject().put("deck",Examples.burn).put("opponents",JSONArray().put(JSONObject().put("name","Burn").put("text",Examples.burn)))
+            .put("format","pauper").put("players",2).put("games",1).put("seed",9917).put("clockSeconds",120).put("aiPolicy",AiPolicy.STRATEGIC)
+        val request=SimulationRequest.unit(AiComparison.prepare(source)[1],0)
         val result=command(request).lineSequence().filter {it.isNotBlank()}.map {JSONObject(it)}.first {it.optString("type")=="result"}.getJSONObject("result")
         assertEquals(result.toString(),"normal",result.getString("termination"))
         val seats=result.getJSONObject("ai").getJSONArray("seats")
         assertEquals(AiPolicy.STRATEGIC,seats.getJSONObject(0).getString("id"))
         assertEquals("strategy-1",seats.getJSONObject(0).getString("policyRevision"))
-        assertEquals(AiPolicy.STABLE,seats.getJSONObject(1).getString("id"))
+        assertEquals(AiPolicy.STRATEGIC,seats.getJSONObject(1).getString("id"))
+        assertEquals("strategy-1",seats.getJSONObject(1).getString("policyRevision"))
     }
     @Test fun realGameOnAndroidRuntimeWithStructuredActions() {
         val events=game("pauper",listOf(Examples.burn,Examples.burn))

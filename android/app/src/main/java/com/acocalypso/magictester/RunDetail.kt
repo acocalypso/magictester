@@ -33,7 +33,8 @@ import org.json.JSONObject
         if(run.payload.has("comparisonId")) item {
             AiComparisonPanel(model,run)
             Text("Paired AI comparison",fontSize=18.sp)
-            Text("Same frozen decks, seed and initial clock. The candidate pilots your deck against native opponents; your seat stays fixed. Compare both results and unfinished attempts before drawing conclusions.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            val candidate=model.runs.firstOrNull {it.payload.optString("comparisonId")==run.payload.optString("comparisonId") && it.payload.optString("comparisonRole")=="candidate"}
+            Text("Same frozen decks, seed and initial clock; your seat stays fixed. "+AiComparison.scopeDescription(candidate?.payload),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(run.payload.optBoolean("comparisonSettingsChanged")) Text("The clock was changed on retry. Compare the per-game limits when reviewing this pair.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             for(peer in model.runs.filter {it.payload.optString("comparisonId")==run.payload.optString("comparisonId")}) {
                 Text("${peer.payload.optString("comparisonRole")}: ${peer.completed}/${peer.payload.optInt("games")} · ${peer.state}",fontSize=12.sp)
@@ -41,7 +42,7 @@ import org.json.JSONObject
             }
         }
         else if(run.payload.optString("aiPolicy",AiPolicy.STABLE)!=AiPolicy.STABLE) item {
-            Text("To measure improvement over default, start a new analysis with ‘Also queue a native comparison’. This run alone cannot quantify an AI strength gain.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("To compare matchup results across policies, start a new analysis with ‘Also queue a native comparison’. This run alone cannot quantify an AI strength gain.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item { LiveGamePanel(run) }
         if(run.payload.optString("kind")=="benchmark") item {run.payload.optJSONObject("benchmarkReport")?.let {report ->

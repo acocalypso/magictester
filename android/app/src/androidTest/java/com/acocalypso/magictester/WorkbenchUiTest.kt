@@ -35,6 +35,8 @@ class WorkbenchUiTest {
         compose.onNodeWithText("Choose AI policy").performScrollTo().performClick()
         compose.onNodeWithText("Strategic v1 · experimental").performClick()
         compose.onNodeWithText("AI: Strategic v1 · experimental").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Also queue a native comparison").performScrollTo().performClick().assertIsOn()
+        compose.onNodeWithText("native AI for every player",substring=true).assertExists()
     }
     @Test fun linkedComparisonReturnsToThePreviousRunOnPhoneBack() {
         val store=RunStore(InstrumentationRegistry.getInstrumentation().targetContext)
@@ -42,6 +44,7 @@ class WorkbenchUiTest {
             .put("games",1).put("clockSeconds",120).put("seed",55).put("aiPolicy",AiPolicy.EXPANDED).put("engineVersion",BuildConfig.FORGE_VERSION)
             .put("opponents",org.json.JSONArray().put(org.json.JSONObject().put("name","Opponent").put("text",Examples.burn)))
         val pair=AiComparison.prepare(source)
+        pair[1].put("aiScope",AiPolicy.YOUR_DECK) // A previously saved comparison.
         pair[0].put("title","Linked native fixture");pair[1].put("title","Linked candidate fixture")
         val ids=store.createBatch(pair)
         try {
@@ -49,6 +52,7 @@ class WorkbenchUiTest {
             compose.onNodeWithText("Runs",useUnmergedTree=true).performClick()
             compose.waitUntil(5000) {compose.onAllNodesWithText("Linked candidate fixture").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Linked candidate fixture").performClick()
+            compose.onNodeWithText("Legacy comparison:",substring=true).assertExists()
             compose.onNodeWithText("Open Native Forge").performScrollTo().performClick()
             compose.onNodeWithText("Linked native fixture").assertIsDisplayed()
             phoneBack()
