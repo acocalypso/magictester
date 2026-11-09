@@ -1,5 +1,10 @@
 # Expanded AI test build: Android 0.1.8
 
+**Current behavior:** from Android 0.1.14, new linked comparisons apply the
+selected AI to your deck **and all opponents** in the candidate. See the
+[all-player comparison guide](ALL_PLAYER_AI_COMPARISONS.md). The instructions and
+benchmark descriptions below document the original own-deck-only release.
+
 For the newer mulligan, sequencing and bounded combat policy, see the
 [Strategic v1 / Android 0.1.10 guide](STRATEGIC_AI_TEST_GUIDE.md).
 

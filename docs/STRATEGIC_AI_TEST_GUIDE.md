@@ -1,5 +1,9 @@
 # Strategic AI test build: Android 0.1.10
 
+**Current comparison mode:** Android 0.1.14 applies Strategic v1 to your deck and
+every opponent in new candidate runs. See the [all-player comparison guide](ALL_PLAYER_AI_COMPARISONS.md).
+The results and setup below describe the original 0.1.10 own-deck-only experiment.
+
 Select **Test → Analysis settings → Choose AI policy → Strategic v1 · experimental**.
 Enable **Also queue a native comparison** to get a linked default/experimental
 pair. Existing preferred policies are retained on update: Expanded v2 remains
