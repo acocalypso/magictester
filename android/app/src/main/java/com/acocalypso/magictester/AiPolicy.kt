@@ -6,9 +6,10 @@ object AiPolicy {
     const val TACTICAL="tactical-v1"
     const val EXPANDED="tactical-v2"
     const val STRATEGIC="strategic-v1"
+    const val ADAPTIVE="strategic-v2"
     const val ALL="all-seats"
     const val YOUR_DECK="your-deck-only"
-    val options=listOf(STABLE,TACTICAL,EXPANDED,STRATEGIC)
+    val options=listOf(STABLE,TACTICAL,EXPANDED,STRATEGIC,ADAPTIVE)
     fun checked(id: String): String {
         require(id in options) {"Unsupported AI policy: $id. Create a new analysis with a supported policy."}
         return id
@@ -27,6 +28,7 @@ object AiPolicy {
         TACTICAL -> "Tactical v1 · experimental"
         EXPANDED -> "Expanded v2 · experimental"
         STRATEGIC -> "Strategic v1 · experimental"
+        ADAPTIVE -> "Strategic v2 · experimental"
         else -> "Unrecognized policy ($id)"
     }
     fun scopeLabel(scope: String)=if(scope==YOUR_DECK) "your deck; native opponents" else "all seats"

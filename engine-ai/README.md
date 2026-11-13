@@ -133,3 +133,70 @@ This is an opt-in heuristic policy, not a trained model or a universal strength
 claim. Planning counters may repeat; public action signatures and paired outcomes
 are the evidence that a game actually changed. See
 [the Strategic test guide](../docs/STRATEGIC_AI_TEST_GUIDE.md).
+
+## Strategic v2
+
+`strategic-v2` (revision `strategy-2`) keeps everything in Strategic v1 and adds
+three things that depend on remembering what an opponent has played. Earlier
+policies and native Forge are unchanged.
+
+- **Match memory** (`MatchMemory`). Every card a player publicly shows is
+  recorded for the length of one match: spells and abilities put on the stack,
+  lands played, and face-up cards in the battlefield, graveyard, exile, stack
+  and command zones. Hands, libraries, sideboards, face-down cards and
+  decklists are never read. Game two and three of a best-of-three start with
+  what game one revealed; nothing carries over to another match.
+- **Matchup sideboarding** (`StrategicSideboard`). Native Forge swaps same-cost
+  cards at random and only after a loss. Strategic v2 scores each card in the 75
+  by whether its interaction is live against the cards the opponent showed:
+  removal by the share of revealed permanents it can hit (using the card's own
+  target filter and damage amount), counterspells by the spells they can stop,
+  graveyard hate by revealed graveyard use, sweepers by their creatures against
+  yours, plus discard, lifegain, fog and colour protection. Cards are exchanged
+  one for one while the incoming card is clearly better. Lands and mana sources
+  are never touched, deck size never changes, and with fewer than five revealed
+  nonland cards nothing is changed. Cards are classified from Forge's card
+  scripts, not from a list of names. Two-player games only.
+- **Known-sweeper restraint** (`StrategicPlay`). If the opponent has shown a
+  board wipe this match, can cast it by their next turn, and the current board
+  already wins within three attacks and would be destroyed, a further creature
+  with no haste, flash or enters-the-battlefield effect is kept in hand. At most
+  two creatures are held.
+
+Game results add `ai.matchMemory` with the number of games observed and the
+count of distinct cards known per seat (never the names), and planning notes
+`sideboard-planned`, `sideboard-cards-exchanged`,
+`sideboard-insufficient-evidence` and `hold-creature-vs-known-sweeper`.
+
+`tests/AdaptiveContracts.java` checks these on printed cards from both seats:
+what memory may and may not see, plans against artifact, graveyard, creatureless
+and single-colour opponents, deck-size and land invariants, hidden-card
+independence, and the limits of the sweeper rule. It runs as part of
+`tools/check.py`.
+
+## Head-to-head league
+
+`tools/league.py` measures whether one policy plays better than another rather
+than whether one deck beats another. Each pairing of two decks is played as a
+mirrored pair with one seed: the candidate pilots deck A against the baseline on
+deck B, then they exchange decks. The report gives the candidate's share of
+decided matches with a Wilson 95% interval, an exact sign test over the pairs,
+a per-deck breakdown, and for best-of-three the game-one and post-sideboard
+rates separately. Unfinished legs are counted and their pair excluded.
+
+```sh
+python3 engine-ai/tools/league.py \
+  --forge-jar android/engine/build/upstream.jar \
+  --native-home android/engine/build/data \
+  --bridge-classes android/engine/build/classes \
+  --config engine-ai/fixtures/league/league.json \
+  --report league-report.json --jobs 8
+```
+
+`--override KEY=JSON` replaces one config value, for example
+`--override baseline=strategic-v1` or `--override bestOf=1`. The nine lists in
+`fixtures/league/` are project-authored archetype decks with sideboards (burn,
+creature aggro, tempo, two control decks, artifacts, go-wide, graveyard and
+ramp). They exist to exercise different play styles; they are not a metagame
+and are not checked for format legality. See
+[the Strategic v2 results](../docs/STRATEGIC_V2_AI.md).

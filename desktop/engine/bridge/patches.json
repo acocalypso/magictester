@@ -31,7 +31,7 @@
     "path": "forge/ai/PlayerControllerAi.java",
     "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/PlayerControllerAi.java",
     "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
-    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner. Optional bounded actor-visible entity-choice diagnostics, without changing the native decision.",
+    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner. Optional bounded actor-visible entity-choice diagnostics, without changing the native decision. Opt-in Strategic v2 plans sideboarding from the cards the opponent publicly showed; other policies keep native sideboarding.",
     "replacements": [
       {
         "find": "if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
@@ -56,6 +56,10 @@
       {
         "find": "        brains.declareBlockersFor(defender, combat);",
         "replace": "        brains.declareBlockersFor(defender, combat);\n        if (defender == player) org.magictester.ai.StrategicCombat.block(player, combat);"
+      },
+      {
+        "find": "        Map<PaperCard, PaperCard> sideboardPlan = Maps.newHashMap();",
+        "replace": "        List<PaperCard> strategicPlan = org.magictester.ai.StrategicSideboard.plan(player, deck);\n        if (strategicPlan != null) return strategicPlan;\n\n        Map<PaperCard, PaperCard> sideboardPlan = Maps.newHashMap();"
       }
     ]
   },
@@ -198,5 +202,13 @@
     "find": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {",
     "replace": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {\n        if (org.magictester.ai.StrategicSequencing.beforeCombat(ai, sa)) return true;",
     "purpose": "Opt-in Strategic v1: conditional haste, mana refund and team haste setup before combat. Native policies unchanged."
+  },
+  {
+    "path": "forge/ai/ability/PermanentCreatureAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/PermanentCreatureAi.java",
+    "sha256": "b5234b70472f46654fa31c266fa3538b0ffce3269787950238d26138c0230709",
+    "find": "    protected boolean checkPhaseRestrictions(final Player ai, final SpellAbility sa, final PhaseHandler ph) {\n        final Card card = sa.getHostCard();\n        final Game game = ai.getGame();\n",
+    "replace": "    protected boolean checkPhaseRestrictions(final Player ai, final SpellAbility sa, final PhaseHandler ph) {\n        if (org.magictester.ai.StrategicPlay.holdCreature(ai, sa)) return false;\n        final Card card = sa.getHostCard();\n        final Game game = ai.getGame();\n",
+    "purpose": "Opt-in Strategic v2: keep extra creatures back from a board wipe the opponent has publicly shown this match. Other policies unchanged."
   }
 ]

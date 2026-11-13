@@ -32,7 +32,8 @@ import java.util.Locale
                 Text("Default: ${score.defaultWins}/${score.pairs} wins (${percent(score.defaultWins)}%)\nExperimental: ${score.experimentalWins}/${score.pairs} wins (${percent(score.experimentalWins)}%)",fontSize=14.sp)
                 Text("Gained wins: ${score.gainedWins} · Lost wins: ${score.lostWins}\nMatched outcomes: ${score.pairs}/${run.payload.optInt("games")}. Draws count as finished matches, not wins.",fontSize=12.sp)
                 if(baseline?.state!="complete" || candidate?.state!="complete" || score.pairs<run.payload.optInt("games")) Text("Partial comparison — remaining, interrupted and timed-out matches are excluded.",fontSize=12.sp)
-                Text("Small samples can vary by chance. Repeat with more seeds and opponents to assess matchup performance. Your seat stays fixed.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(score.verdict,fontSize=13.sp)
+                Text("Repeat with more seeds and opponents to assess matchup performance. Your seat stays fixed.",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(report.message,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(report.excludedPairs>0) Text("${report.excludedPairs} finished pairs excluded: clock, seed, engine build or AI evidence did not match.",fontSize=12.sp,color=MaterialTheme.colorScheme.error)

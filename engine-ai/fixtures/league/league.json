@@ -1,0 +1,56 @@
+{
+  "description": "Project-authored archetype gauntlet for AI head-to-head leagues. These lists exist to exercise different play styles and sideboard plans; they are not a tournament metagame and are not checked for format legality.",
+  "candidate": "strategic-v2",
+  "baseline": "stable",
+  "bestOf": 3,
+  "repeats": 2,
+  "seed": 20261111,
+  "clockSeconds": 300,
+  "decks": [
+    {
+      "name": "Burn",
+      "archetype": "aggro-burn",
+      "deck": "burn.dck"
+    },
+    {
+      "name": "Stompy",
+      "archetype": "creature-aggro",
+      "deck": "stompy.dck"
+    },
+    {
+      "name": "Faeries",
+      "archetype": "tempo",
+      "deck": "faeries.dck"
+    },
+    {
+      "name": "Black Control",
+      "archetype": "control-midrange",
+      "deck": "black-control.dck"
+    },
+    {
+      "name": "Affinity",
+      "archetype": "artifact-aggro",
+      "deck": "affinity.dck"
+    },
+    {
+      "name": "White Weenie",
+      "archetype": "go-wide-aggro",
+      "deck": "white-weenie.dck"
+    },
+    {
+      "name": "Blue-White Control",
+      "archetype": "control",
+      "deck": "blue-white-control.dck"
+    },
+    {
+      "name": "Graveyard Midrange",
+      "archetype": "graveyard",
+      "deck": "graveyard.dck"
+    },
+    {
+      "name": "Green Ramp",
+      "archetype": "ramp",
+      "deck": "ramp.dck"
+    }
+  ]
+}

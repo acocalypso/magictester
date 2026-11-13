@@ -8,6 +8,7 @@ class AiPolicyTest {
             assertEquals(List(count) {"stable"},AiPolicy.seats(AiPolicy.STABLE,count))
             assertEquals(List(count) {"tactical-v1"},AiPolicy.seats(AiPolicy.TACTICAL,count))
             assertEquals(List(count) {"strategic-v1"},AiPolicy.seats(AiPolicy.STRATEGIC,count))
+            assertEquals(List(count) {"strategic-v2"},AiPolicy.seats(AiPolicy.ADAPTIVE,count))
             assertEquals(listOf(AiPolicy.STRATEGIC)+List(count-1) {AiPolicy.STABLE},AiPolicy.seats(AiPolicy.STRATEGIC,count,AiPolicy.YOUR_DECK))
         }
     }
@@ -31,6 +32,7 @@ class AiPolicyTest {
     @Test fun labelsDistinguishExperimentalAndUnknownEvidence() {
         assertEquals("Native Forge",AiPolicy.label(AiPolicy.STABLE))
         assertTrue(AiPolicy.label(AiPolicy.TACTICAL).contains("experimental"))
+        assertEquals("Strategic v2 · experimental",AiPolicy.label(AiPolicy.ADAPTIVE))
         assertTrue(AiPolicy.label("old-policy").contains("Unrecognized"))
     }
 }

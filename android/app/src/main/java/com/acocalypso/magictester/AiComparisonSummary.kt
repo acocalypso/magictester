@@ -6,6 +6,26 @@ import org.json.JSONObject
 data class AiComparisonScore(val pairs: Int,val defaultWins: Int,val experimentalWins: Int,val gainedWins: Int,val lostWins: Int) {
     val extraWins get()=experimentalWins-defaultWins
     val percentagePoints get()=if(pairs==0) 0.0 else 100.0*extraWins/pairs
+    /**
+     * Exact two-sided sign test on matches whose result changed. It answers: if both AIs were
+     * equally good, how often would gained and lost wins split at least this unevenly? Null when
+     * no result changed. Matches with the same result in both runs carry no information here.
+     */
+    val chanceProbability: Double? get() {
+        val n=gainedWins+lostWins
+        if(n==0) return null
+        val k=minOf(gainedWins,lostWins)
+        var term=1.0;var tail=0.0 // C(n,i)/2^n, built up without overflow
+        repeat(n) {term/=2.0}
+        for(i in 0..k) {tail+=term;term=term*(n-i)/(i+1)}
+        return (2*tail).coerceAtMost(1.0)
+    }
+    val verdict: String get() {
+        val p=chanceProbability ?: return "No match changed its result, so this sample shows no difference."
+        val percent=String.format(java.util.Locale.US,"%.0f",100*p)
+        return if(p<0.05) "A split this uneven would happen by chance only about $percent% of the time. The difference is unlikely to be luck."
+        else "A split this uneven would happen by chance about $percent% of the time. This is not yet evidence of a real difference; run more matches."
+    }
     companion object {
         fun calculate(default: Map<Int,Boolean>,experimental: Map<Int,Boolean>): AiComparisonScore {
             val indices=default.keys.intersect(experimental.keys)

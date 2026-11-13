@@ -14,6 +14,13 @@ class AiComparisonScoreTest {
         assertEquals(100.0,AiComparisonScore.calculate(mapOf(0 to false),mapOf(0 to true)).percentagePoints,0.0)
         val worse=AiComparisonScore.calculate(mapOf(0 to true),mapOf(0 to false))
         assertEquals(-1,worse.extraWins);assertEquals(1,worse.lostWins);assertEquals(-100.0,worse.percentagePoints,0.0)
+        assertNull(AiComparisonScore(4,2,2,0,0).chanceProbability)
+        assertEquals(1.0,AiComparisonScore(4,2,2,1,1).chanceProbability!!,1e-12)
+        assertEquals(0.0625,AiComparisonScore(10,2,7,5,0).chanceProbability!!,1e-12) // 2 * (1/2)^5
+        assertEquals(0.021484375,AiComparisonScore(20,5,13,9,1).chanceProbability!!,1e-12) // 2 * 11/1024
+        assertEquals(AiComparisonScore(20,13,5,1,9).chanceProbability!!,AiComparisonScore(20,5,13,9,1).chanceProbability!!,0.0)
+        assertTrue(AiComparisonScore(20,5,13,9,1).verdict.contains("unlikely to be luck"))
+        assertTrue(AiComparisonScore(10,2,7,5,0).verdict.contains("not yet evidence"))
         val empty=AiComparisonScore.calculate(mapOf(0 to true),emptyMap())
         assertEquals(0,empty.pairs);assertEquals(0.0,empty.percentagePoints,0.0)
     }

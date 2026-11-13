@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
     dependencies = [str(jar)]
     if args.native_home:
         dependencies.insert(0, str(args.bridge_classes.resolve(strict=True)))
-        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java', root / 'tests/NativeCancellationContracts.java', root / 'tests/StrategicContracts.java']
+        sources += [root / 'tests/ForgeTraceContracts.java', root / 'tests/DamageTacticsContracts.java', root / 'tests/NativePolicyBridgeContracts.java', root / 'tests/ExpandedTacticsContracts.java', root / 'tests/NativeCancellationContracts.java', root / 'tests/StrategicContracts.java', root / 'tests/AdaptiveContracts.java']
     subprocess.run([args.java, '-m', 'jdk.compiler/com.sun.tools.javac.Main', '--release', '17',
                     '-cp', os.pathsep.join(dependencies), '-d', classes, *map(str, sources)], check=True)
     cp = os.pathsep.join([classes, *dependencies])
@@ -49,3 +49,7 @@ with tempfile.TemporaryDirectory(prefix='magictester-ai-') as classes:
         if args.report:
             strategic.append(str(args.report.with_name(args.report.stem + '-strategic.json').resolve()))
         subprocess.run(strategic, check=True, timeout=120)
+        adaptive=[args.java, '-Xmx512m', '-cp', cp, 'AdaptiveContracts', home, str(root / 'fixtures/league')]
+        if args.report:
+            adaptive.append(str(args.report.with_name(args.report.stem + '-adaptive.json').resolve()))
+        subprocess.run(adaptive, check=True, timeout=180)
