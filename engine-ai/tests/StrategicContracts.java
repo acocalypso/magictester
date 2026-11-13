@@ -49,6 +49,11 @@ public final class StrategicContracts {
     static void library(Player p) {for(int i=0;i<18;i++)card(p,"Mountain",ZoneType.Library);for(int i=0;i<36;i++)card(p,"Grizzly Bears",ZoneType.Library);}
     static void hand(Player p,String... names) {for(String n:names)card(p,n,ZoneType.Hand);}
     static void finish(Position p,String label) {evidence.add(Map.of("id",label,"ai",AiPolicies.close(p.game)));}
+    /** What unmodified Forge decides for the same hand; since 2.0.16 that is its own deck-plan mulligan. */
+    static boolean nativeKeep(boolean swapped,int returned,String... names) {
+        var p=position("stable",swapped);library(p.actor);hand(p.actor,names);
+        boolean keep=p.actor.getController().mulliganKeepHand(p.actor,returned);AiPolicies.close(p.game);return keep;
+    }
     static void mulligans(boolean swapped) {
         for(String policy:List.of("stable","tactical-v1","tactical-v2","strategic-v1")) {
             var p=position(policy,swapped);library(p.actor);
@@ -69,17 +74,17 @@ public final class StrategicContracts {
         check(bottom.size()==2 && bottom.get(0).isLand() && bottom.get(1).isLand(),"London search keeps two lands and the three playable spells");
         check(original.size()==7,"Search must not mutate the source hand");finish(p,"london-bottom");
         p=position("strategic-v1",swapped);library(p.actor);hand(p.actor,"Forest","Forest","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt");
-        boolean nativeDecision=!ComputerUtil.wantMulligan(p.actor,2);
+        boolean nativeDecision=nativeKeep(swapped,2,"Forest","Forest","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt");
         check(p.actor.getController().mulliganKeepHand(p.actor,2)==nativeDecision,"Do not introduce a low-card mulligan loop");finish(p,"low-card-fallback");
         p=position("strategic-v1",swapped);library(p.actor);hand(p.actor,"Forest","Forest","Generous Ent","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt");
-        nativeDecision=!ComputerUtil.wantMulligan(p.actor,0);
+        nativeDecision=nativeKeep(swapped,0,"Forest","Forest","Generous Ent","Lightning Bolt","Lightning Bolt","Lightning Bolt","Lightning Bolt");
         check(p.actor.getController().mulliganKeepHand(p.actor,0)==nativeDecision,"Landcycling and alternative faces retain native mulligans");finish(p,"alternate-resource-fallback");
         p=position("strategic-v1",swapped);library(p.actor);hand(p.actor,"Gaea's Cradle","Gaea's Cradle","Gaea's Cradle","Llanowar Elves","Llanowar Elves","Llanowar Elves","Llanowar Elves");
-        nativeDecision=!ComputerUtil.wantMulligan(p.actor,0);
+        nativeDecision=nativeKeep(swapped,0,"Gaea's Cradle","Gaea's Cradle","Gaea's Cradle","Llanowar Elves","Llanowar Elves","Llanowar Elves","Llanowar Elves");
         check(p.actor.getController().mulliganKeepHand(p.actor,0)==nativeDecision,"Dynamic mana retains native hand evaluation");
         check(StrategicHand.bottom(p.actor,p.actor.getCardsIn(ZoneType.Hand),1)==null,"Dynamic mana retains native bottom selection");finish(p,"dynamic-mana-fallback");
         p=position("strategic-v1",swapped);library(p.actor);hand(p.actor,"Seat of the Synod","Seat of the Synod","Myr Enforcer","Myr Enforcer","Myr Enforcer","Myr Enforcer","Myr Enforcer");
-        nativeDecision=!ComputerUtil.wantMulligan(p.actor,0);
+        nativeDecision=nativeKeep(swapped,0,"Seat of the Synod","Seat of the Synod","Myr Enforcer","Myr Enforcer","Myr Enforcer","Myr Enforcer","Myr Enforcer");
         check(p.actor.getController().mulliganKeepHand(p.actor,0)==nativeDecision,"Affinity costs retain native hand evaluation");
         check(StrategicHand.bottom(p.actor,p.actor.getCardsIn(ZoneType.Hand),1)==null,"Affinity costs retain native bottom selection");finish(p,"affinity-cost-fallback");
         p=position("strategic-v1",swapped);library(p.actor);

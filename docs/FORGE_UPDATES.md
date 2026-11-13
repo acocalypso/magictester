@@ -1,6 +1,6 @@
 # Latest stable Forge
 
-The application follows the official [latest stable GitHub release](https://github.com/Card-Forge/forge/releases/latest). Drafts, prereleases and nightlies are excluded. The maintained bootstrap baseline is 2.0.15; the live GitHub endpoint also reported 2.0.15 on 6 November 2026. The JAR's build banner contains `SNAPSHOT`; update selection uses the stable GitHub release designation, not that internal banner.
+The application follows the official [latest stable GitHub release](https://github.com/Card-Forge/forge/releases/latest). Drafts, prereleases and nightlies are excluded. The maintained bootstrap baseline is 2.0.16, published 11 November 2026. The JAR's build banner contains `SNAPSHOT`; update selection uses the stable GitHub release designation, not that internal banner.
 
 First boot checks for a newer release before starting the API. Maintenance checks on startup and hourly (`FORGE_CHECK_HOURS`, minimum one). It uses the official release asset's SHA-256 digest, resolves the exact source tag to an immutable commit and rejects unexpected URLs, missing checksums or downgrades. An archive changed under the same version is an error.
 

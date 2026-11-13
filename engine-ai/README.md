@@ -36,7 +36,7 @@ Android's engine preparation compiles these sources into its engine JAR. Docker 
 Run the bounded journal contracts with a full JDK (17 or later) and an installed Forge dependency JAR:
 
 ```sh
-python3 engine-ai/tools/check.py --forge-jar /path/to/forge-gui-desktop-2.0.15-jar-with-dependencies.jar
+python3 engine-ai/tools/check.py --forge-jar /path/to/forge-gui-desktop-2.0.16-jar-with-dependencies.jar
 ```
 
 Use `--java /path/to/jdk/bin/java` if needed. To run all native contracts after engine preparation:

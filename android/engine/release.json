@@ -1,9 +1,9 @@
 {
-  "version": "2.0.15",
-  "tag": "forge-2.0.15",
-  "sourceCommit": "4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676",
-  "archiveUrl": "https://github.com/Card-Forge/forge/releases/download/forge-2.0.15/forge-installer-2.0.15.tar.bz2",
-  "archiveSha256": "4468f182b60f6ca62d89697baa208981085af744f116781af751c611826db600",
-  "jarName": "forge-gui-desktop-2.0.15-jar-with-dependencies.jar",
-  "fModelSha256": "977fcf910d6c74635e618e7d46790a49ff064d9454e9ff33c615d2a069b4737f"
+  "version": "2.0.16",
+  "tag": "forge-2.0.16",
+  "sourceCommit": "583714b8bfbd9cb04f8bc39ad95861190caf7691",
+  "archiveUrl": "https://github.com/Card-Forge/forge/releases/download/forge-2.0.16/forge-installer-2.0.16.tar.bz2",
+  "archiveSha256": "feb1338c2f4a8c62e9289b6270caa7fcc38f2441d5ec4d7cff237c2c1a3b15d0",
+  "jarName": "forge-gui-desktop-2.0.16-jar-with-dependencies.jar",
+  "fModelSha256": "2a42e43a737cb9a49ee8103c68c45b87a63328f9652b3963c88e76acfd1b53f9"
 }

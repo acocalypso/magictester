@@ -77,7 +77,7 @@ public final class DamageTacticsContracts {
             if(fixture.has("verifyLifeReplacementSeat")) assertions+=2;
             results.add(Map.of("id",id,"baseline",baseline,"candidate",candidate));
         }
-        if(args.length>2) Files.writeString(Path.of(args[2]),JSON.toJson(Map.of("schemaVersion",1,"engineVersion","2.0.15","seed",90817,"assertions",assertions,"fixtures",results)));
+        if(args.length>2) Files.writeString(Path.of(args[2]),JSON.toJson(Map.of("schemaVersion",1,"engineVersion","2.0.16","seed",90817,"assertions",assertions,"fixtures",results)));
         System.out.println("Damage tactics passed: "+fixtures.size()+" native positions, "+assertions+" assertions");System.exit(0);
     }
 }

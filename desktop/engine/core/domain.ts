@@ -197,7 +197,7 @@ export class CachedCardDataProvider implements CardDataProvider {
       const factsData = JSON.parse(factsRaw);
       if (
         factsData.schemaVersion !== 1 ||
-        factsData.engineVersion !== (runtime?.bridge.engineVersion || "2.0.15")
+        factsData.engineVersion !== (runtime?.bridge.engineVersion || "2.0.16")
       )
         throw new Error("Incompatible Forge facts cache");
       this.facts = new Map(

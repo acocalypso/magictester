@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "candidate": "strategic-v2",
+  "baseline": "strategic-v1",
+  "bestOf": 3,
+  "seed": 20261111,
+  "repeats": 8,
+  "clockSeconds": 300,
+  "decks": [
+    "Burn",
+    "Stompy",
+    "Faeries",
+    "Black Control",
+    "Affinity",
+    "White Weenie",
+    "Blue-White Control",
+    "Graveyard Midrange",
+    "Green Ramp"
+  ],
+  "method": "Mirrored pairs: both policies pilot both decks of every pairing with one seed. Draws count as neither a win nor a loss.",
+  "legsPlayed": 576,
+  "legsUnfinished": 0,
+  "pairsExcludedForUnfinishedLeg": 0,
+  "decidedMatches": 576,
+  "candidateWins": 291,
+  "baselineWins": 285,
+  "draws": 0,
+  "candidateShare": 0.5052,
+  "candidateShareWilson95": [
+    0.4645,
+    0.5459
+  ],
+  "pairs": {
+    "candidateWonBoth": 48,
+    "baselineWonBoth": 45,
+    "split": 195,
+    "signTestTwoSidedP": 0.835846
+  },
+  "games": {
+    "gameOne": {
+      "candidateWins": 286,
+      "decided": 576,
+      "candidateShare": 0.4965,
+      "wilson95": [
+        0.4559,
+        0.5372
+      ]
+    },
+    "afterSideboard": {
+      "candidateWins": 416,
+      "decided": 815,
+      "candidateShare": 0.5104,
+      "wilson95": [
+        0.4761,
+        0.5446
+      ]
+    }
+  },
+  "sideboardCardsBroughtIn": {
+    "candidate": 1403,
+    "baseline": 1670
+  },
+  "candidatePlanningNotes": {
+    "hold-creature-vs-known-sweeper": 330,
+    "mana-refund-main1": 171,
+    "mulligan-bottom-selected": 287,
+    "mulligan-keep-changed": 70,
+    "sideboard-cards-exchanged": 1403,
+    "sideboard-insufficient-evidence": 50,
+    "sideboard-planned": 765
+  },
+  "perDeck": {
+    "Affinity": {
+      "candidatePilot": {
+        "score": 12.0,
+        "matches": 64,
+        "rate": 0.1875
+      },
+      "baselinePilot": {
+        "score": 12.0,
+        "matches": 64,
+        "rate": 0.1875
+      },
+      "difference": 0.0
+    },
+    "Black Control": {
+      "candidatePilot": {
+        "score": 26.0,
+        "matches": 64,
+        "rate": 0.4062
+      },
+      "baselinePilot": {
+        "score": 27.0,
+        "matches": 64,
+        "rate": 0.4219
+      },
+      "difference": -0.0156
+    },
+    "Blue-White Control": {
+      "candidatePilot": {
+        "score": 45.0,
+        "matches": 64,
+        "rate": 0.7031
+      },
+      "baselinePilot": {
+        "score": 48.0,
+        "matches": 64,
+        "rate": 0.75
+      },
+      "difference": -0.0469
+    },
+    "Burn": {
+      "candidatePilot": {
+        "score": 36.0,
+        "matches": 64,
+        "rate": 0.5625
+      },
+      "baselinePilot": {
+        "score": 31.0,
+        "matches": 64,
+        "rate": 0.4844
+      },
+      "difference": 0.0781
+    },
+    "Faeries": {
+      "candidatePilot": {
+        "score": 32.0,
+        "matches": 64,
+        "rate": 0.5
+      },
+      "baselinePilot": {
+        "score": 29.0,
+        "matches": 64,
+        "rate": 0.4531
+      },
+      "difference": 0.0469
+    },
+    "Graveyard Midrange": {
+      "candidatePilot": {
+        "score": 35.0,
+        "matches": 64,
+        "rate": 0.5469
+      },
+      "baselinePilot": {
+        "score": 35.0,
+        "matches": 64,
+        "rate": 0.5469
+      },
+      "difference": 0.0
+    },
+    "Green Ramp": {
+      "candidatePilot": {
+        "score": 19.0,
+        "matches": 64,
+        "rate": 0.2969
+      },
+      "baselinePilot": {
+        "score": 16.0,
+        "matches": 64,
+        "rate": 0.25
+      },
+      "difference": 0.0469
+    },
+    "Stompy": {
+      "candidatePilot": {
+        "score": 39.0,
+        "matches": 64,
+        "rate": 0.6094
+      },
+      "baselinePilot": {
+        "score": 45.0,
+        "matches": 64,
+        "rate": 0.7031
+      },
+      "difference": -0.0938
+    },
+    "White Weenie": {
+      "candidatePilot": {
+        "score": 47.0,
+        "matches": 64,
+        "rate": 0.7344
+      },
+      "baselinePilot": {
+        "score": 42.0,
+        "matches": 64,
+        "rate": 0.6562
+      },
+      "difference": 0.0781
+    }
+  },
+  "matchDurationMs": {
+    "median": 12521,
+    "max": 278590
+  },
+  "interpretation": "Evidence for this deck pool, engine build and clock only. A share near 50% with an interval that spans 50% shows no measured difference. Host durations are not a phone measurement.",
+  "workersFailed": 0
+}

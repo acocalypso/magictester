@@ -60,7 +60,7 @@ public final class StrategicDeckBenchmark {
             results.add(row);
             System.out.println("Pair "+(index+1)+"/"+count+": "+opponent.get("name").getAsString()+" changed="+differs+" winners="+baseline.get("winner")+"/"+candidate.get("winner"));
         }
-        var summary=new LinkedHashMap<String,Object>();summary.put("policy","strategic-v1");summary.put("engineVersion","2.0.15");summary.put("seed",config.get("seed"));summary.put("pairs",count);summary.put("finishedPairs",completePairs);
+        var summary=new LinkedHashMap<String,Object>();summary.put("policy","strategic-v1");summary.put("engineVersion","2.0.16");summary.put("seed",config.get("seed"));summary.put("pairs",count);summary.put("finishedPairs",completePairs);
         summary.put("baselineWins",baselineWins);summary.put("candidateWins",candidateWins);summary.put("changedActionPairs",changed);summary.put("results",results);
         summary.put("interpretation","Small fixed-seat deck/pool sample, not evidence of general AI strength. Durations include host load and are not a device performance benchmark.");
         Files.writeString(Path.of(args[2]),JSON.toJson(summary));System.exit(completePairs==count?0:2);

@@ -84,7 +84,7 @@ public final class ExpandedTacticsContracts {
                 results.add(Map.of("id",id,"actorSeat",rotation,"baseline",baseline,"candidate",candidate));
             }
         }
-        if(args.length>2) Files.writeString(Path.of(args[2]),JSON.toJson(Map.of("schemaVersion",1,"engineVersion","2.0.15","policy","tactical-v2","scenarios",fixtures.size(),"positions",results.size(),"assertions",assertions,"changedPositions",changes,"fixtures",results)));
+        if(args.length>2) Files.writeString(Path.of(args[2]),JSON.toJson(Map.of("schemaVersion",1,"engineVersion","2.0.16","policy","tactical-v2","scenarios",fixtures.size(),"positions",results.size(),"assertions",assertions,"changedPositions",changes,"fixtures",results)));
         System.out.println("Expanded tactics passed: "+fixtures.size()+" scenarios, "+results.size()+" rotated positions, "+assertions+" assertions, "+changes+" changed positions");System.exit(0);
     }
 }

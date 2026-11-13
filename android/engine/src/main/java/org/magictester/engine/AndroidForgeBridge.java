@@ -1,7 +1,7 @@
 package org.magictester.engine;
 
 /* SPDX-License-Identifier: GPL-3.0-only
- * Maintained Forge 2.0.15 bridge. Public engine API plus pinned opt-in overrides.
+ * Maintained Forge 2.0.16 bridge. Public engine API plus pinned opt-in overrides.
  */
 import com.google.common.eventbus.Subscribe;
 import com.google.gson.*;

@@ -1,8 +1,8 @@
 [
   {
     "path": "forge/game/player/Player.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/player/Player.java",
-    "sha256": "f5353a9f4e69ea21437f336390d558aba0bcd8d4e9ec5fbd29d92edf4d0e7451",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-game/src/main/java/forge/game/player/Player.java",
+    "sha256": "c2f5a3c52f7f29738186c82d7c2df73d622d6463e21d1e9b14bdfa60ace43003",
     "purpose": "Duel Commander has no 21-point commander-damage loss condition. Preserve Commander zone/SBA/cost behavior. Also allow an optional companion choice to be declined without a null-card exception. Honor legal pregame wild-color choices from the registered deck rather than an empty-hand AI color guess.",
     "replacements": [
       {
@@ -21,7 +21,7 @@
   },
   {
     "path": "forge/game/staticability/StaticAbilityCantBeCast.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/staticability/StaticAbilityCantBeCast.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-game/src/main/java/forge/game/staticability/StaticAbilityCantBeCast.java",
     "sha256": "60c3aed9c191920f8bad88e5dd5fee47af0c97fcd1e183506306135b4da9b382",
     "find": "        card.setCastSA(spell);\n\n        final Game game = activator.getGame();",
     "replace": "        card.setCastSA(spell);\n\n        final Game game = activator.getGame();\n        // MagicTester Duel rule: after the first command-zone commander cast,\n        // another designated commander cannot be cast from that zone this game.\n        // The native commander-tax counters track that exact cast history.\n        if (Boolean.getBoolean(\"magictester.duel\") && card.isCommander()\n                && card.isInZone(ZoneType.Command) && card.getOwner().equals(activator)\n                && activator.getTotalCommanderCast() > 0 && activator.getCommanderCast(card) == 0) {\n            return true;\n        }",
@@ -29,14 +29,10 @@
   },
   {
     "path": "forge/ai/PlayerControllerAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/PlayerControllerAi.java",
-    "sha256": "a8c0efea0a55b46416fbaccbcf7aa075f5f2ff13e579fa051f5a3334bb381206",
-    "purpose": "Allow native AI sideboarding after an actual rule draw without dereferencing a missing winner. Optional bounded actor-visible entity-choice diagnostics, without changing the native decision. Opt-in Strategic v2 plans sideboarding from the cards the opponent publicly showed; other policies keep native sideboarding.",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/PlayerControllerAi.java",
+    "sha256": "3eec0312ee37b3acbec73d89b6c153590cefe19ba7438fd351540104a9a547ab",
+    "purpose": "Optional bounded actor-visible entity-choice diagnostics, without changing the native decision. Opt-in Strategic v2 plans sideboarding from the cards the opponent publicly showed; other policies keep native sideboarding.",
     "replacements": [
-      {
-        "find": "if (lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())",
-        "replace": "if (lastOutcome.getWinningPlayer() != null && lastOutcome.getWinningPlayer().getPlayer().equals(player.getLobbyPlayer())"
-      },
       {
         "find": "        return SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);",
         "replace": "        org.magictester.ai.DecisionJournal.Choice trace = org.magictester.ai.ForgeDecisionTrace.begin(player, optionList, sa, isOptional);\n        try {\n            T selected = SpellApiToAi.Converter.get(sa).chooseSingleEntity(player, sa, optionList, isOptional, targetedPlayer, params);\n            org.magictester.ai.ForgeDecisionTrace.complete(trace, selected, player);\n            return selected;\n        } catch (RuntimeException | Error error) {\n            if (trace != null) trace.failed();\n            throw error;\n        }"
@@ -60,12 +56,16 @@
       {
         "find": "        Map<PaperCard, PaperCard> sideboardPlan = Maps.newHashMap();",
         "replace": "        List<PaperCard> strategicPlan = org.magictester.ai.StrategicSideboard.plan(player, deck);\n        if (strategicPlan != null) return strategicPlan;\n\n        Map<PaperCard, PaperCard> sideboardPlan = Maps.newHashMap();"
+      },
+      {
+        "find": "                return OpeningHand.keep(player, player.getCardsIn(ZoneType.Hand), cardsToReturn,\n                        firstPlayer == player, brains.deckPlan(player), brains.getIntProperty(AiProps.MULLIGAN_THRESHOLD));",
+        "replace": "                return org.magictester.ai.StrategicHand.keep(player, cardsToReturn, OpeningHand.keep(player, player.getCardsIn(ZoneType.Hand), cardsToReturn,\n                        firstPlayer == player, brains.deckPlan(player), brains.getIntProperty(AiProps.MULLIGAN_THRESHOLD)));"
       }
     ]
   },
   {
     "path": "forge/ai/ability/ChooseCompanionAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/ChooseCompanionAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/ChooseCompanionAi.java",
     "sha256": "50e031fcf8d59c4a4b07c58b288d68dd7ddc9a4862577b37b3aed8128c93717c",
     "find": "        Collections.shuffle(cards, MyRandom.getRandom());",
     "replace": "        String requested = System.getProperty(\"magictester.companion.\" + ai.getLobbyPlayer().getName());\n        if (requested != null) {\n            for (Card card : cards) if (card.getName().equals(requested)) return card;\n            return null; // Do not silently substitute a different companion.\n        }\n        Collections.shuffle(cards, MyRandom.getRandom());",
@@ -73,7 +73,7 @@
   },
   {
     "path": "forge/ai/ability/DamageAiBase.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DamageAiBase.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/DamageAiBase.java",
     "sha256": "141910237c17f06466d0c437b1616a28a91bd3689edadf749383965022a5a114",
     "find": "        Player enemy = comp.getWeakestOpponent();\n        boolean dmgByCardsInHand = false;",
     "replace": "        Player enemy = org.magictester.ai.TacticalDamage.preferLethal(comp, sa, d, comp.getWeakestOpponent());\n        boolean dmgByCardsInHand = false;",
@@ -81,16 +81,16 @@
   },
   {
     "path": "forge/ai/ability/DamageDealAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DamageDealAi.java",
-    "sha256": "5c298a91077b3d86c53a92735ae2e8f872a5e9cda2bfb53f5cd1c433b05d0fc2",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/DamageDealAi.java",
+    "sha256": "b52577fa7e991046527b8b40f1343ea55a6c337f581e87a9909c070467a34253",
     "find": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }",
     "replace": "        Player enemy = targetableOpps.min(PlayerPredicates.compareByLife());\n        if (enemy == null) {\n            enemy = ai.getWeakestOpponent();\n        }\n        enemy = org.magictester.ai.TacticalDamage.preferLethal(ai, sa, dmg, enemy);",
     "purpose": "Opt-in per-seat tactical-v1 policy: rank legal predicted-lethal opponents consistently in simple single-target burn; preserve native stable policy."
   },
   {
     "path": "forge/ai/ability/LifeLoseAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/LifeLoseAi.java",
-    "sha256": "d5ddb6dda9edfe51d0831f38cf3a2ad4389de9187960a8b5e61b3a58e638b95f",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/LifeLoseAi.java",
+    "sha256": "512a9e31bef9f522d3a30a5f06057c183873349a361cab4600b38ef2d73b2618",
     "replacements": [
       {
         "find": "        sa.resetTargets();\n        PlayerCollection opps = ai.getOpponents().filter(PlayerPredicates.isTargetableBy(sa));",
@@ -101,8 +101,8 @@
   },
   {
     "path": "forge/ai/ability/DiscardAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DiscardAi.java",
-    "sha256": "5a50f0142ca78f449be5f93c8365a0df95bb5f0d3ef38c996ef3b68b34ee8cde",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/DiscardAi.java",
+    "sha256": "c3542d4ac5611f318af2b77056f1eb3e90bc0086bd097c510d18d1f9451b79db",
     "replacements": [
       {
         "find": "        final PlayerCollection opps = ai.getOpponents();\n        Collections.shuffle(opps, MyRandom.getRandom());",
@@ -113,8 +113,8 @@
   },
   {
     "path": "forge/ai/ability/MillAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/MillAi.java",
-    "sha256": "42bc0ed271938d530cba5dee391c51368c40a4e9f7531431a020936be211461a",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/MillAi.java",
+    "sha256": "05cb205e3f14d730042dc5d95f2ee5aeb66abb60743878a461cd07536f681d55",
     "replacements": [
       {
         "find": "    private boolean targetAI(final Player ai, final SpellAbility sa, final boolean mandatory) {\n        final Card source = sa.getHostCard();",
@@ -125,8 +125,8 @@
   },
   {
     "path": "forge/ai/ability/DrawAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/DrawAi.java",
-    "sha256": "e52505fb0b43a457ee6e6a9f6398fa0d80d3af68a76aef4350af5ae564bfb797",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/DrawAi.java",
+    "sha256": "7b68aa7f0a9bebc1db7919151885076663b303abf440fac8b83e2a05f4933e32",
     "replacements": [
       {
         "find": "                if (numCards >= oppA.getCardsIn(ZoneType.Library).size()) {",
@@ -137,7 +137,7 @@
   },
   {
     "path": "forge/ai/ability/PoisonAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/PoisonAi.java",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/PoisonAi.java",
     "sha256": "8dc26b5bb61b0d3fa9f7f483c3c2fe22e9ebf91d045fc015a12b395547f76577",
     "replacements": [
       {
@@ -157,56 +157,56 @@
   },
   {
     "path": "forge/ai/AiController.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/AiController.java",
-    "sha256": "7c3801ff392a720450358efd6710cc10fbcf7bf339a9a2a8ed520e1c757ff8e2",
-    "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged.",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/AiController.java",
+    "sha256": "6ca79880f62dbc58a861c168bd442ec847b35855b00c100f0b35e9eb08cf40bd",
+    "purpose": "Count evaluation timeouts and fail the isolated game if the AI evaluator cannot stop; remove the unsupported Thread.stop fallback. Opt-in Strategic sequencing hint. Forge's own shared evaluation deadline is retained.",
     "replacements": [
       {
-        "find": "            future.cancel(true);\n            try {\n                t.join(2000); //2 seconds wait\n            } catch (InterruptedException ie) {\n                Thread.currentThread().interrupt();\n            }\n            if (t.isAlive()) {\n                // last resort, see #8302: the eval thread may be stuck inside a single\n                // evaluation or an infinite loop and never reach the cooperative exit\n                try {\n                    t.stop();\n                } catch (UnsupportedOperationException | NoSuchMethodError ex) {\n                    // Stop support: dropped by Android and Java 20 / 26 removed it completely - so sadly thread will keep running\n                }\n            }\n",
+        "find": "            future.cancel(true);\n            try {\n                // join returns as soon as the eval thread exits, so the common case costs nothing. The full 2 s only matters\n                // for a thread inside code without check() (mana payment, threat prediction, simulation): giving up earlier\n                // just starts the stop() fallback sooner, and on Java 20+/Android stop() throws, so the thread would keep\n                // running next to the game thread\n                t.join(2000); // 2 seconds wait\n            } catch (InterruptedException ie) {\n                Thread.currentThread().interrupt();\n            }\n            if (t.isAlive()) {\n                // last resort, see #8302: the eval thread may be stuck inside a single\n                // evaluation or an infinite loop and never reach the cooperative exit\n                try {\n                    t.stop();\n                } catch (UnsupportedOperationException | NoSuchMethodError ex) {\n                    // Stop support: dropped by Android and Java 20 / 26 removed it completely - so sadly thread will keep running\n                }\n            }\n",
         "replace": "            if (e instanceof TimeoutException) org.magictester.ai.AiPolicies.evaluationTimedOut(player);\n            if (e instanceof InterruptedException) Thread.currentThread().interrupt();\n            org.magictester.ai.AiCancellation.cancelAndJoin(future, t);\n"
       },
       {
-        "find": "        FutureTask<SpellAbility> future = new FutureTask<>(() -> {",
-        "replace": "        org.magictester.ai.StrategicSequencing.order(player, all);\n\n        FutureTask<SpellAbility> future = new FutureTask<>(() -> {"
+        "find": "        final long aiId = AITimeoutTracker.key(game.getId(), player.getId());",
+        "replace": "        org.magictester.ai.StrategicSequencing.order(player, all);\n\n        final long aiId = AITimeoutTracker.key(game.getId(), player.getId());"
       }
     ]
   },
   {
     "path": "forge/ai/ComputerUtilMana.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ComputerUtilMana.java",
-    "sha256": "9f21cc1b070144e6e8cd648ff6d12a88ecf32b622b4da625c5120f1e389dd591",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ComputerUtilMana.java",
+    "sha256": "2284ea3b046cb74ef0ffa52e0ffd9011193be7be808b8a8406013547654d177c",
     "find": "        for (final Card sourceCard : getAvailableManaSources(ai, checkPlayable)) {",
     "replace": "        org.magictester.ai.AiCancellation.checkpoint();\n        for (final Card sourceCard : getAvailableManaSources(ai, checkPlayable)) {\n            org.magictester.ai.AiCancellation.checkpoint();",
     "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
   },
   {
     "path": "forge/game/ability/AbilityUtils.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/ability/AbilityUtils.java",
-    "sha256": "96e9b1a9ddefa81d0c9e3275f4ff6267871f533ceb6462473443872ec07c480d",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-game/src/main/java/forge/game/ability/AbilityUtils.java",
+    "sha256": "423496c936555ea1a98e2213a52b139f9cc55b91d7193f49fe54a48f1624c4c9",
     "find": "    public static int calculateAmount(final Card card, String amount, CardTraitBase ability, boolean maxto) {\n        // return empty strings and constants",
     "replace": "    public static int calculateAmount(final Card card, String amount, CardTraitBase ability, boolean maxto) {\n        org.magictester.ai.AiCancellation.checkpoint();\n        // return empty strings and constants",
     "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
   },
   {
     "path": "forge/game/replacement/ReplacementHandler.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-game/src/main/java/forge/game/replacement/ReplacementHandler.java",
-    "sha256": "499434615a5e75e324863a787fd3e45f6a08abdfbfa00d4abc74c8998cf0e2cc",
-    "find": "        game.forEachCardInGame(crd -> {\n            Card c = preList.get(crd);",
-    "replace": "        game.forEachCardInGame(crd -> {\n            org.magictester.ai.AiCancellation.checkpoint();\n            Card c = preList.get(crd);",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-game/src/main/java/forge/game/replacement/ReplacementHandler.java",
+    "sha256": "a52411bde96e4fa4e395b69eb2b42f6bcac4779470505f6c9b04c6f9d3b8131f",
+    "find": "        game.forEachCardInGame(crd -> {\n            Card c = preList == null ? crd : preList.get(crd);",
+    "replace": "        game.forEachCardInGame(crd -> {\n            org.magictester.ai.AiCancellation.checkpoint();\n            Card c = preList == null ? crd : preList.get(crd);",
     "purpose": "Shared cancellation checkpoints and fail the isolated game if the AI evaluator cannot stop; remove unsupported Thread.stop fallback. Normal decisions unchanged."
   },
   {
     "path": "forge/ai/ComputerUtil.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ComputerUtil.java",
-    "sha256": "ed3dd76219f81c67fcdb11b9c9d48fb37ce2caf886eecce71096db4b972f828d",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ComputerUtil.java",
+    "sha256": "b0befac5af601f3c943a04a865e08873c2f9fe881c3fac7a034071c713e11be8",
     "find": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {",
     "replace": "    public static boolean castPermanentInMain1(final Player ai, final SpellAbility sa) {\n        if (org.magictester.ai.StrategicSequencing.beforeCombat(ai, sa)) return true;",
     "purpose": "Opt-in Strategic v1: conditional haste, mana refund and team haste setup before combat. Native policies unchanged."
   },
   {
     "path": "forge/ai/ability/PermanentCreatureAi.java",
-    "url": "https://raw.githubusercontent.com/Card-Forge/forge/4ec5f1a2c32fa90ecb983a72b9eb47aa5c5d7676/forge-ai/src/main/java/forge/ai/ability/PermanentCreatureAi.java",
-    "sha256": "b5234b70472f46654fa31c266fa3538b0ffce3269787950238d26138c0230709",
+    "url": "https://raw.githubusercontent.com/Card-Forge/forge/583714b8bfbd9cb04f8bc39ad95861190caf7691/forge-ai/src/main/java/forge/ai/ability/PermanentCreatureAi.java",
+    "sha256": "c4c7ea8387869203fcb709491cfc5823d942285ace61738d992d2f55503784be",
     "find": "    protected boolean checkPhaseRestrictions(final Player ai, final SpellAbility sa, final PhaseHandler ph) {\n        final Card card = sa.getHostCard();\n        final Game game = ai.getGame();\n",
     "replace": "    protected boolean checkPhaseRestrictions(final Player ai, final SpellAbility sa, final PhaseHandler ph) {\n        if (org.magictester.ai.StrategicPlay.holdCreature(ai, sa)) return false;\n        final Card card = sa.getHostCard();\n        final Game game = ai.getGame();\n",
     "purpose": "Opt-in Strategic v2: keep extra creatures back from a board wipe the opponent has publicly shown this match. Other policies unchanged."
