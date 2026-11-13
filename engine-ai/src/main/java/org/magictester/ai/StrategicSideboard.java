@@ -198,7 +198,14 @@ public final class StrategicSideboard {
 
     /** Returns the new main deck, or null to let native Forge decide. */
     public static List<PaperCard> plan(Player actor,Deck deck) {
-        if(!AiPolicies.adaptive(actor) || actor.getGame().getRegisteredPlayers().size()!=2)return null;
+        if(!AiPolicies.adaptive(actor) || actor.getGame().getRegisteredPlayers().size()!=2 || actor.getGame().getRules().getGameType().isCardPoolLimited())return null;
+        try {return planned(actor,deck);}
+        catch(RuntimeException unreadable) {
+            // A card this planner cannot read must not end the match: native sideboarding takes over.
+            AiPolicies.note(actor,"sideboard-fallback-native");return null;
+        }
+    }
+    private static List<PaperCard> planned(Player actor,Deck deck) {
         Player opponent=null;for(Player p:actor.getGame().getRegisteredPlayers())if(p!=actor)opponent=p;
         if(opponent==null)return null;
         List<PaperCard> main=deck.get(DeckSection.Main).toFlatList(),side=deck.get(DeckSection.Sideboard).toFlatList();

@@ -20,6 +20,8 @@ class AiComparisonScoreTest {
         assertEquals(0.021484375,AiComparisonScore(20,5,13,9,1).chanceProbability!!,1e-12) // 2 * 11/1024
         assertEquals(AiComparisonScore(20,13,5,1,9).chanceProbability!!,AiComparisonScore(20,5,13,9,1).chanceProbability!!,0.0)
         assertTrue(AiComparisonScore(20,5,13,9,1).verdict.contains("unlikely to be luck"))
+        assertEquals(1.0,AiComparisonScore(1100,550,550,550,550).chanceProbability!!,0.03) // large even split stays "chance"
+        assertTrue(AiComparisonScore(1100,400,700,700,400).chanceProbability!!<1e-6)
         assertTrue(AiComparisonScore(10,2,7,5,0).verdict.contains("not yet evidence"))
         val empty=AiComparisonScore.calculate(mapOf(0 to true),emptyMap())
         assertEquals(0,empty.pairs);assertEquals(0.0,empty.percentagePoints,0.0)

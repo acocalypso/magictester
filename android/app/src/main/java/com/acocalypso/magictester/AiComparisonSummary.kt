@@ -15,6 +15,12 @@ data class AiComparisonScore(val pairs: Int,val defaultWins: Int,val experimenta
         val n=gainedWins+lostWins
         if(n==0) return null
         val k=minOf(gainedWins,lostWins)
+        if(n>1000) { // The exact terms underflow here; the normal approximation is accurate at this size.
+            val z=((n/2.0-k-0.5)/kotlin.math.sqrt(n/4.0)).coerceAtLeast(0.0)
+            val t=1/(1+0.2316419*z)
+            val upper=kotlin.math.exp(-z*z/2)/kotlin.math.sqrt(2*Math.PI)*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))))
+            return (2*upper).coerceAtMost(1.0)
+        }
         var term=1.0;var tail=0.0 // C(n,i)/2^n, built up without overflow
         repeat(n) {term/=2.0}
         for(i in 0..k) {tail+=term;term=term*(n-i)/(i+1)}

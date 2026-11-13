@@ -31,11 +31,12 @@ public final class MatchMemory {
 
     /** Observes one running game. Public so tests can feed it; subscribed to Forge's event bus. */
     public static final class Live {
-        private final Game game;
+        private final java.lang.ref.WeakReference<Game> game; // never keep a finished game alive
         private final List<Map<String,Set<Integer>>> seen=new ArrayList<>();
-        private Live(Game game,int seats) {this.game=game;for(int i=0;i<seats;i++)seen.add(new HashMap<>());}
+        private Live(Game game,int seats) {this.game=new java.lang.ref.WeakReference<>(game);for(int i=0;i<seats;i++)seen.add(new HashMap<>());}
         @Subscribe public void event(GameEvent event) {
             try {
+                Game game=this.game.get();if(game==null)return;
                 if(event instanceof GameEventSpellAbilityCast cast) observe(game.findByView(cast.sa().getHostCard()));
                 else if(event instanceof GameEventLandPlayed land) observe(game.findByView(land.land()));
                 else if(event instanceof GameEventTurnBegan) scan();
@@ -49,7 +50,7 @@ public final class MatchMemory {
             int seat=AiPolicies.seat(owner);if(seat<0 || seat>=seen.size())return;
             seen.get(seat).computeIfAbsent(card.getPaperCard().getName(),k->new HashSet<>()).add(card.getId());
         }
-        void scan() {for(Card card:game.getCardsIn(PUBLIC))observe(card);}
+        void scan() {Game game=this.game.get();if(game!=null)for(Card card:game.getCardsIn(PUBLIC))observe(card);}
         synchronized Map<String,Integer> counts(int seat) {
             Map<String,Integer> result=new HashMap<>();
             for(var entry:seen.get(seat).entrySet())result.put(entry.getKey(),entry.getValue().size());

@@ -39,7 +39,7 @@ public final class StrategicPlay {
         for(Map.Entry<String,Integer> entry:MatchMemory.known(opponent).entrySet()) {
             CardRoles.Role role=CardRoles.of(entry.getKey(),opponent);
             if(!role.sweeper() || role.cmc()>lands+1)continue;
-            // Every copy they have ever shown is already used up this game: nothing left to fear.
+            // A playset already spent this game leaves nothing to fear; fewer may mean more remain.
             int spent=0;for(Card c:opponent.getCardsIn(ZoneType.Graveyard))if(c.getName().equals(entry.getKey()))spent++;
             for(Card c:opponent.getCardsIn(ZoneType.Exile))if(!c.isFaceDown() && c.getName().equals(entry.getKey()))spent++;
             if(spent>=4)continue;
